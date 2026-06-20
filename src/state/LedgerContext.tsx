@@ -11,7 +11,7 @@ import {
 } from "react";
 import type { CategoryDef, Currency, LedgerData, NewTxnInput, Txn } from "../types";
 import { DUMMY } from "../lib/dummyData";
-import { BUILT_IN_CATEGORIES, DEFAULT_FALLBACK } from "../lib/categories";
+import { BUILT_IN_CATEGORIES, DEFAULT_FALLBACK, PROTECTED_IDS } from "../lib/categories";
 import { formatTxnTime } from "../lib/format";
 import { fetchLivePrices, type PriceFetchResult } from "../lib/priceApi";
 
@@ -21,24 +21,204 @@ interface PriceMeta {
   status: PriceStatus;
   error: string | null;
   updatedAt: number | null;
-  // 세 시세 필드 각각이 한 번이라도 실제 API로부터 갱신된 적이 있는지
   liveFields: { btcKRW: boolean; btcUSD: boolean; usdKRW: boolean };
 }
 
-const CATEGORIES_STORAGE_KEY = "myledger.categories.v1";
-const TXNS_STORAGE_KEY = "myledger.txns.v1";
-const PENDING_UNDO_STORAGE_KEY = "myledger.pendingUndo.v1";
+export const CATEGORIES_STORAGE_KEY = "myledger.categories.v1";
+export const TXNS_STORAGE_KEY = "myledger.txns.v1";
+export const PENDING_UNDO_STORAGE_KEY = "myledger.pendingUndo.v1";
 const UNDO_WINDOW_MS = 5000;
+
+interface TxnSummary {
+  balance: number;
+  income: number;
+  expense: number;
+}
+
+interface PersistedTxnsState {
+  txns: Txn[];
+  nextTxnId: number;
+}
+
+interface PersistedUndoState {
+  txn: Txn;
+  index: number;
+  expiresAt: number;
+}
+
+interface State {
+  currency: Currency;
+  data: LedgerData;
+  nextTxnId: number;
+  refreshIntervalMs: number;
+  priceMeta: PriceMeta;
+  categories: CategoryDef[];
+}
+
+export interface NewCategoryInput {
+  label: string;
+  fg: string;
+  icon: string;
+  group: "expense" | "income";
+}
+
+export interface PendingUndo {
+  txn: Txn;
+  index: number;
+  expiresAt: number;
+}
+
+type Action =
+  | { type: "SET_CURRENCY"; currency: Currency }
+  | { type: "ADD_TXN"; input: NewTxnInput }
+  | { type: "UPDATE_TXN"; id: number; input: NewTxnInput }
+  | { type: "DELETE_TXN"; id: number }
+  | { type: "RESTORE_TXN"; txn: Txn; index: number }
+  | { type: "SET_REFRESH_INTERVAL"; ms: number }
+  | { type: "PRICE_FETCH_START" }
+  | ({ type: "PRICE_FETCH_SETTLED" } & PriceFetchResult)
+  | { type: "ADD_CATEGORY"; category: CategoryDef }
+  | { type: "UPDATE_CATEGORY"; id: string; patch: Partial<Pick<CategoryDef, "label" | "fg" | "icon">> }
+  | { type: "DELETE_CATEGORY"; id: string };
+
+interface LedgerContextValue {
+  currency: Currency;
+  setCurrency: (c: Currency) => void;
+  data: LedgerData;
+  addTxn: (input: NewTxnInput) => void;
+  updateTxn: (id: number, input: NewTxnInput) => void;
+  deleteTxn: (id: number) => void;
+  pendingUndo: PendingUndo | null;
+  undoLastDelete: () => void;
+  refreshIntervalMs: number;
+  setRefreshIntervalMs: (ms: number) => void;
+  priceStatus: PriceStatus;
+  priceError: string | null;
+  priceUpdatedAt: number | null;
+  isPriceFallback: boolean;
+  refreshPrices: () => void;
+  categories: CategoryDef[];
+  categoriesById: Record<string, CategoryDef>;
+  addCategory: (input: NewCategoryInput) => void;
+  updateCategory: (id: string, patch: Partial<Pick<CategoryDef, "label" | "fg" | "icon">>) => void;
+  deleteCategory: (id: string) => void;
+}
+
+const LedgerContext = createContext<LedgerContextValue | null>(null);
+
+function calculateTxnSummary(txns: Txn[]): TxnSummary {
+  return txns.reduce<TxnSummary>(
+    (summary, txn) => {
+      const amount = Number.isFinite(txn.amount) ? txn.amount : 0;
+      return {
+        balance: summary.balance + amount,
+        income: summary.income + (amount > 0 ? amount : 0),
+        expense: summary.expense + (amount < 0 ? -amount : 0),
+      };
+    },
+    { balance: 0, income: 0, expense: 0 }
+  );
+}
+
+function withTxnSummary(data: LedgerData, txns: Txn[]): LedgerData {
+  return { ...data, ...calculateTxnSummary(txns), txns };
+}
+
+function isValidTxn(value: unknown): value is Txn {
+  if (!value || typeof value !== "object") return false;
+  const txn = value as Partial<Txn>;
+  return (
+    typeof txn.id === "number" &&
+    Number.isFinite(txn.id) &&
+    typeof txn.title === "string" &&
+    typeof txn.cat === "string" &&
+    typeof txn.catLabel === "string" &&
+    typeof txn.time === "string" &&
+    typeof txn.date === "string" &&
+    !Number.isNaN(new Date(txn.date).getTime()) &&
+    typeof txn.amount === "number" &&
+    Number.isFinite(txn.amount) &&
+    typeof txn.btcAt === "number" &&
+    Number.isFinite(txn.btcAt) &&
+    txn.btcAt > 0
+  );
+}
+
+function normalizeTxns(value: unknown): Txn[] | null {
+  if (!Array.isArray(value)) return null;
+  const seen = new Set<number>();
+  const txns: Txn[] = [];
+  for (const item of value) {
+    if (!isValidTxn(item) || seen.has(item.id)) continue;
+    seen.add(item.id);
+    txns.push({ ...item, title: item.title.trim() || item.catLabel });
+  }
+  return txns;
+}
+
+function nextTxnIdFrom(txns: Txn[], storedNextId?: unknown): number {
+  const maxTxnId = txns.reduce((max, txn) => Math.max(max, txn.id), 0);
+  const candidate = typeof storedNextId === "number" && Number.isFinite(storedNextId) ? storedNextId : 0;
+  return Math.max(candidate, maxTxnId + 1, Date.now());
+}
+
+function normalizeCategories(value: unknown): CategoryDef[] | null {
+  if (!Array.isArray(value)) return null;
+  const builtInsById = new Map(BUILT_IN_CATEGORIES.map((category) => [category.id, category]));
+  const byId = new Map(BUILT_IN_CATEGORIES.map((category) => [category.id, category]));
+
+  for (const item of value) {
+    if (!item || typeof item !== "object") continue;
+    const category = item as Partial<CategoryDef>;
+    if (
+      typeof category.id !== "string" ||
+      typeof category.label !== "string" ||
+      !["expense", "income", "invest"].includes(String(category.group)) ||
+      !["expense", "income"].includes(String(category.flow)) ||
+      typeof category.icon !== "string" ||
+      typeof category.fg !== "string"
+    ) {
+      continue;
+    }
+
+    const group = category.group as CategoryDef["group"];
+    const flow = category.flow as CategoryDef["flow"];
+    const builtIn = builtInsById.get(category.id);
+    if (builtIn && PROTECTED_IDS.has(category.id)) {
+      byId.set(category.id, {
+        ...builtIn,
+        label: category.label.trim() || builtIn.label,
+        fg: category.fg,
+        icon: category.icon,
+        protected: true,
+      });
+      continue;
+    }
+
+    byId.set(category.id, {
+      id: category.id,
+      label: category.label.trim() || category.id,
+      group,
+      flow,
+      icon: category.icon,
+      fg: category.fg,
+      protected: category.protected === true || PROTECTED_IDS.has(category.id),
+    });
+  }
+
+  return Array.from(byId.values());
+}
 
 function loadCategories(): CategoryDef[] {
   try {
     const raw = localStorage.getItem(CATEGORIES_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      const categories = normalizeCategories(parsed);
+      if (categories && categories.length > 0) return categories;
     }
   } catch {
-    // 손상된 데이터 등은 무시하고 기본값으로 폴백
+    // Ignore malformed persisted categories and recover with built-ins.
   }
   return BUILT_IN_CATEGORIES;
 }
@@ -47,15 +227,8 @@ function saveCategories(categories: CategoryDef[]) {
   try {
     localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(categories));
   } catch {
-    // 프라이빗 모드 등으로 저장이 안 되어도 인메모리 상태로는 계속 동작
+    // Keep in-memory state working if the browser refuses writes.
   }
-}
-
-interface PersistedTxnsState {
-  balance: number;
-  income: number;
-  expense: number;
-  txns: Txn[];
 }
 
 function loadTxnsState(): PersistedTxnsState | null {
@@ -63,17 +236,10 @@ function loadTxnsState(): PersistedTxnsState | null {
     const raw = localStorage.getItem(TXNS_STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (
-      parsed &&
-      typeof parsed.balance === "number" &&
-      typeof parsed.income === "number" &&
-      typeof parsed.expense === "number" &&
-      Array.isArray(parsed.txns)
-    ) {
-      return parsed;
-    }
+    const txns = normalizeTxns(parsed?.txns);
+    if (txns) return { txns, nextTxnId: nextTxnIdFrom(txns, parsed?.nextTxnId) };
   } catch {
-    // 손상된 데이터는 무시하고 더미로 폴백
+    // Ignore malformed persisted transactions and recover with defaults.
   }
   return null;
 }
@@ -82,14 +248,8 @@ function saveTxnsState(s: PersistedTxnsState) {
   try {
     localStorage.setItem(TXNS_STORAGE_KEY, JSON.stringify(s));
   } catch {
-    // 프라이빗 모드 등으로 저장이 안 되어도 인메모리 상태로는 계속 동작
+    // Keep in-memory state working if the browser refuses writes.
   }
-}
-
-interface PersistedUndoState {
-  txn: Txn;
-  index: number;
-  expiresAt: number;
 }
 
 function loadPendingUndo(): PendingUndo | null {
@@ -101,8 +261,7 @@ function loadPendingUndo(): PendingUndo | null {
       parsed &&
       typeof parsed.index === "number" &&
       typeof parsed.expiresAt === "number" &&
-      parsed.txn &&
-      typeof parsed.txn.id === "number" &&
+      isValidTxn(parsed.txn) &&
       Date.now() < parsed.expiresAt
     ) {
       return parsed;
@@ -123,7 +282,7 @@ function savePendingUndo(pendingUndo: PendingUndo | null) {
     const persisted: PersistedUndoState = pendingUndo;
     localStorage.setItem(PENDING_UNDO_STORAGE_KEY, JSON.stringify(persisted));
   } catch {
-    // 저장 실패 시에도 메모리 상태의 Undo는 유지한다.
+    // If persistence fails, the in-memory undo state still works.
   }
 }
 
@@ -131,33 +290,16 @@ function genCategoryId(): string {
   return `cat_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
 }
 
-interface State {
-  currency: Currency;
-  data: LedgerData;
-  refreshIntervalMs: number;
-  priceMeta: PriceMeta;
-  categories: CategoryDef[];
+function findFallbackCategory(categories: CategoryDef[], flow: "expense" | "income"): CategoryDef | null {
+  const fallbackId = DEFAULT_FALLBACK[flow];
+  return (
+    categories.find((c) => c.id === fallbackId) ??
+    BUILT_IN_CATEGORIES.find((c) => c.id === fallbackId) ??
+    categories.find((c) => c.flow === flow) ??
+    BUILT_IN_CATEGORIES.find((c) => c.flow === flow) ??
+    null
+  );
 }
-
-export interface NewCategoryInput {
-  label: string;
-  fg: string;
-  icon: string;
-  group: "expense" | "income";
-}
-
-type Action =
-  | { type: "SET_CURRENCY"; currency: Currency }
-  | { type: "ADD_TXN"; input: NewTxnInput }
-  | { type: "UPDATE_TXN"; id: number; input: NewTxnInput }
-  | { type: "DELETE_TXN"; id: number }
-  | { type: "RESTORE_TXN"; txn: Txn; index: number }
-  | { type: "SET_REFRESH_INTERVAL"; ms: number }
-  | { type: "PRICE_FETCH_START" }
-  | ({ type: "PRICE_FETCH_SETTLED" } & PriceFetchResult)
-  | { type: "ADD_CATEGORY"; category: CategoryDef }
-  | { type: "UPDATE_CATEGORY"; id: string; patch: Partial<Pick<CategoryDef, "label" | "fg" | "icon">> }
-  | { type: "DELETE_CATEGORY"; id: string };
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
@@ -207,29 +349,26 @@ function reducer(state: State, action: Action): State {
         data:
           nextLabel === undefined
             ? state.data
-            : {
-                ...state.data,
-                // 라벨이 바뀌면 이미 기록된 거래의 라벨 스냅샷도 함께 갱신해 화면이 어긋나지 않게 한다
-                txns: state.data.txns.map((t) => (t.cat === action.id ? { ...t, catLabel: nextLabel } : t)),
-              },
+            : withTxnSummary(
+                state.data,
+                state.data.txns.map((t) => (t.cat === action.id ? { ...t, catLabel: nextLabel } : t))
+              ),
       };
     }
     case "DELETE_CATEGORY": {
       const target = state.categories.find((c) => c.id === action.id);
-      if (!target || target.protected) return state; // UI가 막아주지만 방어적으로 한 번 더 확인
-      const fallbackGroup = target.group === "income" ? "income" : "expense";
-      const fallbackId = DEFAULT_FALLBACK[fallbackGroup];
-      const fallback = state.categories.find((c) => c.id === fallbackId);
-      const fallbackLabel = fallback?.label ?? "기타";
+      if (!target || target.protected || PROTECTED_IDS.has(target.id)) return state;
+
+      const fallback = findFallbackCategory(state.categories, target.group === "income" ? "income" : "expense");
+      if (!fallback) return { ...state, categories: state.categories.filter((c) => c.id !== action.id) };
+
+      const nextTxns = state.data.txns.map((t) =>
+        t.cat === action.id ? { ...t, cat: fallback.id, catLabel: fallback.label } : t
+      );
       return {
         ...state,
         categories: state.categories.filter((c) => c.id !== action.id),
-        data: {
-          ...state.data,
-          txns: state.data.txns.map((t) =>
-            t.cat === action.id ? { ...t, cat: fallbackId, catLabel: fallbackLabel } : t
-          ),
-        },
+        data: withTxnSummary(state.data, nextTxns),
       };
     }
   }
@@ -239,8 +378,7 @@ function applyAddTxn(state: State, input: NewTxnInput): State {
   const category = state.categories.find((c) => c.id === input.cat);
   const label = category?.label ?? input.cat;
   const signedAmount = input.isIncome ? Math.abs(input.amount) : -Math.abs(input.amount);
-  const currentMaxId = state.data.txns.reduce((max, t) => Math.max(max, t.id), 0);
-  const nextId = Math.max(currentMaxId + 1, Date.now());
+  const nextId = Math.max(state.nextTxnId, Date.now());
   const newTxn: Txn = {
     id: nextId,
     title: input.title.trim() || label,
@@ -254,13 +392,8 @@ function applyAddTxn(state: State, input: NewTxnInput): State {
   };
   return {
     ...state,
-    data: {
-      ...state.data,
-      txns: [newTxn, ...state.data.txns],
-      balance: state.data.balance + signedAmount,
-      income: state.data.income + (signedAmount > 0 ? signedAmount : 0),
-      expense: state.data.expense + (signedAmount < 0 ? -signedAmount : 0),
-    },
+    nextTxnId: nextId + 1,
+    data: withTxnSummary(state.data, [newTxn, ...state.data.txns]),
   };
 }
 
@@ -280,106 +413,40 @@ function applyUpdateTxn(state: State, id: number, input: NewTxnInput): State {
     date: input.date,
     amount: signedAmount,
     memo: input.memo,
-    // btcAt은 의도적으로 보존 — 최초 기록 시점 시세라는 의미를 수정 후에도 유지
   };
   const nextTxns = state.data.txns.slice();
   nextTxns[idx] = updatedTxn;
-  const oldIncome = oldTxn.amount > 0 ? oldTxn.amount : 0;
-  const oldExpense = oldTxn.amount < 0 ? -oldTxn.amount : 0;
-  const newIncome = signedAmount > 0 ? signedAmount : 0;
-  const newExpense = signedAmount < 0 ? -signedAmount : 0;
-  return {
-    ...state,
-    data: {
-      ...state.data,
-      txns: nextTxns,
-      balance: state.data.balance - oldTxn.amount + signedAmount,
-      income: state.data.income - oldIncome + newIncome,
-      expense: state.data.expense - oldExpense + newExpense,
-    },
-  };
+  return { ...state, data: withTxnSummary(state.data, nextTxns) };
 }
 
 function applyDeleteTxn(state: State, id: number): State {
   const idx = state.data.txns.findIndex((t) => t.id === id);
   if (idx === -1) return state;
-  const removed = state.data.txns[idx];
   const nextTxns = state.data.txns.slice();
   nextTxns.splice(idx, 1);
-  return {
-    ...state,
-    data: {
-      ...state.data,
-      txns: nextTxns,
-      balance: state.data.balance - removed.amount,
-      income: state.data.income - (removed.amount > 0 ? removed.amount : 0),
-      expense: state.data.expense - (removed.amount < 0 ? -removed.amount : 0),
-    },
-  };
+  return { ...state, data: withTxnSummary(state.data, nextTxns) };
 }
 
 function applyRestoreTxn(state: State, txn: Txn, index: number): State {
-  if (state.data.txns.some((t) => t.id === txn.id)) return state;
+  if (!isValidTxn(txn) || state.data.txns.some((t) => t.id === txn.id)) return state;
   const nextTxns = state.data.txns.slice();
   const insertAt = Math.max(0, Math.min(index, nextTxns.length));
   nextTxns.splice(insertAt, 0, txn);
   return {
     ...state,
-    data: {
-      ...state.data,
-      txns: nextTxns,
-      balance: state.data.balance + txn.amount,
-      income: state.data.income + (txn.amount > 0 ? txn.amount : 0),
-      expense: state.data.expense + (txn.amount < 0 ? -txn.amount : 0),
-    },
+    nextTxnId: nextTxnIdFrom(nextTxns, state.nextTxnId),
+    data: withTxnSummary(state.data, nextTxns),
   };
 }
 
-export interface PendingUndo {
-  txn: Txn;
-  index: number;
-  expiresAt: number;
-}
-
-interface LedgerContextValue {
-  currency: Currency;
-  setCurrency: (c: Currency) => void;
-  data: LedgerData;
-  addTxn: (input: NewTxnInput) => void;
-  updateTxn: (id: number, input: NewTxnInput) => void;
-  deleteTxn: (id: number) => void;
-  pendingUndo: PendingUndo | null;
-  undoLastDelete: () => void;
-  refreshIntervalMs: number;
-  setRefreshIntervalMs: (ms: number) => void;
-  priceStatus: PriceStatus;
-  priceError: string | null;
-  priceUpdatedAt: number | null;
-  isPriceFallback: boolean;
-  refreshPrices: () => void;
-  categories: CategoryDef[];
-  categoriesById: Record<string, CategoryDef>;
-  addCategory: (input: NewCategoryInput) => void;
-  updateCategory: (id: string, patch: Partial<Pick<CategoryDef, "label" | "fg" | "icon">>) => void;
-  deleteCategory: (id: string) => void;
-}
-
-const LedgerContext = createContext<LedgerContextValue | null>(null);
-
 function buildInitialState(): State {
   const persisted = loadTxnsState();
-  const data: LedgerData = persisted
-    ? {
-        ...DUMMY,
-        balance: persisted.balance,
-        income: persisted.income,
-        expense: persisted.expense,
-        txns: persisted.txns,
-      }
-    : DUMMY;
+  const initialTxns = persisted?.txns ?? DUMMY.txns;
+  const data = withTxnSummary(DUMMY, initialTxns);
   return {
     currency: "KRW",
     data,
+    nextTxnId: persisted?.nextTxnId ?? nextTxnIdFrom(initialTxns),
     refreshIntervalMs: 60_000,
     priceMeta: {
       status: "idle",
@@ -413,13 +480,8 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
   }, [state.categories]);
 
   useEffect(() => {
-    saveTxnsState({
-      balance: state.data.balance,
-      income: state.data.income,
-      expense: state.data.expense,
-      txns: state.data.txns,
-    });
-  }, [state.data.balance, state.data.income, state.data.expense, state.data.txns]);
+    saveTxnsState({ txns: state.data.txns, nextTxnId: state.nextTxnId });
+  }, [state.data.txns, state.nextTxnId]);
 
   useEffect(() => {
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
