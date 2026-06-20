@@ -354,6 +354,23 @@
   margin-top: 14px;
 }
 
+.ldg-wallet-name-form {
+  display: grid;
+  gap: 10px;
+}
+
+.ldg-wallet-name-form .ldg-input {
+  width: 100%;
+  min-width: 0;
+  font-size: 16px;
+}
+
+.ldg-wallet-name-btns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
 .ldg-security-form {
   display: flex;
   flex-direction: column;

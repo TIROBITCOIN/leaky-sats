@@ -1,6 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180" role="img" aria-label="My Ledger">
-  <rect width="180" height="180" rx="40" fill="#0a0a0a"/>
-  <circle cx="90" cy="90" r="68" fill="#f7931a" opacity="0.16"/>
-  <path d="M98 18 51 102h36l-8 60 52-90H94l4-54Z" fill="#f7931a"/>
-  <path d="M87 49h21c14 0 23 8 23 19 0 8-5 15-13 18 10 3 15 11 15 22 0 14-11 24-27 24H71V49h16Zm0 15v17h16c8 0 12-3 12-9s-4-8-12-8H87Zm0 32v20h18c8 0 13-4 13-10s-5-10-13-10H87Z" fill="#0a0a0a"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180" role="img" aria-label="Wallet">
+  <rect width="180" height="180" rx="40" fill="#1a1a2e"/>
+  <!-- wallet body -->
+  <rect x="34" y="52" width="112" height="76" rx="13" fill="none" stroke="#e0e0e0" stroke-width="4.5"/>
+  <!-- wallet flap -->
+  <path d="M34 69v-5c0-7.2 5.8-13 13-13h86c7.2 0 13 5.8 13 13v5" fill="none" stroke="#e0e0e0" stroke-width="4.5"/>
+  <!-- clasp circle -->
+  <circle cx="131" cy="90" r="9" fill="#e0e0e0" opacity="0.9"/>
+  <circle cx="131" cy="90" r="4.5" fill="#1a1a2e"/>
 </svg>

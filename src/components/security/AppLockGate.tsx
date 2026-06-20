@@ -81,11 +81,10 @@ export default function AppLockGate({ children }: { children: ReactNode }) {
   return (
     <div className="ldg-lock-screen" role="dialog" aria-modal="true" aria-labelledby="app-lock-title">
       <form className="ldg-lock-card" onSubmit={handleSubmit}>
-        <div className="ldg-lock-mark">₿</div>
         <h1 id="app-lock-title" className="ldg-lock-title">
-          My Ledger
+          잠금 해제
         </h1>
-        <p className="ldg-lock-sub">이 기기에서 설정한 PIN을 입력하세요.</p>
+        <p className="ldg-lock-sub">PIN을 입력하세요.</p>
         <input
           ref={inputRef}
           className="ldg-lock-input"
@@ -104,7 +103,7 @@ export default function AppLockGate({ children }: { children: ReactNode }) {
           잠금 해제
         </button>
         <p className="ldg-lock-note">
-          이 비밀번호는 이 기기에서만 작동합니다. 잊어버리면 브라우저 데이터를 초기화해야 할 수 있습니다.
+          이 PIN은 이 기기에서만 작동합니다.
         </p>
       </form>
     </div>
