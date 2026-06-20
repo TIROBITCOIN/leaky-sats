@@ -17,6 +17,37 @@ export const krwToSats = (krw: number, rate: number): number => Math.round((krw 
 
 export const fmtSats = (sats: number): string => `${sats.toLocaleString("en-US")} sats`;
 
+export type BtcUnit = "BTC" | "sats";
+
+const DISPLAY_UNIT_KEY = "myledger.displayUnit.v1";
+
+export function loadBtcUnit(): BtcUnit {
+  try {
+    const raw = localStorage.getItem(DISPLAY_UNIT_KEY);
+    if (raw === "sats") return "sats";
+  } catch { /* fall through */ }
+  return "BTC";
+}
+
+export function saveBtcUnit(unit: BtcUnit) {
+  try {
+    localStorage.setItem(DISPLAY_UNIT_KEY, unit);
+  } catch { /* ignore */ }
+}
+
+/** Format a BTC amount respecting the display unit. Removes trailing zeros for BTC. */
+export function fmtBtcValue(btc: number, unit: BtcUnit): string {
+  if (!Number.isFinite(btc)) return unit === "sats" ? "0 sats" : "0 BTC";
+  if (unit === "sats") {
+    const sats = Math.round(btc * 1e8);
+    return `${sats.toLocaleString("en-US")} sats`;
+  }
+  // BTC with trailing zero removal
+  const fixed = btc.toFixed(8);
+  const trimmed = fixed.replace(/\.?0+$/, "");
+  return `${trimmed} BTC`;
+}
+
 // 김프 = (업비트KRW − 바이낸스USD × USDKRW) / (바이낸스USD × USDKRW) × 100
 export const kimchiPremium = (btcKRW: number, btcUSD: number, usdKRW: number): number => {
   const fair = btcUSD * usdKRW;

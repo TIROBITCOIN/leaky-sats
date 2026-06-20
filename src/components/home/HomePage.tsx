@@ -3,6 +3,7 @@ import "../../styles/ledger.css";
 import { useLedger } from "../../state/LedgerContext";
 import { loadWalletName } from "../../lib/walletName";
 import { getHeldBtc } from "../../lib/heldBtc";
+import { loadBtcUnit, type BtcUnit } from "../../lib/format";
 import { calculateMonthlyLivingCashflow, calculateSellNeeded } from "../../lib/sellCalculator";
 import LightningOverlay from "../lightning/LightningOverlay";
 import Slogan from "./Slogan";
@@ -19,6 +20,7 @@ export default function HomePage() {
   const { currency, setCurrency, data, categoriesById } = useLedger();
   const [walletName, setWalletName] = useState(loadWalletName);
   const [heldBtc, setHeldBtc] = useState(getHeldBtc);
+  const [btcUnit, setBtcUnit] = useState<BtcUnit>(loadBtcUnit);
 
   useEffect(() => {
     document.title = walletName;
@@ -29,6 +31,7 @@ export default function HomePage() {
     const refresh = () => {
       setWalletName(loadWalletName());
       setHeldBtc(getHeldBtc());
+      setBtcUnit(loadBtcUnit());
     };
     const onVisibility = () => {
       if (document.visibilityState === "visible") refresh();
@@ -60,9 +63,9 @@ export default function HomePage() {
           <Slogan />
           <LedgerHeader d={data} walletName={walletName} />
           <CurrencyToggle value={currency} onChange={setCurrency} />
-          <BalanceCard d={data} heldBtc={heldBtc} />
+          <BalanceCard d={data} heldBtc={heldBtc} unit={btcUnit} />
           <InOutCards d={data} currency={currency} />
-          <SellNeededCard result={sellResult} />
+          <SellNeededCard result={sellResult} unit={btcUnit} />
           <PriceWidget d={data} />
           <ChartCard />
           <TxnsCard d={data} currency={currency} />

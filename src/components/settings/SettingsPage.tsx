@@ -4,6 +4,7 @@ import "../../styles/forms.css";
 import { useLedger } from "../../state/LedgerContext";
 import { formatUpdatedAt, getPriceTone } from "../../lib/priceStatus";
 import { loadWalletName, saveWalletName, DEFAULT_NAME, MAX_LENGTH } from "../../lib/walletName";
+import { loadBtcUnit, saveBtcUnit, type BtcUnit } from "../../lib/format";
 import { getHeldBtc, setHeldBtc, normalizeHeldBtcInput } from "../../lib/heldBtc";
 import AppLockSettings from "../security/AppLockSettings";
 import CategoryManager from "./CategoryManager";
@@ -29,7 +30,7 @@ export default function SettingsPage() {
     isPriceFallback,
     refreshPrices,
   } = useLedger();
-  const [unit, setUnit] = useState<(typeof UNITS)[number]>("BTC");
+  const [unit, setUnit] = useState<BtcUnit>(loadBtcUnit);
   const [source, setSource] = useState<(typeof SOURCES)[number]>("Upbit");
   const [walletNameInput, setWalletNameInput] = useState(loadWalletName);
   const [walletNameSaved, setWalletNameSaved] = useState(false);
@@ -78,7 +79,7 @@ export default function SettingsPage() {
             </div>
             <div className="ldg-radio-group">
               {UNITS.map((u) => (
-                <button type="button" key={u} className={unit === u ? "on" : ""} onClick={() => setUnit(u)}>
+                <button type="button" key={u} className={unit === u ? "on" : ""} onClick={() => { setUnit(u); saveBtcUnit(u); }}>
                   {u}
                 </button>
               ))}
