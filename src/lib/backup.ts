@@ -2,10 +2,12 @@ const APP_ID = "my-ledger";
 const BACKUP_VERSION = 1;
 const TXNS_KEY = "myledger.txns.v1";
 const CATEGORIES_KEY = "myledger.categories.v1";
+const HELD_BTC_KEY = "myledger.heldBtc.v1";
 
 export const BACKUP_KEYS = {
   txns: TXNS_KEY,
   categories: CATEGORIES_KEY,
+  heldBtc: HELD_BTC_KEY,
 } as const;
 
 export interface BackupPayload {
@@ -15,6 +17,7 @@ export interface BackupPayload {
   data: {
     [TXNS_KEY]: unknown;
     [CATEGORIES_KEY]: unknown;
+    [HELD_BTC_KEY]?: unknown;
   };
 }
 
@@ -44,6 +47,7 @@ export function createBackupPayload(): BackupPayload {
     data: {
       [TXNS_KEY]: readParsedStorage(TXNS_KEY, { txns: [], nextTxnId: Date.now() }),
       [CATEGORIES_KEY]: readParsedStorage(CATEGORIES_KEY, []),
+      [HELD_BTC_KEY]: localStorage.getItem(HELD_BTC_KEY) ?? "0",
     },
   };
 }
@@ -90,4 +94,7 @@ export function restoreBackupPayload(payload: BackupPayload) {
 
   localStorage.setItem(TXNS_KEY, JSON.stringify(payload.data[TXNS_KEY]));
   localStorage.setItem(CATEGORIES_KEY, JSON.stringify(payload.data[CATEGORIES_KEY]));
+  if (HELD_BTC_KEY in payload.data && payload.data[HELD_BTC_KEY] != null) {
+    localStorage.setItem(HELD_BTC_KEY, String(payload.data[HELD_BTC_KEY]));
+  }
 }

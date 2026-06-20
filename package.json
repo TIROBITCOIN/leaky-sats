@@ -15,7 +15,8 @@
     "verify:deploy": "node verify-deploy.mjs",
     "verify:security": "node verify-security.mjs",
     "verify:branding": "node verify-branding.mjs",
-    "verify:mobile": "node verify-mobile-polish.mjs"
+    "verify:mobile": "node verify-mobile-polish.mjs",
+    "verify:sell": "node verify-sell-calculator.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

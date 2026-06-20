@@ -4,6 +4,7 @@ import "../../styles/forms.css";
 import { useLedger } from "../../state/LedgerContext";
 import { formatUpdatedAt, getPriceTone } from "../../lib/priceStatus";
 import { loadWalletName, saveWalletName, DEFAULT_NAME, MAX_LENGTH } from "../../lib/walletName";
+import { getHeldBtc, setHeldBtc, normalizeHeldBtcInput } from "../../lib/heldBtc";
 import AppLockSettings from "../security/AppLockSettings";
 import CategoryManager from "./CategoryManager";
 import BackupRestoreCard from "./BackupRestoreCard";
@@ -32,6 +33,11 @@ export default function SettingsPage() {
   const [source, setSource] = useState<(typeof SOURCES)[number]>("Upbit");
   const [walletNameInput, setWalletNameInput] = useState(loadWalletName);
   const [walletNameSaved, setWalletNameSaved] = useState(false);
+  const [heldBtcInput, setHeldBtcInput] = useState(() => {
+    const v = getHeldBtc();
+    return v === 0 ? "" : String(v);
+  });
+  const [heldBtcSaved, setHeldBtcSaved] = useState(false);
 
   const priceTone = getPriceTone(priceStatus, isPriceFallback);
   const updatedAtText = formatUpdatedAt(priceUpdatedAt);
@@ -182,6 +188,59 @@ export default function SettingsPage() {
             </div>
           </div>
           {walletNameSaved && (
+            <div className="ldg-backup-status ok" style={{ marginTop: 8 }}>저장되었습니다.</div>
+          )}
+        </div>
+
+        <div className="ldg-card">
+          <div className="ldg-setting-label">보유 BTC</div>
+          <div className="ldg-setting-desc" style={{ marginBottom: 10 }}>
+            BTC 보유량은 메인 화면과 팔아야 할 BTC 계산에 사용됩니다.
+          </div>
+          <div className="ldg-wallet-name-form">
+            <input
+              type="text"
+              inputMode="decimal"
+              className="ldg-input"
+              value={heldBtcInput}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === "" || /^\d*\.?\d{0,8}$/.test(v)) {
+                  setHeldBtcInput(v);
+                  setHeldBtcSaved(false);
+                }
+              }}
+              placeholder="0.00000000"
+            />
+            <div className="ldg-wallet-name-btns">
+              <button
+                type="button"
+                className="ldg-submit-btn"
+                onClick={() => {
+                  const val = normalizeHeldBtcInput(heldBtcInput);
+                  const saved = setHeldBtc(val);
+                  setHeldBtcInput(saved === 0 ? "" : String(saved));
+                  setHeldBtcSaved(true);
+                  setTimeout(() => setHeldBtcSaved(false), 2000);
+                }}
+              >
+                저장
+              </button>
+              <button
+                type="button"
+                className="ldg-submit-btn secondary"
+                onClick={() => {
+                  setHeldBtc(0);
+                  setHeldBtcInput("");
+                  setHeldBtcSaved(true);
+                  setTimeout(() => setHeldBtcSaved(false), 2000);
+                }}
+              >
+                초기화
+              </button>
+            </div>
+          </div>
+          {heldBtcSaved && (
             <div className="ldg-backup-status ok" style={{ marginTop: 8 }}>저장되었습니다.</div>
           )}
         </div>
