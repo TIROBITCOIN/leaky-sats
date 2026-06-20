@@ -61,3 +61,12 @@
 - README 배포 가이드
 - 백업/복원
 - 회귀 테스트 체크리스트
+
+### Phase 5 완료 범위
+
+- Netlify/Vercel 배포 설정
+- SPA fallback 설정
+- 실기기 검증 체크리스트
+- QR 접속 테스트 안내
+- 백업/복원 UX
+- localStorage-only 데이터 유실 리스크 완화

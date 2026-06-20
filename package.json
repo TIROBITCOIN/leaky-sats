@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "verify:persist": "node verify-persist.mjs",
     "verify:calc": "node verify-calculations.mjs",
-    "verify:pwa": "node verify-pwa.mjs"
+    "verify:pwa": "node verify-pwa.mjs",
+    "verify:backup": "node verify-backup.mjs",
+    "verify:deploy": "node verify-deploy.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
