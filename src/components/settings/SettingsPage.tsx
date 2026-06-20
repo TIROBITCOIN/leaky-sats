@@ -3,6 +3,7 @@ import "../../styles/ledger.css";
 import "../../styles/forms.css";
 import { useLedger } from "../../state/LedgerContext";
 import { formatUpdatedAt, getPriceTone } from "../../lib/priceStatus";
+import AppLockSettings from "../security/AppLockSettings";
 import CategoryManager from "./CategoryManager";
 
 const UNITS = ["BTC", "sats"] as const;
@@ -33,12 +34,12 @@ export default function SettingsPage() {
   const updatedAtText = formatUpdatedAt(priceUpdatedAt);
   const statusText =
     priceTone === "loading"
-      ? "시세 불러오는 중..."
+      ? "시세를 불러오는 중..."
       : priceTone === "offline"
-      ? "시세 연동 실패 — 더미 시세 사용 중"
+      ? "시세 연동 실패 후 이전 시세를 사용 중"
       : priceTone === "stale"
-      ? `일부 시세 갱신 실패 — ${updatedAtText} 값 유지 중`
-      : `마지막 갱신 ${updatedAtText} (실시간)`;
+      ? `일부 시세 갱신 실패. ${updatedAtText} 값 사용 중`
+      : `마지막 갱신 ${updatedAtText}`;
 
   const handleExport = () => {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -54,7 +55,7 @@ export default function SettingsPage() {
     <div className="ldg-screen">
       <div className="ldg-content">
         <div className="ldg-page-title">설정</div>
-        <div className="ldg-page-sub">표시 방식과 백업을 관리해요.</div>
+        <div className="ldg-page-sub">표시 방식, 시세, 카테고리, 로컬 잠금을 관리합니다.</div>
 
         <div className="ldg-card">
           <div className="ldg-setting-row">
@@ -63,22 +64,22 @@ export default function SettingsPage() {
               <div className="ldg-setting-desc">홈 화면 기본 표시 통화</div>
             </div>
             <div className="ldg-radio-group">
-              <button className={currency === "KRW" ? "on" : ""} onClick={() => setCurrency("KRW")}>
-                ₩ KRW
+              <button type="button" className={currency === "KRW" ? "on" : ""} onClick={() => setCurrency("KRW")}>
+                KRW
               </button>
-              <button className={currency === "BTC" ? "on" : ""} onClick={() => setCurrency("BTC")}>
-                ₿ Bitcoin
+              <button type="button" className={currency === "BTC" ? "on" : ""} onClick={() => setCurrency("BTC")}>
+                Bitcoin
               </button>
             </div>
           </div>
           <div className="ldg-setting-row">
             <div>
               <div className="ldg-setting-label">표시 단위</div>
-              <div className="ldg-setting-desc">소액 환산 시 BTC/sats 단위</div>
+              <div className="ldg-setting-desc">금액 환산 시 BTC/sats 단위</div>
             </div>
             <div className="ldg-radio-group">
               {UNITS.map((u) => (
-                <button key={u} className={unit === u ? "on" : ""} onClick={() => setUnit(u)}>
+                <button key={u} type="button" className={unit === u ? "on" : ""} onClick={() => setUnit(u)}>
                   {u}
                 </button>
               ))}
@@ -90,11 +91,11 @@ export default function SettingsPage() {
           <div className="ldg-setting-row">
             <div>
               <div className="ldg-setting-label">시세 소스</div>
-              <div className="ldg-setting-desc">현재 시세 재평가 기준 거래소</div>
+              <div className="ldg-setting-desc">현재 시세 평가 기준</div>
             </div>
             <div className="ldg-radio-group">
               {SOURCES.map((s) => (
-                <button key={s} className={source === s ? "on" : ""} onClick={() => setSource(s)}>
+                <button key={s} type="button" className={source === s ? "on" : ""} onClick={() => setSource(s)}>
                   {s}
                 </button>
               ))}
@@ -109,6 +110,7 @@ export default function SettingsPage() {
               {INTERVALS.map((i) => (
                 <button
                   key={i.label}
+                  type="button"
                   className={refreshIntervalMs === i.ms ? "on" : ""}
                   onClick={() => setRefreshIntervalMs(i.ms)}
                 >
@@ -122,10 +124,10 @@ export default function SettingsPage() {
               <div className="ldg-setting-label">시세 상태</div>
               <div className="ldg-setting-desc">
                 {statusText}
-                {priceError ? ` (${priceError} 연결 실패)` : ""}
+                {priceError ? ` (${priceError})` : ""}
               </div>
             </div>
-            <button className="ldg-link" onClick={refreshPrices}>
+            <button className="ldg-link" type="button" onClick={refreshPrices}>
               지금 갱신
             </button>
           </div>
@@ -135,18 +137,25 @@ export default function SettingsPage() {
               <div className="ldg-setting-desc">다크 모드 고정</div>
             </div>
             <div className="ldg-radio-group">
-              <button className="on">Dark</button>
+              <button className="on" type="button">
+                Dark
+              </button>
             </div>
           </div>
         </div>
 
         <CategoryManager />
+        <AppLockSettings />
 
         <div className="ldg-card">
           <div className="ldg-label" style={{ marginBottom: 10 }}>
-            백업 / 내보내기
+            데이터 내보내기
           </div>
-          <button className="ldg-submit-btn" onClick={handleExport}>
+          <div className="ldg-setting-desc" style={{ marginBottom: 12 }}>
+            현재 브라우저의 가계부 데이터를 JSON 파일로 내려받습니다. PIN과 앱 잠금 설정은 포함하지
+            않습니다.
+          </div>
+          <button className="ldg-submit-btn" type="button" onClick={handleExport}>
             JSON으로 내보내기
           </button>
         </div>

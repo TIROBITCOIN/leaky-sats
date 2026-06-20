@@ -11,6 +11,7 @@
   --ldg-fg-4: #6b6b6b;
   --ldg-pos: #4ade80;
   --ldg-neg: #f87171;
-  --ldg-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, sans-serif;
+  --ldg-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR",
+    "Malgun Gothic", sans-serif;
   --ldg-mono: var(--ldg-sans);
 }

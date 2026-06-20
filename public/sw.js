@@ -5,7 +5,8 @@ const APP_SHELL = [
   "/manifest.webmanifest",
   "/icons/icon-192.svg",
   "/icons/icon-512.svg",
-  "/icons/maskable-icon.svg"
+  "/icons/maskable-icon.svg",
+  "/icons/apple-touch-icon.svg"
 ];
 
 const API_HOSTS = new Set(["api.upbit.com", "api.binance.com", "api.frankfurter.dev"]);

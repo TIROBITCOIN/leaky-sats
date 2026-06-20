@@ -5,6 +5,7 @@ body {
   height: 100%;
   background: #05060a;
   font-family: var(--ldg-sans);
+  font-variant-numeric: tabular-nums;
   color: #fff;
 }
 
@@ -17,6 +18,9 @@ body {
   box-sizing: border-box;
 }
 
-button {
+button,
+input,
+textarea,
+select {
   font-family: inherit;
 }

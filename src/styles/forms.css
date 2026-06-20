@@ -1,7 +1,7 @@
 .ldg-page-title {
   font-size: 20px;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   margin: 4px 2px 2px;
 }
 
@@ -25,7 +25,8 @@
   font: inherit;
   font-size: 30px;
   font-weight: 600;
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
   background: transparent;
   border: 0;
@@ -184,6 +185,19 @@
   opacity: 0.85;
 }
 
+.ldg-secondary-btn {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ldg-fg-2);
+  border: 1px solid var(--ldg-border);
+  border-radius: 99px;
+  padding: 12px 14px;
+  cursor: pointer;
+  width: 100%;
+}
+
 /* ---- Settings list ---- */
 .ldg-setting-row {
   display: flex;
@@ -338,4 +352,23 @@
   align-items: center;
   gap: 14px;
   margin-top: 14px;
+}
+
+.ldg-security-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ldg-security-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.ldg-security-status {
+  margin-top: 10px;
+  color: var(--ldg-orange);
+  font-size: 12px;
+  font-weight: 700;
 }

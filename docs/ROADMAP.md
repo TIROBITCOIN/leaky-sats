@@ -2,13 +2,13 @@
 
 ## Phase 1: 제품 정의
 
-- 제품 정의
-- README
-- PRODUCT_SPEC
-- TECH_DECISIONS
-- MVP 범위 고정
+- 제품 방향을 "비트코이너를 위한 모바일 우선 PWA 가계부"로 고정
+- README 작성
+- PRODUCT_SPEC 작성
+- TECH_DECISIONS 작성
+- MVP 범위와 제외 범위 고정
 
-## Phase 2: 가계부 핵심 기능 안정화
+## Phase 2: 거래 데이터 안정화
 
 - 거래 추가/수정/삭제 안정화
 - 거래 localStorage 영속화
@@ -16,7 +16,7 @@
 - 카테고리 관리 안정화
 - 새로고침 후 데이터 유지
 
-## Phase 3: 통계/자산 계산 정리
+## Phase 3: 통계/자산 계산 안정화
 
 - 월별 수입/지출 계산
 - 카테고리별 지출 계산
@@ -52,12 +52,40 @@
 - 외부 BTC/FX 시세 API는 service worker가 강하게 캐싱하지 않는다.
 - 시세 API 실패 또는 오프라인 상태는 앱의 fallback/stale UI로 표현한다.
 - Android Chrome은 `beforeinstallprompt` 기반 설치 안내를 사용한다.
-- iOS Safari는 공유 메뉴의 “홈 화면에 추가” 안내를 제공한다.
+- iOS Safari는 공유 메뉴의 "홈 화면에 추가" 안내를 제공한다.
 
-## Phase 5: 배포/검증
+## Phase 5: 배포/백업/복원
 
-- Netlify/Vercel 배포
-- 실제 모바일 테스트
-- README 배포 가이드
-- 백업/복원
-- 회귀 테스트 체크리스트
+- Netlify/Vercel 배포 설정
+- 실제 모바일 URL 테스트
+- QR 접속 테스트
+- 배포 README 정리
+- 백업/복원 UX
+- localStorage-only 리스크 완화
+
+## Phase 6: 프라이버시, 앱 잠금, 브랜딩 개선
+
+- 본문/금액/거래내역 가독성 개선
+- 숫자 tabular-nums 적용
+- PWA 홈 화면 아이콘과 apple-touch-icon 보강
+- 4~6자리 PIN 기반 로컬 앱 잠금
+- PIN salt/hash 저장
+- 잠금 화면과 설정 화면 추가
+- localStorage 프라이버시 모델과 보안 한계 문서화
+
+### Phase 6 보안 정책
+
+- 앱 잠금은 서버 로그인이 아니라 같은 기기에서 화면 노출을 줄이는 로컬 잠금이다.
+- PIN은 평문으로 저장하지 않는다.
+- 앱 잠금 설정은 백업 대상에서 제외한다.
+- 고급 공격자, DevTools, localStorage 직접 조작, 기기 탈취, 백업 파일 유출까지 완벽하게 막지는 못한다.
+- 비트코인 시드, 개인키, 거래소 API 키, 은행 정보는 앱에 저장하지 않는다.
+
+## Phase 7 후보
+
+- localStorage 데이터 암호화
+- 클라우드 동기화 검토
+- 배포 후 버그 수정
+- UI polish
+- 접근성 개선
+- 가격 stale 상태 UX 개선

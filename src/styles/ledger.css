@@ -88,7 +88,7 @@
 .ldg-app-name {
   font-size: 20px;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   margin-top: 2px;
 }
 .ldg-block {
@@ -198,8 +198,9 @@
 .ldg-balance-main {
   font-size: 34px;
   font-weight: 600;
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
   margin-top: 6px;
+  font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
 }
 .ldg-balance-sub {
@@ -218,8 +219,9 @@
 .ldg-inout-main {
   font-size: 17px;
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   margin-top: 6px;
+  font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
 }
 .ldg-inout-main.pos {
@@ -272,8 +274,9 @@
 .ldg-price-val {
   font-size: 14px;
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
   margin-top: 4px;
+  font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
 }
 .ldg-price-val.mono {
@@ -447,7 +450,7 @@
 .ldg-txn-title {
   font-size: 14px;
   font-weight: 500;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -465,7 +468,8 @@
 .ldg-txn-main {
   font-size: 14px;
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
 }
 .ldg-txn-main.pos {

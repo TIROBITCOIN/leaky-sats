@@ -11,27 +11,30 @@ import SettingsPage from "./components/settings/SettingsPage";
 import UndoToast from "./components/common/UndoToast";
 import OfflineBadge from "./components/pwa/OfflineBadge";
 import InstallPrompt from "./components/pwa/InstallPrompt";
+import AppLockGate from "./components/security/AppLockGate";
 
 export default function App() {
   return (
     <LedgerProvider>
       <BrowserRouter>
-        <PageContainer>
-          <div className="app-main">
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/add" element={<TransactionEntryPage />} />
-              <Route path="/transactions" element={<TxnListPage />} />
-              <Route path="/stats" element={<StatsPage />} />
-              <Route path="/assets" element={<AssetsPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-            </Routes>
-          </div>
-          <TabBar />
-          <OfflineBadge />
-          <InstallPrompt />
-          <UndoToast />
-        </PageContainer>
+        <AppLockGate>
+          <PageContainer>
+            <div className="app-main">
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/add" element={<TransactionEntryPage />} />
+                <Route path="/transactions" element={<TxnListPage />} />
+                <Route path="/stats" element={<StatsPage />} />
+                <Route path="/assets" element={<AssetsPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+              </Routes>
+            </div>
+            <TabBar />
+            <OfflineBadge />
+            <InstallPrompt />
+            <UndoToast />
+          </PageContainer>
+        </AppLockGate>
       </BrowserRouter>
     </LedgerProvider>
   );
