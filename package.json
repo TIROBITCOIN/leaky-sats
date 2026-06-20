@@ -2,6 +2,7 @@
   "name": "my-ledger",
   "private": true,
   "version": "0.1.0",
+  "description": "Mobile-first PWA ledger for Korean Bitcoiners",
   "type": "module",
   "scripts": {
     "dev": "vite",
