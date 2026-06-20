@@ -44,6 +44,16 @@
 - 오프라인 기본 동작
 - 모바일 터치 UX 정리
 
+### Phase 4 PWA 정책
+
+- 이 프로젝트는 앱스토어 앱이 아니라 모바일 브라우저에서 설치 가능한 PWA다.
+- 첫 접속 후 service worker가 앱 shell을 캐시한다.
+- 오프라인에서도 localStorage 거래 데이터는 유지된다.
+- 외부 BTC/FX 시세 API는 service worker가 강하게 캐싱하지 않는다.
+- 시세 API 실패 또는 오프라인 상태는 앱의 fallback/stale UI로 표현한다.
+- Android Chrome은 `beforeinstallprompt` 기반 설치 안내를 사용한다.
+- iOS Safari는 공유 메뉴의 “홈 화면에 추가” 안내를 제공한다.
+
 ## Phase 5: 배포/검증
 
 - Netlify/Vercel 배포

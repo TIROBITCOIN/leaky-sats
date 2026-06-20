@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192" role="img" aria-label="My Ledger">
+  <rect width="192" height="192" rx="42" fill="#0a0a0a"/>
+  <circle cx="96" cy="96" r="72" fill="#f7931a" opacity="0.14"/>
+  <path d="M104 20 54 109h38l-8 63 55-95h-39l4-57Z" fill="#f7931a"/>
+  <path d="M93 52h22c15 0 24 8 24 20 0 9-5 16-13 19 10 3 16 11 16 23 0 15-11 25-29 25H76V52h17Zm0 16v18h17c8 0 12-3 12-9s-4-9-12-9H93Zm0 34v21h20c8 0 13-4 13-11s-5-10-14-10H93Z" fill="#0a0a0a"/>
+</svg>
