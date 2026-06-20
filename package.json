@@ -17,7 +17,8 @@
     "verify:branding": "node verify-branding.mjs",
     "verify:mobile": "node verify-mobile-polish.mjs",
     "verify:sell": "node verify-sell-calculator.mjs",
-    "verify:unit": "node verify-bitcoin-unit.mjs"
+    "verify:unit": "node verify-bitcoin-unit.mjs",
+    "verify:sell-records": "node verify-btc-sell-records.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

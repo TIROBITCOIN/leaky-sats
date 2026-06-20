@@ -26,8 +26,8 @@ assert.match(sellCard, /unit.*BtcUnit/, "SellNeededCard accepts unit prop");
 const homePage = readFileSync("src/components/home/HomePage.tsx", "utf8");
 assert.match(homePage, /loadBtcUnit/, "HomePage imports loadBtcUnit");
 assert.match(homePage, /btcUnit/, "HomePage has btcUnit state");
-assert.match(homePage, /BalanceCard.*unit=/, "HomePage passes unit to BalanceCard");
-assert.match(homePage, /SellNeededCard.*unit=/, "HomePage passes unit to SellNeededCard");
+assert.match(homePage, /BalanceCard[\s\S]*?unit=/, "HomePage passes unit to BalanceCard");
+assert.match(homePage, /SellNeededCard[\s\S]*?unit=/, "HomePage passes unit to SellNeededCard");
 
 // 6. HomePage refreshes btcUnit on visibility/focus
 assert.match(homePage, /setBtcUnit\(loadBtcUnit/, "HomePage refreshes btcUnit on visibility change");

@@ -4,6 +4,8 @@ export interface SellResult {
   incomeKrw: number;
   expenseKrw: number;
   netKrw: number;
+  totalDeficitKrw: number;
+  confirmedCoverageKrw: number;
   deficitKrw: number;
   sellBtc: number;
   sellSats: number;
@@ -57,14 +59,18 @@ export function calculateSellNeeded({
   expenseKrw,
   btcKrw,
   heldBtc,
+  confirmedCoverageKrw = 0,
 }: {
   incomeKrw: number;
   expenseKrw: number;
   btcKrw: number;
   heldBtc: number;
+  confirmedCoverageKrw?: number;
 }): SellResult {
   const netKrw = incomeKrw - expenseKrw;
-  const deficitKrw = netKrw < 0 ? Math.abs(netKrw) : 0;
+  const totalDeficitKrw = netKrw < 0 ? Math.abs(netKrw) : 0;
+  const safeCoverage = Number.isFinite(confirmedCoverageKrw) && confirmedCoverageKrw > 0 ? confirmedCoverageKrw : 0;
+  const deficitKrw = Math.max(0, totalDeficitKrw - safeCoverage);
 
   const safeBtcKrw = Number.isFinite(btcKrw) && btcKrw > 0 ? btcKrw : 0;
   const safeHeld = Number.isFinite(heldBtc) && heldBtc >= 0 ? heldBtc : 0;
@@ -79,6 +85,8 @@ export function calculateSellNeeded({
     incomeKrw,
     expenseKrw,
     netKrw,
+    totalDeficitKrw,
+    confirmedCoverageKrw: safeCoverage,
     deficitKrw,
     sellBtc: Number.isFinite(sellBtc) ? sellBtc : 0,
     sellSats: Number.isFinite(sellSats) ? sellSats : 0,

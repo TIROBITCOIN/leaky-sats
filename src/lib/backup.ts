@@ -3,11 +3,15 @@ const BACKUP_VERSION = 1;
 const TXNS_KEY = "myledger.txns.v1";
 const CATEGORIES_KEY = "myledger.categories.v1";
 const HELD_BTC_KEY = "myledger.heldBtc.v1";
+const DISPLAY_UNIT_KEY = "myledger.displayUnit.v1";
+const BTC_SELL_RECORDS_KEY = "myledger.btcSellRecords.v1";
 
 export const BACKUP_KEYS = {
   txns: TXNS_KEY,
   categories: CATEGORIES_KEY,
   heldBtc: HELD_BTC_KEY,
+  displayUnit: DISPLAY_UNIT_KEY,
+  btcSellRecords: BTC_SELL_RECORDS_KEY,
 } as const;
 
 export interface BackupPayload {
@@ -18,6 +22,8 @@ export interface BackupPayload {
     [TXNS_KEY]: unknown;
     [CATEGORIES_KEY]: unknown;
     [HELD_BTC_KEY]?: unknown;
+    [DISPLAY_UNIT_KEY]?: unknown;
+    [BTC_SELL_RECORDS_KEY]?: unknown;
   };
 }
 
@@ -48,6 +54,8 @@ export function createBackupPayload(): BackupPayload {
       [TXNS_KEY]: readParsedStorage(TXNS_KEY, { txns: [], nextTxnId: Date.now() }),
       [CATEGORIES_KEY]: readParsedStorage(CATEGORIES_KEY, []),
       [HELD_BTC_KEY]: localStorage.getItem(HELD_BTC_KEY) ?? "0",
+      [DISPLAY_UNIT_KEY]: localStorage.getItem(DISPLAY_UNIT_KEY) ?? "BTC",
+      [BTC_SELL_RECORDS_KEY]: readParsedStorage(BTC_SELL_RECORDS_KEY, []),
     },
   };
 }
@@ -96,5 +104,11 @@ export function restoreBackupPayload(payload: BackupPayload) {
   localStorage.setItem(CATEGORIES_KEY, JSON.stringify(payload.data[CATEGORIES_KEY]));
   if (HELD_BTC_KEY in payload.data && payload.data[HELD_BTC_KEY] != null) {
     localStorage.setItem(HELD_BTC_KEY, String(payload.data[HELD_BTC_KEY]));
+  }
+  if (DISPLAY_UNIT_KEY in payload.data && payload.data[DISPLAY_UNIT_KEY] != null) {
+    localStorage.setItem(DISPLAY_UNIT_KEY, String(payload.data[DISPLAY_UNIT_KEY]));
+  }
+  if (BTC_SELL_RECORDS_KEY in payload.data && payload.data[BTC_SELL_RECORDS_KEY] != null) {
+    localStorage.setItem(BTC_SELL_RECORDS_KEY, JSON.stringify(payload.data[BTC_SELL_RECORDS_KEY]));
   }
 }

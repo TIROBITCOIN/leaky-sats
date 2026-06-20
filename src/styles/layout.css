@@ -249,3 +249,112 @@
     transform: translateY(0);
   }
 }
+
+/* ---- Modal ---- */
+.ldg-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  padding: 16px;
+}
+
+.ldg-modal-content {
+  width: min(100%, 400px);
+  max-height: calc(100dvh - 64px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid rgba(247, 147, 26, 0.25);
+  border-radius: 18px;
+  background: rgba(20, 20, 20, 0.96);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+}
+
+.ldg-modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.ldg-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ldg-modal-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ldg-fg-3);
+}
+
+.ldg-modal-readonly {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ldg-fg-2);
+  padding: 10px 0;
+}
+
+.ldg-modal-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ldg-fg-2);
+  cursor: pointer;
+}
+
+.ldg-modal-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--ldg-orange);
+}
+
+.ldg-modal-error {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ldg-neg);
+}
+
+.ldg-modal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+/* ---- Sell record rows ---- */
+.ldg-sell-record-row {
+  padding: 6px 0;
+  border-bottom: 0.5px solid var(--ldg-border);
+}
+.ldg-sell-record-row:last-child {
+  border-bottom: 0;
+}
+.ldg-sell-record-date {
+  font-size: 11px;
+  color: var(--ldg-fg-3);
+}
+.ldg-sell-record-detail {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+.ldg-sell-record-krw {
+  color: var(--ldg-fg-3);
+  font-weight: 500;
+}
+.ldg-sell-record-rate {
+  font-size: 10px;
+  color: var(--ldg-fg-4);
+  margin-top: 1px;
+}

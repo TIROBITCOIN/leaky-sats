@@ -13,6 +13,7 @@
 .ldg-tab {
   background: none;
   border: 0;
+  text-decoration: none;
   color: var(--ldg-fg-3);
   display: flex;
   flex-direction: column;
