@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "verify:persist": "node verify-persist.mjs"
+    "verify:persist": "node verify-persist.mjs",
+    "verify:calc": "node verify-calculations.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
