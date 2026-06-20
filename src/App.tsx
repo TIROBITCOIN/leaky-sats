@@ -9,6 +9,8 @@ import StatsPage from "./components/stats/StatsPage";
 import AssetsPage from "./components/assets/AssetsPage";
 import SettingsPage from "./components/settings/SettingsPage";
 import UndoToast from "./components/common/UndoToast";
+import OfflineBadge from "./components/pwa/OfflineBadge";
+import InstallPrompt from "./components/pwa/InstallPrompt";
 
 export default function App() {
   return (
@@ -26,6 +28,8 @@ export default function App() {
             </Routes>
           </div>
           <TabBar />
+          <OfflineBadge />
+          <InstallPrompt />
           <UndoToast />
         </PageContainer>
       </BrowserRouter>

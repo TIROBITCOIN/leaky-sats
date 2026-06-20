@@ -9,7 +9,8 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "verify:persist": "node verify-persist.mjs",
-    "verify:calc": "node verify-calculations.mjs"
+    "verify:calc": "node verify-calculations.mjs",
+    "verify:pwa": "node verify-pwa.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

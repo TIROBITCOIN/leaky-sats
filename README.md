@@ -26,7 +26,7 @@ My Ledger는 한국 비트코이너가 원화 수입과 지출을 기록하고, 
 - localStorage
 - 모바일 우선 웹앱/PWA
 
-이 프로젝트는 현재 React Native 모바일 앱으로 전환하지 않습니다. Phase 1 기준의 제품 방향은 **Vite + React + TypeScript + localStorage 기반 모바일 우선 PWA MVP**입니다.
+이 프로젝트는 현재 React Native 모바일 앱으로 전환하지 않습니다. Phase 4 기준의 제품 방향은 **Vite + React + TypeScript + localStorage 기반 모바일 우선 PWA MVP**입니다.
 
 ## 현재 MVP 범위
 
@@ -38,6 +38,8 @@ My Ledger는 한국 비트코이너가 원화 수입과 지출을 기록하고, 
 - 카테고리 관리
 - 통계
 - 자산 탭
+- PWA 설치
+- 기본 오프라인 앱 shell
 
 ## MVP 제외 범위
 
@@ -58,6 +60,40 @@ npm install
 npm run dev
 npm run build
 ```
+
+## PWA 설치 방법
+
+이 앱은 앱스토어 앱이 아니라 모바일 브라우저에서 설치 가능한 PWA입니다.
+
+- Android Chrome: 앱 접속 후 브라우저 메뉴 또는 화면의 설치 안내에서 설치합니다.
+- iOS Safari: 공유 버튼을 누른 뒤 “홈 화면에 추가”를 선택합니다.
+- 데스크톱 Chrome/Edge: 주소창 설치 아이콘이 보이면 설치할 수 있습니다.
+
+## 오프라인 동작 범위
+
+- 첫 접속 후 service worker가 앱 shell을 캐시합니다.
+- 오프라인에서도 localStorage에 저장된 거래 데이터는 유지됩니다.
+- 시세 API는 온라인 상태에서만 갱신됩니다.
+- 오프라인 또는 시세 실패 시 가격 위젯은 기존 fallback/stale 상태를 사용합니다.
+- 외부 Upbit/Binance/FX API 응답은 service worker가 강하게 캐싱하지 않습니다.
+
+## 검증
+
+```bash
+npm run build
+npm run verify:persist
+npm run verify:calc
+npm run verify:pwa
+```
+
+PWA 수동 확인은 production build 기준으로 진행합니다.
+
+```bash
+npm run build
+npm run preview
+```
+
+브라우저 DevTools의 Application 탭에서 Manifest와 Service Worker를 확인하고, 오프라인 모드에서 새로고침해 앱 shell이 뜨는지 확인합니다.
 
 ## 배포 방향
 
