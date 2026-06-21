@@ -21,7 +21,8 @@
     "verify:sell-records": "node verify-btc-sell-records.mjs",
     "verify:month": "node verify-month-navigation.mjs",
     "verify:terminology": "node verify-terminology.mjs",
-    "verify:major-items": "node verify-major-items.mjs"
+    "verify:major-items": "node verify-major-items.mjs",
+    "verify:calendar-ui": "node verify-calendar-ui.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

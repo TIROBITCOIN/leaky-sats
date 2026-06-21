@@ -19,14 +19,16 @@ assert.match(homePage, /setSelectedMonth/, "HomePage has setSelectedMonth");
 const headerSrc = readFileSync("src/components/home/LedgerHeader.tsx", "utf8");
 assert.match(headerSrc, /selectedMonth/, "LedgerHeader accepts selectedMonth");
 
-// 4. getCurrentMonthKey used as the default when no month is selected, selectedMonth for calculations
-// Phase 10: selectedMonth moved from local useState to a ?month= URL search param so the entry
-// screen (and the tab bar) can read which month Home was showing, but it still falls back to
-// getCurrentMonthKey() when no/invalid month param is present.
+// 4. getCurrentMonthKey used as the default when no month is selected, selectedMonth for calculations.
+// Phase 10: selectedMonth moved from local useState to a ?month= URL search param.
+// Phase 11: that logic now lives in the shared src/lib/useSelectedMonth.ts hook (used by both
+// HomePage and StatsPage) instead of being duplicated inline in each page component.
+assert.match(homePage, /useSelectedMonth/, "HomePage uses the shared useSelectedMonth hook");
+const useSelectedMonthSrc = readFileSync("src/lib/useSelectedMonth.ts", "utf8");
 assert.match(
-  homePage,
+  useSelectedMonthSrc,
   /selectedMonth = isValidMonthKey\(monthParam\) \? monthParam : getCurrentMonthKey\(\)/,
-  "selectedMonth defaults to getCurrentMonthKey when no month param is present"
+  "useSelectedMonth defaults to getCurrentMonthKey when no month param is present"
 );
 assert.match(homePage, /anchorDate.*=.*monthKeyToAnchorDate\(selectedMonth\)/, "anchorDate derived from selectedMonth");
 
@@ -48,11 +50,16 @@ const modalSrc = readFileSync("src/components/home/SellConfirmModal.tsx", "utf8"
 assert.match(modalSrc, /selectedMonth/, "SellConfirmModal accepts selectedMonth");
 assert.match(modalSrc, /month: selectedMonth/, "SellConfirmModal saves record with selectedMonth");
 
-// 9. UI has prev/next month buttons
-assert.match(headerSrc, /onPrevMonth/, "LedgerHeader has onPrevMonth");
-assert.match(headerSrc, /onNextMonth/, "LedgerHeader has onNextMonth");
-assert.match(headerSrc, /이전 달|〈/, "prev button exists in header");
-assert.match(headerSrc, /다음 달|〉/, "next button exists in header");
+// 9. UI has prev/next month buttons.
+// Phase 11: the small inline 〈/〉 buttons that used to live directly in LedgerHeader moved into
+// the shared MonthSelector component (src/components/common/MonthSelector.tsx), which
+// LedgerHeader now renders instead of its own buttons.
+assert.match(headerSrc, /MonthSelector/, "LedgerHeader renders the shared MonthSelector");
+const monthSelectorSrc = readFileSync("src/components/common/MonthSelector.tsx", "utf8");
+assert.match(monthSelectorSrc, /이전 달|〈/, "prev button exists in MonthSelector");
+assert.match(monthSelectorSrc, /다음 달|〉/, "next button exists in MonthSelector");
+assert.match(monthSelectorSrc, /getPreviousMonthKey/, "MonthSelector moves to the previous month");
+assert.match(monthSelectorSrc, /getNextMonthKey/, "MonthSelector moves to the next month");
 
 // 10. NaN/Infinity defense maintained
 const sellCalcSrc = readFileSync("src/lib/sellCalculator.ts", "utf8");

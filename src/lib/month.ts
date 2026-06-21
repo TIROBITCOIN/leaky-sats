@@ -73,3 +73,31 @@ export function monthKeyToDatetimeLocal(monthKey: string): string {
     d.getMinutes()
   )}`;
 }
+
+/** "YYYY-MM-DD" key from a Date — 통계 달력에서 날짜를 묶는 키로 쓴다. */
+export function dateKeyFromDate(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+/** "YYYY-MM-DD" key from an ISO datetime string (Txn.date 형식) */
+export function dateKeyFromIso(iso: string): string {
+  return dateKeyFromDate(new Date(iso));
+}
+
+/** "YYYY-MM-DD" key for today */
+export function getTodayDateKey(): string {
+  return dateKeyFromDate(new Date());
+}
+
+/** "YYYY-MM" 월의 일수 */
+export function getDaysInMonth(monthKey: string): number {
+  const [y, m] = monthKey.split("-").map(Number);
+  return new Date(y, m, 0).getDate();
+}
+
+/** "YYYY-MM" 월 1일의 요일(0=일 ~ 6=토) — 달력 grid의 앞쪽 빈 칸 수로 쓴다. */
+export function getFirstWeekdayOfMonth(monthKey: string): number {
+  const [y, m] = monthKey.split("-").map(Number);
+  return new Date(y, m - 1, 1).getDay();
+}
