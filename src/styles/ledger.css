@@ -394,13 +394,6 @@
   font-weight: 500;
 }
 
-/* ---- Chart (자산 탭 누적 sats 추이에서 재사용) ---- */
-.ldg-chart {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-
 /* ---- Calendar month view (통계, Phase 11) ---- */
 .ldg-calendar-summary {
   display: grid;

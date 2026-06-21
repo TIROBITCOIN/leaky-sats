@@ -43,18 +43,24 @@ assert.match(combined, /BTC 판매 확정/, "'BTC 판매 확정' label is presen
 // Phase 12: "BTC 판매 합계" → "{년}년 판매한 비트코인" 형태로 바뀌었다.
 assert.match(combined, /판매한 비트코인/, "'판매한 비트코인' label is present");
 
-// 7. "BTC 구매" 문구 존재
-assert.match(combined, /BTC 구매/, "'BTC 구매' label is present");
+// 7. "BTC 구매" 문구 존재.
+// Phase 13.1: 자산 탭(AssetsPage.tsx)이 제거되면서 "BTC 구매" 하드코딩 문구는 더 이상
+// src/components에 없다 — 실제로는 src/lib/categories.ts·majorItems.ts의 카테고리/큰 항목 라벨이
+// CategoryGroupPicker, TransactionEntryPage 등에서 동적으로 렌더링된다. 그래서 두 데이터 파일도
+// 함께 검사한다.
+const categoriesSrc = readFileSync(join(root, "src/lib/categories.ts"), "utf8");
+const majorItemsSrc = readFileSync(join(root, "src/lib/majorItems.ts"), "utf8");
+const combinedWithLabels = combined + categoriesSrc + majorItemsSrc;
+assert.match(combinedWithLabels, /BTC 구매/, "'BTC 구매' label is present");
 
 // 8. "BTC 판매" 문구 존재
-assert.match(combined, /BTC 판매/, "'BTC 판매' label is present");
+assert.match(combinedWithLabels, /BTC 판매/, "'BTC 판매' label is present");
 
 // 9. 내부 localStorage key는 변경되지 않았는지
 const sellRecordsSrc = readFileSync(join(root, "src/lib/btcSellRecords.ts"), "utf8");
 assert.match(sellRecordsSrc, /myledger\.btcSellRecords\.v1/, "btcSellRecords localStorage key is unchanged");
 
 // 10. 내부 id btc_buy/btc_sell 및 invest 그룹/protected 처리가 유지되는지
-const categoriesSrc = readFileSync(join(root, "src/lib/categories.ts"), "utf8");
 assert.match(categoriesSrc, /id:\s*"btc_buy"/, "btc_buy id is preserved");
 assert.match(categoriesSrc, /id:\s*"btc_sell"/, "btc_sell id is preserved");
 assert.match(categoriesSrc, /group:\s*"invest"/, "invest group handling is preserved");

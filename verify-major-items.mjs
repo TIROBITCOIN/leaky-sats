@@ -137,9 +137,13 @@ for (const key of expectedKeys) {
 
 // 15. verify:terminology가 깨지지 않도록 동일한 핵심 조건을 다시 확인
 // Phase 12: "판매 필요 BTC" → "판매해야 하는 비트코인", "BTC 판매 반영" → "BTC 판매 확정"으로 재명명.
-assert.match(combinedComponents, /판매해야 하는 비트코인/, "판매해야 하는 비트코인 label still present");
-assert.match(combinedComponents, /BTC 판매 확정/, "BTC 판매 확정 label still present");
-assert.match(combinedComponents, /BTC 구매/, "BTC 구매 label still present");
-assert.match(combinedComponents, /BTC 판매/, "BTC 판매 label still present");
+// Phase 13.1: 자산 탭(AssetsPage.tsx) 제거로 "BTC 구매" 하드코딩 문구가 src/components에서 사라졌다 —
+// 실제로는 categories.ts/majorItems.ts의 라벨이 CategoryGroupPicker/TransactionEntryPage 등에서
+// 동적으로 렌더링되므로 두 데이터 파일도 함께 검사한다.
+const combinedWithLabels = combinedComponents + categoriesSrc + majorItemsSrc;
+assert.match(combinedWithLabels, /판매해야 하는 비트코인/, "판매해야 하는 비트코인 label still present");
+assert.match(combinedWithLabels, /BTC 판매 확정/, "BTC 판매 확정 label still present");
+assert.match(combinedWithLabels, /BTC 구매/, "BTC 구매 label still present");
+assert.match(combinedWithLabels, /BTC 판매/, "BTC 판매 label still present");
 
 console.log("verify:major-items passed");

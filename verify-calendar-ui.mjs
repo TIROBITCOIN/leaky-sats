@@ -89,8 +89,13 @@ assert.doesNotMatch(statsPageSrc, /ldg-range/, "StatsPage no longer uses the old
 // 15. 기존 "구매/판매" 용어가 유지되는지 확인 (매수/매도 재도입 금지)
 assert.doesNotMatch(combinedComponents, /BTC 매수/, "BTC 매수 not reintroduced");
 assert.doesNotMatch(combinedComponents, /BTC 매도/, "BTC 매도 not reintroduced");
-assert.match(combinedComponents, /BTC 구매/, "BTC 구매 label still present");
-assert.match(combinedComponents, /BTC 판매/, "BTC 판매 label still present");
+// Phase 13.1: 자산 탭(AssetsPage.tsx) 제거로 "BTC 구매" 하드코딩 문구가 src/components에서 사라졌다 —
+// categories.ts/majorItems.ts의 라벨이 다른 화면에서 동적으로 렌더링되므로 함께 검사한다.
+const categoriesSrcForTerms = read("src/lib/categories.ts");
+const majorItemsSrcForTerms = read("src/lib/majorItems.ts");
+const combinedWithLabels = combinedComponents + categoriesSrcForTerms + majorItemsSrcForTerms;
+assert.match(combinedWithLabels, /BTC 구매/, "BTC 구매 label still present");
+assert.match(combinedWithLabels, /BTC 판매/, "BTC 판매 label still present");
 
 // 16. 기존 localStorage key가 변경되지 않았는지 확인
 const expectedKeys = [
