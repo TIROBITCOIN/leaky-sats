@@ -14,6 +14,7 @@ import {
   listBtcSellRecordsByMonth,
 } from "../../lib/btcSellRecords";
 import LightningOverlay from "../lightning/LightningOverlay";
+import MonthSelector from "../common/MonthSelector";
 import Slogan from "./Slogan";
 import LedgerHeader from "./LedgerHeader";
 import CurrencyToggle from "./CurrencyToggle";
@@ -108,9 +109,12 @@ export default function HomePage() {
       <div className="ldg-screen">
         <div className="ldg-content">
           <Slogan />
-          <LedgerHeader d={data} walletName={walletName} selectedMonth={selectedMonth} onChangeMonth={setSelectedMonth} />
+          <LedgerHeader d={data} walletName={walletName} />
           <CurrencyToggle value={currency} onChange={setCurrency} />
           <BalanceCard d={data} heldBtc={heldBtc} unit={btcUnit} />
+          <div className="ldg-home-month-selector">
+            <MonthSelector selectedMonth={selectedMonth} onChangeMonth={setSelectedMonth} />
+          </div>
           <InOutCards d={data} currency={currency} />
           <SellNeededCard
             result={sellResult}

@@ -41,11 +41,13 @@ assert.match(monthSelectorSrc, /setPickerOpen\(true\)/, "clicking the month labe
 assert.match(monthPickerSrc, /length:\s*12/, "MonthPickerModal builds a 12-month list");
 assert.match(monthPickerSrc, /\{m\}월/, "MonthPickerModal renders M월 labels for each month");
 
-// 6. HomePage가 새 MonthSelector를 사용 (LedgerHeader를 통해 렌더링)
+// 6. HomePage가 새 MonthSelector를 직접 사용하는지.
+// Phase 11.1: 월 선택 UI는 보유 BTC 카드 아래로 옮겨져 HomePage가 직접 렌더링한다 — LedgerHeader는
+// 더 이상 MonthSelector를 렌더링할 책임이 없다(렌더링하지 않아도 검증을 통과해야 한다).
 const homePageSrc = read("src/components/home/HomePage.tsx");
 const headerSrc = read("src/components/home/LedgerHeader.tsx");
 assert.match(homePageSrc, /LedgerHeader/, "HomePage renders LedgerHeader");
-assert.match(headerSrc, /MonthSelector/, "LedgerHeader renders MonthSelector");
+assert.match(homePageSrc, /<MonthSelector\s+selectedMonth={selectedMonth}/, "HomePage renders MonthSelector directly");
 
 // 7. StatsPage가 새 MonthSelector를 사용
 const statsPageSrc = read("src/components/stats/StatsPage.tsx");
