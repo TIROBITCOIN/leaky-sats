@@ -6,12 +6,20 @@ import { formatUpdatedAt, getPriceTone } from "../../lib/priceStatus";
 import { loadWalletName, saveWalletName, DEFAULT_NAME, MAX_LENGTH } from "../../lib/walletName";
 import { loadBtcUnit, saveBtcUnit, type BtcUnit } from "../../lib/format";
 import { getHeldBtc, setHeldBtc, normalizeHeldBtcInput } from "../../lib/heldBtc";
+import { loadSettlementDay, saveSettlementDay, getSettlementPeriod } from "../../lib/settlement";
+import { getCurrentMonthKey } from "../../lib/month";
 import AppLockSettings from "../security/AppLockSettings";
 import CategoryManager from "./CategoryManager";
 import BackupRestoreCard from "./BackupRestoreCard";
 
 const UNITS = ["BTC", "sats"] as const;
 const SOURCES = ["Upbit", "Binance"] as const;
+const SETTLEMENT_DAYS = Array.from({ length: 28 }, (_, i) => i + 1);
+
+function formatFullDate(dateKeyStr: string): string {
+  const [y, m, d] = dateKeyStr.split("-").map(Number);
+  return `${y}년 ${m}월 ${d}일`;
+}
 const INTERVALS: { label: string; ms: number }[] = [
   { label: "30초", ms: 30_000 },
   { label: "1분", ms: 60_000 },
@@ -39,6 +47,12 @@ export default function SettingsPage() {
     return v === 0 ? "" : String(v);
   });
   const [heldBtcSaved, setHeldBtcSaved] = useState(false);
+  const [settlementDay, setSettlementDay] = useState(loadSettlementDay);
+
+  const currentMonthKey = getCurrentMonthKey();
+  const currentPeriod = getSettlementPeriod(currentMonthKey, settlementDay);
+  const examplePeriod = getSettlementPeriod(currentMonthKey, 17);
+  const [exampleY, exampleM] = currentMonthKey.split("-").map(Number);
 
   const priceTone = getPriceTone(priceStatus, isPriceFallback);
   const updatedAtText = formatUpdatedAt(priceUpdatedAt);
@@ -244,6 +258,33 @@ export default function SettingsPage() {
           {heldBtcSaved && (
             <div className="ldg-backup-status ok" style={{ marginTop: 8 }}>저장되었습니다.</div>
           )}
+        </div>
+
+        <div className="ldg-card">
+          <div className="ldg-setting-label">정산 기준일</div>
+          <div className="ldg-setting-desc" style={{ marginBottom: 10 }}>
+            매월 선택한 날짜부터 다음 달 전날까지를 한 정산기간으로 계산합니다.
+            <br />
+            예: 정산 기준일이 17일이면, {exampleY}년 {exampleM}월 정산기간은 {formatFullDate(examplePeriod.startDate)} ~{" "}
+            {formatFullDate(examplePeriod.endDate)}입니다.
+          </div>
+          <select
+            className="ldg-select"
+            value={settlementDay}
+            onChange={(e) => {
+              const day = saveSettlementDay(Number(e.target.value));
+              setSettlementDay(day);
+            }}
+          >
+            {SETTLEMENT_DAYS.map((d) => (
+              <option key={d} value={d}>
+                {d}일
+              </option>
+            ))}
+          </select>
+          <div className="ldg-balance-sub" style={{ marginTop: 8 }}>
+            현재 정산기간: {currentPeriod.rangeLabel} ({currentPeriod.label})
+          </div>
         </div>
 
         <CategoryManager />

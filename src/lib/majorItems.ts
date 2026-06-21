@@ -9,7 +9,7 @@ export interface MajorItem {
   id: string;
   label: string;
   flow: MajorItemFlow;
-  /** 매핑되는 카테고리 id. "BTC 판매 반영"처럼 일반 거래가 아닌 항목은 비워둔다. */
+  /** 매핑되는 카테고리 id. "BTC 판매 확정"처럼 일반 거래가 아닌 항목은 비워둔다. */
   categoryId?: string;
   categoryLabel?: string;
   /** false면 세부 입력 필드를 보여주지 않는다(예: BTC 구매). 기본값은 true로 취급. */
@@ -18,7 +18,7 @@ export interface MajorItem {
   amountLabel?: string;
   placeholder?: string;
   protected?: boolean;
-  /** true면 일반 거래 입력 대신 기존 BTC 판매 반영(SellConfirmModal) 흐름을 연다. */
+  /** true면 일반 거래 입력 대신 기존 BTC 판매 확정(SellConfirmModal) 흐름을 연다. */
   opensSellConfirm?: boolean;
 }
 
@@ -181,7 +181,7 @@ export const BTC_MAJOR_ITEMS: MajorItem[] = [
   },
   {
     id: "btc_sell_confirm",
-    label: "BTC 판매 반영",
+    label: "BTC 판매 확정",
     flow: "btc",
     requiresDetail: false,
     protected: true,

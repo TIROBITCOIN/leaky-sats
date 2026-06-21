@@ -56,7 +56,7 @@ assert.match(balanceCard, /보유 BTC/, "BalanceCard shows 보유 BTC");
 // 10. Home screen has sell-needed card
 assert.ok(existsSync("src/components/home/SellNeededCard.tsx"), "SellNeededCard exists");
 const sellCard = readFileSync("src/components/home/SellNeededCard.tsx", "utf8");
-assert.match(sellCard, /판매 필요 BTC/, "SellNeededCard shows 판매 필요 BTC");
+assert.match(sellCard, /판매해야 하는 비트코인/, "SellNeededCard shows 판매해야 하는 비트코인");
 assert.match(homePage, /SellNeededCard/, "HomePage includes SellNeededCard");
 
 // 11. backup.ts includes heldBtc key

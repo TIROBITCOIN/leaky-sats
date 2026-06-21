@@ -17,7 +17,7 @@ export default function SellNeededCard({ result, unit, selectedMonth, onConfirmS
 
   return (
     <div className="ldg-card">
-      <div className="ldg-label">판매 필요 BTC</div>
+      <div className="ldg-label">판매해야 하는 비트코인</div>
       {noSellNeeded ? (
         <>
           <div className="ldg-inout-main pos" style={{ marginTop: 6 }}>
@@ -56,7 +56,7 @@ export default function SellNeededCard({ result, unit, selectedMonth, onConfirmS
               style={{ marginTop: 12 }}
               onClick={onConfirmSell}
             >
-              BTC 판매 반영
+              BTC 판매 확정
             </button>
           )}
         </>

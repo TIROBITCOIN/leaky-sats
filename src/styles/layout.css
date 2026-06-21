@@ -331,11 +331,18 @@
 
 /* ---- Sell record rows ---- */
 .ldg-sell-record-row {
+  position: relative;
   padding: 6px 0;
   border-bottom: 0.5px solid var(--ldg-border);
 }
 .ldg-sell-record-row:last-child {
   border-bottom: 0;
+}
+.ldg-sell-record-row .ldg-txn-menu-btn {
+  padding: 0 2px;
+}
+.ldg-sell-record-row .ldg-txn-menu {
+  top: 22px;
 }
 .ldg-sell-record-date {
   font-size: 11px;

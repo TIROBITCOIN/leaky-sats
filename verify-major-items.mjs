@@ -57,12 +57,12 @@ expenseIds.forEach((id, i) => {
   assert.match(block, /flow:\s*"expense"/, `expense item ${id} has flow expense`);
 });
 
-// 4. BTC 큰 항목 2개: BTC 구매, BTC 판매 반영
+// 4. BTC 큰 항목 2개: BTC 구매, BTC 판매 확정 (Phase 12: 반영 → 확정으로 재명명)
 const btcBuyBlock = getItemBlock("btc_buy");
 assert.match(btcBuyBlock, /label:\s*"BTC 구매"/, "btc_buy major item labeled BTC 구매");
 assert.match(btcBuyBlock, /flow:\s*"btc"/, "btc_buy major item flow is btc");
 const btcSellConfirmBlock = getItemBlock("btc_sell_confirm");
-assert.match(btcSellConfirmBlock, /label:\s*"BTC 판매 반영"/, "btc_sell_confirm major item labeled BTC 판매 반영");
+assert.match(btcSellConfirmBlock, /label:\s*"BTC 판매 확정"/, "btc_sell_confirm major item labeled BTC 판매 확정");
 
 // 5-8. detailLabel 확인
 assert.match(getItemBlock("card_bill"), /detailLabel:\s*"카드회사"/, "card_bill detailLabel is 카드회사");
@@ -136,8 +136,9 @@ for (const key of expectedKeys) {
 }
 
 // 15. verify:terminology가 깨지지 않도록 동일한 핵심 조건을 다시 확인
-assert.match(combinedComponents, /판매 필요 BTC/, "판매 필요 BTC label still present");
-assert.match(combinedComponents, /BTC 판매 반영/, "BTC 판매 반영 label still present");
+// Phase 12: "판매 필요 BTC" → "판매해야 하는 비트코인", "BTC 판매 반영" → "BTC 판매 확정"으로 재명명.
+assert.match(combinedComponents, /판매해야 하는 비트코인/, "판매해야 하는 비트코인 label still present");
+assert.match(combinedComponents, /BTC 판매 확정/, "BTC 판매 확정 label still present");
 assert.match(combinedComponents, /BTC 구매/, "BTC 구매 label still present");
 assert.match(combinedComponents, /BTC 판매/, "BTC 판매 label still present");
 

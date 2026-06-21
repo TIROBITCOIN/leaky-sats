@@ -84,9 +84,28 @@
 /* ---- Home month selector row (Phase 11.1): 보유 BTC 카드 아래, 수입/지출 카드 위 ---- */
 .ldg-home-month-selector {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   margin: 12px 0 16px;
+  gap: 4px;
+}
+
+/* ---- Stats month selector row (Phase 12): 통계 타이틀 아래, 중앙 정렬 ---- */
+.ldg-stats-month-selector {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin: 12px 0 16px;
+  gap: 4px;
+}
+
+/* ---- Settlement period range label (Phase 12): "6월 17일 ~ 7월 16일" ---- */
+.ldg-settlement-range-label {
+  font-family: var(--ldg-mono);
+  font-size: 12px;
+  color: var(--ldg-fg-3);
 }
 
 /* ---- Month selector (홈/통계 공통, Phase 11) ---- */
@@ -433,9 +452,11 @@
   border-color: var(--ldg-orange);
 }
 .ldg-calendar-date {
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 600;
   color: var(--ldg-fg);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 .ldg-calendar-amt {
   font-family: var(--ldg-mono);

@@ -1,4 +1,5 @@
 import type { CategoryDef, Txn } from "../types";
+import { dateKeyFromIso } from "./month";
 
 export interface SellResult {
   incomeKrw: number;
@@ -15,14 +16,11 @@ export interface SellResult {
   canCoverDeficit: boolean;
 }
 
-/** Filter txns to current month only */
-function filterCurrentMonth(txns: Txn[], anchorDate?: Date): Txn[] {
-  const d = anchorDate ?? new Date();
-  const year = d.getFullYear();
-  const month = d.getMonth();
+/** 정산기간(시작일~종료일, inclusive)에 속하는 거래만 남긴다. */
+function filterByPeriod(txns: Txn[], period: { startDate: string; endDate: string }): Txn[] {
   return txns.filter((t) => {
-    const td = new Date(t.date);
-    return td.getFullYear() === year && td.getMonth() === month;
+    const key = dateKeyFromIso(t.date);
+    return key >= period.startDate && key <= period.endDate;
   });
 }
 
@@ -32,17 +30,21 @@ function isInvestCategory(catId: string, categoriesById: Record<string, Category
   return cat?.group === "invest";
 }
 
-/** Calculate monthly living cashflow excluding invest (btc_buy/btc_sell) transactions */
+/**
+ * Calculate living cashflow for a settlement period, excluding invest (btc_buy/btc_sell)
+ * transactions. period는 src/lib/settlement.ts의 getSettlementPeriod() 결과를 그대로 넘기면 된다 —
+ * settlementDay가 1이면 기존처럼 달력월 전체와 동일하다.
+ */
 export function calculateMonthlyLivingCashflow(
   txns: Txn[],
   categoriesById: Record<string, CategoryDef>,
-  anchorDate?: Date
+  period: { startDate: string; endDate: string }
 ): { incomeKrw: number; expenseKrw: number } {
-  const monthTxns = filterCurrentMonth(txns, anchorDate);
+  const periodTxns = filterByPeriod(txns, period);
   let incomeKrw = 0;
   let expenseKrw = 0;
 
-  for (const t of monthTxns) {
+  for (const t of periodTxns) {
     if (isInvestCategory(t.cat, categoriesById)) continue;
     if (t.amount > 0) {
       incomeKrw += t.amount;

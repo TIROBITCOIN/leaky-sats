@@ -101,3 +101,21 @@ export function getFirstWeekdayOfMonth(monthKey: string): number {
   const [y, m] = monthKey.split("-").map(Number);
   return new Date(y, m - 1, 1).getDay();
 }
+
+/** "YYYY-MM-DD"의 요일(0=일 ~ 6=토) — 정산기간 달력의 앞쪽 빈 칸 수를 셀 때 쓴다. */
+export function getWeekdayOfDateKey(dateKeyStr: string): number {
+  const [y, m, d] = dateKeyStr.split("-").map(Number);
+  return new Date(y, m - 1, d).getDay();
+}
+
+/** startDate~endDate(둘 다 포함, "YYYY-MM-DD") 사이의 모든 날짜 키를 순서대로 반환한다. */
+export function enumerateDateKeysInRange(startDate: string, endDate: string): string[] {
+  const [sy, sm, sd] = startDate.split("-").map(Number);
+  const [ey, em, ed] = endDate.split("-").map(Number);
+  const end = new Date(ey, em - 1, ed);
+  const out: string[] = [];
+  for (let d = new Date(sy, sm - 1, sd); d <= end; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)) {
+    out.push(dateKeyFromDate(d));
+  }
+  return out;
+}

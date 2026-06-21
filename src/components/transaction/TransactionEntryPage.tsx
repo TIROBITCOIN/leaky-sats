@@ -4,7 +4,8 @@ import "../../styles/ledger.css";
 import "../../styles/forms.css";
 import { useLedger } from "../../state/LedgerContext";
 import { fmtKRW, krwToSats, nowDatetimeLocal } from "../../lib/format";
-import { isValidMonthKey, monthKeyToDatetimeLocal } from "../../lib/month";
+import { isValidMonthKey } from "../../lib/month";
+import { loadSettlementDay, getSettlementPeriod, getDefaultDatetimeLocalForPeriod } from "../../lib/settlement";
 import type { CategoryId } from "../../types";
 import CategoryGroupPicker from "./CategoryGroupPicker";
 import { MAJOR_ITEM_GROUPS, type MajorItem } from "../../lib/majorItems";
@@ -100,7 +101,10 @@ export default function TransactionEntryPage() {
   const [memo, setMemo] = useState(() => editingTxn?.memo ?? "");
   const [date, setDate] = useState(() => {
     if (editingTxn) return editingTxn.date;
-    return isValidMonthKey(monthParam) ? monthKeyToDatetimeLocal(monthParam) : nowDatetimeLocal();
+    if (!isValidMonthKey(monthParam)) return nowDatetimeLocal();
+    // 홈에서 보던 정산기간으로 들어오면, 오늘이 그 기간 안이면 오늘을, 아니면 기간 시작일을 기본값으로 쓴다.
+    const period = getSettlementPeriod(monthParam, loadSettlementDay());
+    return getDefaultDatetimeLocalForPeriod(period);
   });
 
   const selectedCategory = categories.find((c) => c.id === cat) ?? categories[0];
@@ -123,7 +127,7 @@ export default function TransactionEntryPage() {
 
   const handleSelectMajorItem = (item: MajorItem) => {
     if (item.opensSellConfirm) {
-      // BTC 판매 반영은 일반 거래 입력이 아니라 기존 SellConfirmModal/btcSellRecords 흐름을 재사용한다.
+      // BTC 판매 확정은 일반 거래 입력이 아니라 기존 SellConfirmModal/btcSellRecords 흐름을 재사용한다.
       navigate("/", { state: { openSellModal: true } });
       return;
     }

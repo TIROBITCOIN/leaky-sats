@@ -5,6 +5,7 @@ const CATEGORIES_KEY = "myledger.categories.v1";
 const HELD_BTC_KEY = "myledger.heldBtc.v1";
 const DISPLAY_UNIT_KEY = "myledger.displayUnit.v1";
 const BTC_SELL_RECORDS_KEY = "myledger.btcSellRecords.v1";
+const SETTLEMENT_DAY_KEY = "myledger.settlementDay.v1";
 
 export const BACKUP_KEYS = {
   txns: TXNS_KEY,
@@ -12,6 +13,7 @@ export const BACKUP_KEYS = {
   heldBtc: HELD_BTC_KEY,
   displayUnit: DISPLAY_UNIT_KEY,
   btcSellRecords: BTC_SELL_RECORDS_KEY,
+  settlementDay: SETTLEMENT_DAY_KEY,
 } as const;
 
 export interface BackupPayload {
@@ -24,6 +26,7 @@ export interface BackupPayload {
     [HELD_BTC_KEY]?: unknown;
     [DISPLAY_UNIT_KEY]?: unknown;
     [BTC_SELL_RECORDS_KEY]?: unknown;
+    [SETTLEMENT_DAY_KEY]?: unknown;
   };
 }
 
@@ -56,6 +59,7 @@ export function createBackupPayload(): BackupPayload {
       [HELD_BTC_KEY]: localStorage.getItem(HELD_BTC_KEY) ?? "0",
       [DISPLAY_UNIT_KEY]: localStorage.getItem(DISPLAY_UNIT_KEY) ?? "BTC",
       [BTC_SELL_RECORDS_KEY]: readParsedStorage(BTC_SELL_RECORDS_KEY, []),
+      [SETTLEMENT_DAY_KEY]: localStorage.getItem(SETTLEMENT_DAY_KEY) ?? "1",
     },
   };
 }
@@ -110,5 +114,8 @@ export function restoreBackupPayload(payload: BackupPayload) {
   }
   if (BTC_SELL_RECORDS_KEY in payload.data && payload.data[BTC_SELL_RECORDS_KEY] != null) {
     localStorage.setItem(BTC_SELL_RECORDS_KEY, JSON.stringify(payload.data[BTC_SELL_RECORDS_KEY]));
+  }
+  if (SETTLEMENT_DAY_KEY in payload.data && payload.data[SETTLEMENT_DAY_KEY] != null) {
+    localStorage.setItem(SETTLEMENT_DAY_KEY, String(payload.data[SETTLEMENT_DAY_KEY]));
   }
 }

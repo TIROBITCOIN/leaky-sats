@@ -32,7 +32,11 @@ assert.match(
   /selectedMonth = isValidMonthKey\(monthParam\) \? monthParam : getCurrentMonthKey\(\)/,
   "useSelectedMonth defaults to getCurrentMonthKey when no month param is present"
 );
-assert.match(homePage, /anchorDate.*=.*monthKeyToAnchorDate\(selectedMonth\)/, "anchorDate derived from selectedMonth");
+// Phase 12: anchorDate/monthKeyToAnchorDate was replaced by a settlement-period range
+// (src/lib/settlement.ts getSettlementPeriod), since income/expense now follow the settlement
+// day instead of the plain calendar month.
+assert.match(homePage, /period\s*=\s*getSettlementPeriod\(selectedMonth, settlementDay\)/, "period derived from selectedMonth and settlementDay");
+assert.match(homePage, /calculateMonthlyLivingCashflow\(\s*data\.txns,\s*categoriesById,\s*period,?\s*\)/, "living cashflow derived from the settlement period");
 
 // 5. SellNeededCard calculation connected via selectedMonth
 const sellCardSrc = readFileSync("src/components/home/SellNeededCard.tsx", "utf8");

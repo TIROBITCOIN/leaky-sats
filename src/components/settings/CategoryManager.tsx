@@ -1,12 +1,21 @@
 import { useState } from "react";
 import type { CategoryDef, CategoryGroup } from "../../types";
 import { useLedger } from "../../state/LedgerContext";
-import { GROUP_LABEL } from "../../lib/categories";
+import { GROUP_LABEL, BUILT_IN_CATEGORIES } from "../../lib/categories";
 import { ICONS, ICONS_BY_ID } from "../../lib/categoryIcons";
 import { hexToRgba } from "../../lib/colorUtils";
 
-const GROUP_ORDER: CategoryGroup[] = ["expense", "income", "invest"];
+const GROUP_ORDER: CategoryGroup[] = ["income", "expense", "invest"];
+// "투자"보다 사용자에게 익숙한 "BTC"로 섹션 제목만 다르게 보여준다(GROUP_LABEL은 다른 곳에서 그대로 재사용).
+const SECTION_LABEL: Record<CategoryGroup, string> = { income: "수입", expense: "지출", invest: "BTC" };
 const ADDABLE_GROUPS: Extract<CategoryGroup, "expense" | "income">[] = ["expense", "income"];
+
+// Phase 10에서 큰 항목 중심으로 정리한 기본 카테고리(BUILT_IN_CATEGORIES) id 집합을 "현재" 카테고리로
+// 본다. 여기 없는 id(식비/카페 등 예전 기본 카테고리나 사용자 커스텀 카테고리)는 삭제하지 않고
+// "이전 카테고리" 섹션에 접어서 보여준다. btc_buy/btc_sell처럼 majorItems.ts에 직접 매핑되지 않는
+// 카테고리(예: BTC 판매는 별도 판매 확정 흐름이라 categoryId가 없다)도 BUILT_IN_CATEGORIES 기준이면
+// 빠짐없이 "현재" 취급된다.
+const CURRENT_CATEGORY_IDS = new Set(BUILT_IN_CATEGORIES.map((c) => c.id));
 
 type FormMode = { kind: "add" } | { kind: "edit"; id: string };
 
@@ -32,6 +41,33 @@ function CatSwatch({ c }: { c: CategoryDef }) {
   );
 }
 
+function CategoryRow({ c, onEdit, onDelete }: { c: CategoryDef; onEdit: () => void; onDelete: () => void }) {
+  return (
+    <div className="ldg-cat-row">
+      <CatSwatch c={c} />
+      <span style={{ fontSize: 13, flex: 1, minWidth: 0 }}>{c.label}</span>
+      <div className="ldg-cat-manage-actions">
+        <button type="button" className="ldg-icon-action" onClick={onEdit} aria-label="편집">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 20h9 M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
+          </svg>
+        </button>
+        {c.protected ? (
+          <span className="ldg-tiny" style={{ padding: "0 4px" }}>
+            기본
+          </span>
+        ) : (
+          <button type="button" className="ldg-icon-action danger" onClick={onDelete} aria-label="삭제">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 7h16 M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2 M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" />
+            </svg>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function CategoryManager() {
   const { categories, data, addCategory, updateCategory, deleteCategory } = useLedger();
   const [formMode, setFormMode] = useState<FormMode | null>(null);
@@ -39,8 +75,11 @@ export default function CategoryManager() {
   const [formFg, setFormFg] = useState("#f87171");
   const [formIcon, setFormIcon] = useState("dots");
   const [formGroup, setFormGroup] = useState<"expense" | "income">("expense");
+  const [legacyOpen, setLegacyOpen] = useState(false);
 
   const categoriesById = Object.fromEntries(categories.map((c) => [c.id, c]));
+  const currentCategories = categories.filter((c) => CURRENT_CATEGORY_IDS.has(c.id));
+  const legacyCategories = categories.filter((c) => !CURRENT_CATEGORY_IDS.has(c.id));
 
   const openAdd = () => {
     setFormMode({ kind: "add" });
@@ -154,42 +193,56 @@ export default function CategoryManager() {
       )}
 
       {GROUP_ORDER.map((group) => {
-        const items = categories.filter((c) => c.group === group);
+        const items = currentCategories.filter((c) => c.group === group);
         if (items.length === 0) return null;
         return (
           <div key={group} className="ldg-cat-manage-section">
             <div className="ldg-tiny" style={{ margin: "14px 0 6px" }}>
-              {GROUP_LABEL[group].toUpperCase()} · {items.length}
+              {SECTION_LABEL[group].toUpperCase()} · {items.length}
             </div>
             <div className="ldg-cat-list">
               {items.map((c) => (
-                <div className="ldg-cat-row" key={c.id}>
-                  <CatSwatch c={c} />
-                  <span style={{ fontSize: 13, flex: 1, minWidth: 0 }}>{c.label}</span>
-                  <div className="ldg-cat-manage-actions">
-                    <button type="button" className="ldg-icon-action" onClick={() => openEdit(c)} aria-label="편집">
-                      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 20h9 M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
-                      </svg>
-                    </button>
-                    {c.protected ? (
-                      <span className="ldg-tiny" style={{ padding: "0 4px" }}>
-                        기본
-                      </span>
-                    ) : (
-                      <button type="button" className="ldg-icon-action danger" onClick={() => handleDelete(c)} aria-label="삭제">
-                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M4 7h16 M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2 M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" />
-                        </svg>
-                      </button>
-                    )}
-                  </div>
-                </div>
+                <CategoryRow key={c.id} c={c} onEdit={() => openEdit(c)} onDelete={() => handleDelete(c)} />
               ))}
             </div>
           </div>
         );
       })}
+
+      {legacyCategories.length > 0 && (
+        <div className="ldg-cat-manage-section">
+          <button
+            type="button"
+            className="ldg-cat-group-header"
+            style={{ marginTop: 14 }}
+            onClick={() => setLegacyOpen((v) => !v)}
+            aria-expanded={legacyOpen}
+          >
+            <span>이전 카테고리</span>
+            <span className="ldg-cat-group-count">{legacyCategories.length}</span>
+            <svg
+              viewBox="0 0 24 24"
+              width="14"
+              height="14"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{ transform: legacyOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s", marginLeft: "auto" }}
+            >
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+          {legacyOpen && (
+            <div className="ldg-cat-list" style={{ marginTop: 6 }}>
+              {legacyCategories.map((c) => (
+                <CategoryRow key={c.id} c={c} onEdit={() => openEdit(c)} onDelete={() => handleDelete(c)} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -12,7 +12,7 @@ export default function YearlySellSummaryCard({ summary, unit, year }: Props) {
 
   return (
     <div className="ldg-card">
-      <div className="ldg-label">{year}년 BTC 판매 합계</div>
+      <div className="ldg-label">{year}년 판매한 비트코인</div>
       <div className="ldg-inout-main neg" style={{ marginTop: 6 }}>
         {fmtBtcValue(summary.totalBtcSold, unit)}
       </div>

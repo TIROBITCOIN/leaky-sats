@@ -38,14 +38,15 @@ assert.match(monthlyCardSrc, /fmtBtcValue/, "MonthlySellSummaryCard uses fmtBtcV
 const yearlyCardSrc = readFileSync("src/components/home/YearlySellSummaryCard.tsx", "utf8");
 assert.match(yearlyCardSrc, /fmtBtcValue/, "YearlySellSummaryCard uses fmtBtcValue");
 
-// 8. SellNeededCard has "BTC 판매 반영" button
-assert.match(sellCardSrc, /BTC 판매 반영/, "SellNeededCard has BTC 판매 반영 button");
+// 8. SellNeededCard has "BTC 판매 확정" button (Phase 12: renamed from 반영 to 확정)
+assert.match(sellCardSrc, /BTC 판매 확정/, "SellNeededCard has BTC 판매 확정 button");
 
 // 9. Modal has required fields
 const modalSrc = readFileSync("src/components/home/SellConfirmModal.tsx", "utf8");
 assert.match(modalSrc, /판매.*BTC|판매.*sats/, "modal has sell BTC/sats input");
 assert.match(modalSrc, /충당 원화/, "modal has krwCovered input");
-assert.match(modalSrc, /BTC\/KRW/, "modal has BTC/KRW input");
+// Phase 12: "판매 시점 BTC/KRW" 문구를 "판매 당시 BTC 가격"으로 바꿨다 — 같은 가격 입력 필드를 다르게 검사한다.
+assert.match(modalSrc, /판매 당시 BTC 가격/, "modal has the sell-time BTC price input");
 assert.match(modalSrc, /보유 BTC에서 차감/, "modal has deduct checkbox");
 
 // 10. Saving deducts from heldBtc

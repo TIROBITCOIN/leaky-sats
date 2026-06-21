@@ -10,6 +10,12 @@ export interface BtcSellRecord {
   krwCovered: number;
   deficitKrwAtConfirm: number;
   deductedFromHeldBtc: boolean;
+  /**
+   * deductedFromHeldBtc가 true일 때 실제로 보유 BTC에서 차감된 양의 스냅샷. 저장 시점의 btcSold와
+   * 같은 값으로 시작하지만, 이후 btcSold가 수정돼도 이 값은 그대로 남아 있어 삭제/재수정 시 보유
+   * BTC를 정확히 되돌릴 수 있다 — 기존 기록(이 필드가 없는 경우)은 옵션 취급해 안전하게 처리한다.
+   */
+  deductedBtcAmount?: number;
   note?: string;
   createdAt: string;
 }
@@ -46,6 +52,7 @@ function isValidRecord(r: unknown): r is BtcSellRecord {
     typeof rec.krwCovered === "number" && Number.isFinite(rec.krwCovered) &&
     typeof rec.deficitKrwAtConfirm === "number" && Number.isFinite(rec.deficitKrwAtConfirm) &&
     typeof rec.deductedFromHeldBtc === "boolean" &&
+    (rec.deductedBtcAmount === undefined || (typeof rec.deductedBtcAmount === "number" && Number.isFinite(rec.deductedBtcAmount))) &&
     typeof rec.createdAt === "string"
   );
 }
@@ -81,22 +88,50 @@ function generateId(): string {
 }
 
 export function addBtcSellRecord(
-  record: Omit<BtcSellRecord, "id" | "createdAt">
+  record: Omit<BtcSellRecord, "id" | "createdAt" | "deductedBtcAmount">
 ): BtcSellRecord {
+  const btcSold = safeNum(record.btcSold);
   const newRecord: BtcSellRecord = {
     ...record,
     id: generateId(),
-    btcSold: safeNum(record.btcSold),
+    btcSold,
     satsSold: safeNum(record.satsSold),
     btcKrwAtSell: safeNum(record.btcKrwAtSell),
     krwCovered: safeNum(record.krwCovered),
     deficitKrwAtConfirm: safeNum(record.deficitKrwAtConfirm),
+    deductedBtcAmount: record.deductedFromHeldBtc ? btcSold : undefined,
     createdAt: new Date().toISOString(),
   };
   const records = loadRecords();
   records.unshift(newRecord);
   saveRecords(records);
   return newRecord;
+}
+
+/** 기존 판매 기록의 필드를 부분 수정한다. 보유 BTC 보정은 호출하는 쪽(SellConfirmModal)의 책임이다 —
+ *  이 함수는 순수하게 저장된 레코드만 갱신한다. */
+export function updateBtcSellRecord(
+  id: string,
+  patch: Partial<Omit<BtcSellRecord, "id" | "createdAt">>
+): BtcSellRecord | null {
+  const records = loadRecords();
+  const idx = records.findIndex((r) => r.id === id);
+  if (idx === -1) return null;
+
+  const current = records[idx];
+  const updated: BtcSellRecord = {
+    ...current,
+    ...patch,
+    btcSold: patch.btcSold !== undefined ? safeNum(patch.btcSold) : current.btcSold,
+    satsSold: patch.satsSold !== undefined ? safeNum(patch.satsSold) : current.satsSold,
+    btcKrwAtSell: patch.btcKrwAtSell !== undefined ? safeNum(patch.btcKrwAtSell) : current.btcKrwAtSell,
+    krwCovered: patch.krwCovered !== undefined ? safeNum(patch.krwCovered) : current.krwCovered,
+    deficitKrwAtConfirm:
+      patch.deficitKrwAtConfirm !== undefined ? safeNum(patch.deficitKrwAtConfirm) : current.deficitKrwAtConfirm,
+  };
+  records[idx] = updated;
+  saveRecords(records);
+  return updated;
 }
 
 export function deleteBtcSellRecord(id: string): boolean {
@@ -106,6 +141,10 @@ export function deleteBtcSellRecord(id: string): boolean {
   records.splice(idx, 1);
   saveRecords(records);
   return true;
+}
+
+export function getBtcSellRecordById(id: string): BtcSellRecord | null {
+  return loadRecords().find((r) => r.id === id) ?? null;
 }
 
 export function listBtcSellRecords(): BtcSellRecord[] {
