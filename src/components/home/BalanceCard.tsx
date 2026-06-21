@@ -1,13 +1,12 @@
-import type { LedgerData } from "../../types";
-import { fmtKRW, fmtBtcValue, type BtcUnit } from "../../lib/format";
+import { fmtBtcValue, type BtcUnit } from "../../lib/format";
 
-export default function BalanceCard({ d, heldBtc, unit }: { d: LedgerData; heldBtc: number; unit: BtcUnit }) {
-  const valuationKrw = d.btcKRW > 0 ? heldBtc * d.btcKRW : 0;
+export default function BalanceCard({ heldBtc, unit }: { heldBtc: number; unit: BtcUnit }) {
+  const otherUnit: BtcUnit = unit === "sats" ? "BTC" : "sats";
   return (
     <div className="ldg-card ldg-balance">
       <div className="ldg-label">보유 BTC</div>
       <div className="ldg-balance-main">{fmtBtcValue(heldBtc, unit)}</div>
-      <div className="ldg-balance-sub">≈ {fmtKRW(valuationKrw)}</div>
+      <div className="ldg-balance-sub">{fmtBtcValue(heldBtc, otherUnit)}</div>
     </div>
   );
 }
