@@ -54,3 +54,22 @@ export function monthKeyToAnchorDate(monthKey: string): Date {
   const [y, m] = monthKey.split("-").map(Number);
   return new Date(y, m - 1, 15); // mid-month avoids timezone edge cases
 }
+
+/** "YYYY-MM" key format check, e.g. "2026-05" */
+export function isValidMonthKey(value: string | null): value is string {
+  return !!value && /^\d{4}-\d{2}$/.test(value);
+}
+
+/**
+ * <input type="datetime-local"> default value for a given month key — 1일, 현재 시각 기준.
+ * 홈에서 보고 있던 월로 거래 입력 화면을 열었을 때 그 월에 바로 기록되도록 한다.
+ */
+export function monthKeyToDatetimeLocal(monthKey: string): string {
+  const [y, m] = monthKey.split("-").map(Number);
+  const now = new Date();
+  const d = new Date(y, m - 1, 1, now.getHours(), now.getMinutes());
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(
+    d.getMinutes()
+  )}`;
+}

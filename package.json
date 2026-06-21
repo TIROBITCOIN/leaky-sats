@@ -20,7 +20,8 @@
     "verify:unit": "node verify-bitcoin-unit.mjs",
     "verify:sell-records": "node verify-btc-sell-records.mjs",
     "verify:month": "node verify-month-navigation.mjs",
-    "verify:terminology": "node verify-terminology.mjs"
+    "verify:terminology": "node verify-terminology.mjs",
+    "verify:major-items": "node verify-major-items.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

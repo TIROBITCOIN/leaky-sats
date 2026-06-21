@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import "../../styles/ledger.css";
 import { useLedger } from "../../state/LedgerContext";
 import { loadWalletName } from "../../lib/walletName";
@@ -11,6 +12,7 @@ import {
   getNextMonthKey,
   getYearFromMonthKey,
   monthKeyToAnchorDate,
+  isValidMonthKey,
 } from "../../lib/month";
 import {
   summarizeBtcSellRecordsByMonth,
@@ -36,7 +38,26 @@ export default function HomePage() {
   const [walletName, setWalletName] = useState(loadWalletName);
   const [heldBtc, setHeldBtc] = useState(getHeldBtc);
   const [btcUnit, setBtcUnit] = useState<BtcUnit>(loadBtcUnit);
-  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthKey);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const monthParam = searchParams.get("month");
+  const selectedMonth = isValidMonthKey(monthParam) ? monthParam : getCurrentMonthKey();
+  const setSelectedMonth = useCallback(
+    (updater: string | ((m: string) => string)) => {
+      setSearchParams(
+        (prev) => {
+          const next = typeof updater === "function" ? updater(selectedMonth) : updater;
+          const params = new URLSearchParams(prev);
+          if (next === getCurrentMonthKey()) params.delete("month");
+          else params.set("month", next);
+          return params;
+        },
+        { replace: true }
+      );
+    },
+    [selectedMonth, setSearchParams]
+  );
   const [sellModalOpen, setSellModalOpen] = useState(false);
   const [sellSavedMessage, setSellSavedMessage] = useState<string | null>(null);
   const [, setRefreshTick] = useState(0);
@@ -44,6 +65,17 @@ export default function HomePage() {
   useEffect(() => {
     document.title = walletName;
   }, [walletName]);
+
+  // 거래 입력 화면에서 "BTC 판매 반영"을 고르면 여기로 돌아오면서 모달을 바로 연다.
+  // 한 번 소비한 뒤에는 history state를 비워서 뒤로가기로 재트리거되지 않게 한다.
+  useEffect(() => {
+    const state = location.state as { openSellModal?: boolean } | null;
+    if (state?.openSellModal) {
+      setSellModalOpen(true);
+      navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const refresh = () => {
