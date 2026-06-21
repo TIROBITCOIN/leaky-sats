@@ -1,19 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import "../../styles/ledger.css";
 import { useLedger } from "../../state/LedgerContext";
 import { loadWalletName } from "../../lib/walletName";
 import { getHeldBtc } from "../../lib/heldBtc";
 import { loadBtcUnit, type BtcUnit } from "../../lib/format";
 import { calculateMonthlyLivingCashflow, calculateSellNeeded } from "../../lib/sellCalculator";
-import {
-  getCurrentMonthKey,
-  getPreviousMonthKey,
-  getNextMonthKey,
-  getYearFromMonthKey,
-  monthKeyToAnchorDate,
-  isValidMonthKey,
-} from "../../lib/month";
+import { getYearFromMonthKey, monthKeyToAnchorDate } from "../../lib/month";
+import { useSelectedMonth } from "../../lib/useSelectedMonth";
 import {
   summarizeBtcSellRecordsByMonth,
   summarizeBtcSellRecordsByYear,
@@ -30,7 +24,6 @@ import SellConfirmModal from "./SellConfirmModal";
 import MonthlySellSummaryCard from "./MonthlySellSummaryCard";
 import YearlySellSummaryCard from "./YearlySellSummaryCard";
 import PriceWidget from "./PriceWidget";
-import ChartCard from "./ChartCard";
 import TxnsCard from "./TxnsCard";
 
 export default function HomePage() {
@@ -38,26 +31,9 @@ export default function HomePage() {
   const [walletName, setWalletName] = useState(loadWalletName);
   const [heldBtc, setHeldBtc] = useState(getHeldBtc);
   const [btcUnit, setBtcUnit] = useState<BtcUnit>(loadBtcUnit);
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [selectedMonth, setSelectedMonth] = useSelectedMonth();
   const location = useLocation();
   const navigate = useNavigate();
-  const monthParam = searchParams.get("month");
-  const selectedMonth = isValidMonthKey(monthParam) ? monthParam : getCurrentMonthKey();
-  const setSelectedMonth = useCallback(
-    (updater: string | ((m: string) => string)) => {
-      setSearchParams(
-        (prev) => {
-          const next = typeof updater === "function" ? updater(selectedMonth) : updater;
-          const params = new URLSearchParams(prev);
-          if (next === getCurrentMonthKey()) params.delete("month");
-          else params.set("month", next);
-          return params;
-        },
-        { replace: true }
-      );
-    },
-    [selectedMonth, setSearchParams]
-  );
   const [sellModalOpen, setSellModalOpen] = useState(false);
   const [sellSavedMessage, setSellSavedMessage] = useState<string | null>(null);
   const [, setRefreshTick] = useState(0);
@@ -132,14 +108,7 @@ export default function HomePage() {
       <div className="ldg-screen">
         <div className="ldg-content">
           <Slogan />
-          <LedgerHeader
-            d={data}
-            walletName={walletName}
-            selectedMonth={selectedMonth}
-            onPrevMonth={() => setSelectedMonth((m) => getPreviousMonthKey(m))}
-            onNextMonth={() => setSelectedMonth((m) => getNextMonthKey(m))}
-            onResetMonth={() => setSelectedMonth(getCurrentMonthKey())}
-          />
+          <LedgerHeader d={data} walletName={walletName} selectedMonth={selectedMonth} onChangeMonth={setSelectedMonth} />
           <CurrencyToggle value={currency} onChange={setCurrency} />
           <BalanceCard d={data} heldBtc={heldBtc} unit={btcUnit} />
           <InOutCards d={data} currency={currency} />
@@ -157,7 +126,6 @@ export default function HomePage() {
           />
           <YearlySellSummaryCard summary={yearlySellSummary} unit={btcUnit} year={yearKey} />
           <PriceWidget d={data} />
-          <ChartCard />
           <TxnsCard d={data} currency={currency} />
         </div>
       </div>

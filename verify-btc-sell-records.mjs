@@ -63,9 +63,12 @@ assert.doesNotMatch(backupSrc, /myledger\.appLock\.v1/, "appLock is not in backu
 const tabbarCss = readFileSync("src/styles/tabbar.css", "utf8");
 assert.match(tabbarCss, /text-decoration:\s*none/, "tab has text-decoration: none");
 
-// 14. Home month display uses month utilities
+// 14. Home month display uses month utilities.
+// Phase 11: LedgerHeader delegates month-label rendering to the shared MonthSelector component.
 const headerSrc = readFileSync("src/components/home/LedgerHeader.tsx", "utf8");
-assert.match(headerSrc, /getMonthLabel|getCurrentMonthLabel/, "LedgerHeader uses month label utility");
+assert.match(headerSrc, /MonthSelector/, "LedgerHeader renders the shared MonthSelector");
+const monthSelectorSrc = readFileSync("src/components/common/MonthSelector.tsx", "utf8");
+assert.match(monthSelectorSrc, /getMonthLabel|getCurrentMonthLabel/, "MonthSelector uses month label utility");
 const monthSrc = readFileSync("src/lib/month.ts", "utf8");
 assert.match(monthSrc, /getCurrentMonthLabel/, "month.ts exports getCurrentMonthLabel");
 assert.match(monthSrc, /getCurrentMonthKey/, "month.ts exports getCurrentMonthKey");

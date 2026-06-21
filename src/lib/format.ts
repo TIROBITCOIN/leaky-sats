@@ -12,6 +12,18 @@ export function formatCategoryLabel(label: string): string {
 export const fmtKRW = (n: number): string =>
   (n < 0 ? "-" : "") + "₩" + Math.abs(n).toLocaleString("ko-KR");
 
+/** 좁은 달력 셀에 맞춘 축약 원화 표시. 1만원 이상이면 "X.X만", 미만이면 보통 천단위 콤마. */
+export const fmtKRWCompact = (n: number): string => {
+  const sign = n < 0 ? "-" : "";
+  const abs = Math.abs(n);
+  if (abs >= 10_000) {
+    const man = abs / 10_000;
+    const digits = man >= 100 ? Math.round(man).toString() : man.toFixed(1).replace(/\.0$/, "");
+    return `${sign}₩${digits}만`;
+  }
+  return `${sign}₩${abs.toLocaleString("ko-KR")}`;
+};
+
 // 0.001 BTC 이상이면 BTC 단위, 미만이면 sats 단위로 표시. rate는 항상 "현재 시세".
 export const fmtBTC = (krw: number, rate: number): string => {
   const btc = krw / rate;
