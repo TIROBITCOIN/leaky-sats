@@ -19,8 +19,15 @@ assert.match(homePage, /setSelectedMonth/, "HomePage has setSelectedMonth");
 const headerSrc = readFileSync("src/components/home/LedgerHeader.tsx", "utf8");
 assert.match(headerSrc, /selectedMonth/, "LedgerHeader accepts selectedMonth");
 
-// 4. getCurrentMonthKey used only for initial value, selectedMonth for calculations
-assert.match(homePage, /useState\(getCurrentMonthKey/, "selectedMonth initialized with getCurrentMonthKey");
+// 4. getCurrentMonthKey used as the default when no month is selected, selectedMonth for calculations
+// Phase 10: selectedMonth moved from local useState to a ?month= URL search param so the entry
+// screen (and the tab bar) can read which month Home was showing, but it still falls back to
+// getCurrentMonthKey() when no/invalid month param is present.
+assert.match(
+  homePage,
+  /selectedMonth = isValidMonthKey\(monthParam\) \? monthParam : getCurrentMonthKey\(\)/,
+  "selectedMonth defaults to getCurrentMonthKey when no month param is present"
+);
 assert.match(homePage, /anchorDate.*=.*monthKeyToAnchorDate\(selectedMonth\)/, "anchorDate derived from selectedMonth");
 
 // 5. SellNeededCard calculation connected via selectedMonth
