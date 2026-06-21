@@ -23,7 +23,8 @@
     "verify:terminology": "node verify-terminology.mjs",
     "verify:major-items": "node verify-major-items.mjs",
     "verify:calendar-ui": "node verify-calendar-ui.mjs",
-    "verify:settlement-sale-ux": "node verify-settlement-sale-ux.mjs"
+    "verify:settlement-sale-ux": "node verify-settlement-sale-ux.mjs",
+    "verify:hodl-assets": "node verify-hodl-assets.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

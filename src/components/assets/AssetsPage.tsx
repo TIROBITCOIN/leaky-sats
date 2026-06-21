@@ -1,16 +1,40 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import "../../styles/ledger.css";
 import "../../styles/forms.css";
 import { useLedger } from "../../state/LedgerContext";
-import { fmtKRW, fmtSats } from "../../lib/format";
+import { fmtKRW, fmtBtcValue, loadBtcUnit, type BtcUnit } from "../../lib/format";
+import { getHeldBtc } from "../../lib/heldBtc";
 import { calculateBitcoinPortfolio } from "../../lib/ledgerCalc.js";
+import PriceWidget from "../home/PriceWidget";
 
 export default function AssetsPage() {
   const { data } = useLedger();
-  const portfolio = useMemo(() => calculateBitcoinPortfolio(data.txns, data.btcKRW), [data.txns, data.btcKRW]);
-  const pnlClass = portfolio.unrealizedPnlKrw >= 0 ? "pos" : "neg";
+  // 자산 탭의 현재 보유량/Total Balance는 항상 heldBtc(설정에서 입력한 값 + 판매 확정 차감)를
+  // source of truth로 쓴다 — 거래 내역으로 다시 추정해서 덮어쓰지 않는다.
+  const [heldBtc, setHeldBtc] = useState(getHeldBtc);
+  const [unit, setUnit] = useState<BtcUnit>(loadBtcUnit);
 
-  // BTC quantity is estimated from manual KRW transactions using abs(amount) / btcAt.
+  useEffect(() => {
+    const refresh = () => {
+      setHeldBtc(getHeldBtc());
+      setUnit(loadBtcUnit());
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", refresh);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", refresh);
+    };
+  }, []);
+
+  // 적립 추이(누적 sats)만 거래 내역에서 뽑아 쓴다 — 현재 보유량 표시와는 별개의, 과거 흐름용 데이터다.
+  const portfolio = useMemo(() => calculateBitcoinPortfolio(data.txns, data.btcKRW), [data.txns, data.btcKRW]);
+  const valuationKrw = data.btcKRW > 0 ? heldBtc * data.btcKRW : 0;
+
   const W = 320;
   const H = 90;
   const pad = 8;
@@ -30,50 +54,42 @@ export default function AssetsPage() {
     <div className="ldg-screen">
       <div className="ldg-content">
         <div className="ldg-page-title">자산</div>
-        <div className="ldg-page-sub">BTC 구매/판매 거래를 기준으로 보유량과 평가액을 계산합니다.</div>
+        <div className="ldg-page-sub">HODL 중인 BTC의 현재 가치를 확인합니다.</div>
 
         <div className="ldg-card ldg-balance">
-          <div className="ldg-label">보유 BTC 평가액</div>
-          <div className="ldg-balance-main">{fmtKRW(Math.round(portfolio.valuationKrw))}</div>
+          <div className="ldg-label">Total Balance</div>
+          <div className="ldg-balance-main">{fmtKRW(Math.round(valuationKrw))}</div>
           <div className="ldg-balance-sub">
-            {portfolio.holdingBtc.toFixed(8)} BTC · {fmtSats(portfolio.holdingSats)}
+            {unit === "sats" ? (
+              <>
+                {fmtBtcValue(heldBtc, "sats")} · {fmtBtcValue(heldBtc, "BTC")}
+              </>
+            ) : (
+              <>
+                {fmtBtcValue(heldBtc, "BTC")} · {fmtBtcValue(heldBtc, "sats")}
+              </>
+            )}
           </div>
+          {heldBtc === 0 && (
+            <div style={{ marginTop: 10, paddingTop: 10, borderTop: "0.5px solid var(--ldg-border)" }}>
+              <div className="ldg-page-sub" style={{ margin: 0 }}>
+                설정에서 보유 BTC를 입력하면 현재 가치를 확인할 수 있습니다.
+              </div>
+              <Link to="/settings" className="ldg-link" style={{ display: "inline-block", marginTop: 8 }}>
+                보유 BTC 입력하기 →
+              </Link>
+            </div>
+          )}
         </div>
 
-        <div className="ldg-inout">
-          <div className="ldg-card ldg-inout-card">
-            <div className="ldg-label">평가손익</div>
-            <div className={`ldg-inout-main ${pnlClass}`}>
-              {portfolio.unrealizedPnlKrw >= 0 ? "+" : ""}
-              {fmtKRW(Math.round(portfolio.unrealizedPnlKrw))}
-            </div>
-            <div className="ldg-inout-sub">
-              {portfolio.unrealizedPnlPct >= 0 ? "+" : ""}
-              {portfolio.unrealizedPnlPct.toFixed(2)}%
-            </div>
-          </div>
-          <div className="ldg-card ldg-inout-card">
-            <div className="ldg-label">평균 매입가</div>
-            <div className="ldg-inout-main">
-              {portfolio.averageCostKrwPerBtc > 0 ? fmtKRW(Math.round(portfolio.averageCostKrwPerBtc)) : "-"}
-            </div>
-            <div className="ldg-inout-sub">총 구매 {fmtKRW(portfolio.totalBuyKrw)}</div>
-          </div>
-        </div>
-
-        <div className="ldg-card">
-          <div className="ldg-label" style={{ marginBottom: 10 }}>
-            BTC 포지션
-          </div>
-          <div className="ldg-page-sub">
-            현재가 {fmtKRW(portfolio.currentPrice)} · 총 판매 {fmtKRW(portfolio.totalSellKrw)} · 순투입금{" "}
-            {fmtKRW(portfolio.netInvestedKrw)}
-          </div>
-        </div>
+        <PriceWidget d={data} />
 
         <div className="ldg-card">
-          <div className="ldg-label" style={{ marginBottom: 10 }}>
-            적립 추이 (누적 sats)
+          <div className="ldg-label" style={{ marginBottom: 4 }}>
+            적립 추이
+          </div>
+          <div className="ldg-page-sub" style={{ marginBottom: 10 }}>
+            BTC 구매/판매 기록을 바탕으로 보유 흐름을 표시합니다.
           </div>
           {pointCoords.length > 1 ? (
             <svg className="ldg-chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="누적 사토시 적립 추이">
@@ -96,7 +112,7 @@ export default function AssetsPage() {
               <circle cx={pointCoords[0].x} cy={pointCoords[0].y} r="4" fill="#F7931A" />
             </svg>
           ) : (
-            <div className="ldg-page-sub">아직 BTC 구매/판매 거래가 없습니다.</div>
+            <div className="ldg-page-sub">아직 BTC 구매/판매 기록이 없습니다.</div>
           )}
         </div>
       </div>
