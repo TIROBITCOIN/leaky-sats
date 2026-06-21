@@ -15,9 +15,11 @@ const homePage = readFileSync("src/components/home/HomePage.tsx", "utf8");
 assert.match(homePage, /selectedMonth/, "HomePage has selectedMonth state");
 assert.match(homePage, /setSelectedMonth/, "HomePage has setSelectedMonth");
 
-// 3. LedgerHeader accepts selectedMonth prop
+// 3. HomePage renders the shared MonthSelector with selectedMonth.
+// Phase 11.1: the month selector moved out of LedgerHeader and is now rendered directly by
+// HomePage, positioned below the balance card — LedgerHeader no longer needs a selectedMonth prop.
 const headerSrc = readFileSync("src/components/home/LedgerHeader.tsx", "utf8");
-assert.match(headerSrc, /selectedMonth/, "LedgerHeader accepts selectedMonth");
+assert.match(homePage, /<MonthSelector\s+selectedMonth={selectedMonth}/, "HomePage renders MonthSelector with selectedMonth");
 
 // 4. getCurrentMonthKey used as the default when no month is selected, selectedMonth for calculations.
 // Phase 10: selectedMonth moved from local useState to a ?month= URL search param.
@@ -52,9 +54,11 @@ assert.match(modalSrc, /month: selectedMonth/, "SellConfirmModal saves record wi
 
 // 9. UI has prev/next month buttons.
 // Phase 11: the small inline 〈/〉 buttons that used to live directly in LedgerHeader moved into
-// the shared MonthSelector component (src/components/common/MonthSelector.tsx), which
-// LedgerHeader now renders instead of its own buttons.
-assert.match(headerSrc, /MonthSelector/, "LedgerHeader renders the shared MonthSelector");
+// the shared MonthSelector component (src/components/common/MonthSelector.tsx).
+// Phase 11.1: HomePage renders MonthSelector itself (not via LedgerHeader) — LedgerHeader is now
+// limited to wallet name / block-height display.
+assert.match(homePage, /MonthSelector/, "HomePage renders the shared MonthSelector");
+assert.doesNotMatch(headerSrc, /MonthSelector/, "LedgerHeader no longer renders MonthSelector (Phase 11.1)");
 const monthSelectorSrc = readFileSync("src/components/common/MonthSelector.tsx", "utf8");
 assert.match(monthSelectorSrc, /이전 달|〈/, "prev button exists in MonthSelector");
 assert.match(monthSelectorSrc, /다음 달|〉/, "next button exists in MonthSelector");

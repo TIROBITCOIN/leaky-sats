@@ -64,9 +64,11 @@ const tabbarCss = readFileSync("src/styles/tabbar.css", "utf8");
 assert.match(tabbarCss, /text-decoration:\s*none/, "tab has text-decoration: none");
 
 // 14. Home month display uses month utilities.
-// Phase 11: LedgerHeader delegates month-label rendering to the shared MonthSelector component.
-const headerSrc = readFileSync("src/components/home/LedgerHeader.tsx", "utf8");
-assert.match(headerSrc, /MonthSelector/, "LedgerHeader renders the shared MonthSelector");
+// Phase 11: month-label rendering lives in the shared MonthSelector component.
+// Phase 11.1: HomePage renders MonthSelector directly below the balance card (not inside
+// LedgerHeader anymore) — LedgerHeader is no longer responsible for month display.
+const homePageSrc = readFileSync("src/components/home/HomePage.tsx", "utf8");
+assert.match(homePageSrc, /MonthSelector/, "HomePage renders the shared MonthSelector");
 const monthSelectorSrc = readFileSync("src/components/common/MonthSelector.tsx", "utf8");
 assert.match(monthSelectorSrc, /getMonthLabel|getCurrentMonthLabel/, "MonthSelector uses month label utility");
 const monthSrc = readFileSync("src/lib/month.ts", "utf8");

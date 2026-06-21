@@ -77,9 +77,18 @@
 .ldg-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: center;
   margin-top: 4px;
 }
+
+/* ---- Home month selector row (Phase 11.1): 보유 BTC 카드 아래, 수입/지출 카드 위 ---- */
+.ldg-home-month-selector {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 12px 0 16px;
+}
+
 /* ---- Month selector (홈/통계 공통, Phase 11) ---- */
 .ldg-month-selector {
   display: flex;
