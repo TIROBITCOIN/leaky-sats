@@ -122,7 +122,7 @@ export default function HomePage() {
           <Slogan />
           <LedgerHeader d={data} walletName={walletName} />
           <CurrencyToggle value={currency} onChange={setCurrency} />
-          <BalanceCard d={data} heldBtc={heldBtc} unit={btcUnit} />
+          <BalanceCard heldBtc={heldBtc} unit={btcUnit} />
           <div className="ldg-home-month-selector">
             <MonthSelector selectedMonth={selectedMonth} onChangeMonth={setSelectedMonth} label={period.label} />
             <div className="ldg-settlement-range-label">{period.rangeLabel}</div>
