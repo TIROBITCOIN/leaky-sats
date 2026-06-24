@@ -5,10 +5,16 @@ import "../../styles/forms.css";
 import { useLedger } from "../../state/LedgerContext";
 import { fmtKRW, krwToSats, nowDatetimeLocal } from "../../lib/format";
 import { isValidMonthKey } from "../../lib/month";
-import { loadSettlementDay, getSettlementPeriod, getDefaultDatetimeLocalForPeriod } from "../../lib/settlement";
+import {
+  loadSettlementDay,
+  getSettlementPeriod,
+  getDefaultDatetimeLocalForPeriod,
+  getSettlementMonthKeyForDate,
+} from "../../lib/settlement";
 import type { CategoryId } from "../../types";
 import CategoryGroupPicker from "./CategoryGroupPicker";
 import { MAJOR_ITEM_GROUPS, type MajorItem } from "../../lib/majorItems";
+import { addRecurringRule, markRecurringMaterialized, normalizeRecurringDay } from "../../lib/recurringRules";
 
 /** 금액 · 날짜/시간 · 메모 · 저장 버튼 — 수정 화면과 큰 항목 2단계 입력 화면이 공유한다. */
 function AmountDateMemoFields({
@@ -24,6 +30,7 @@ function AmountDateMemoFields({
   submitLabel,
   disabled,
   extraBefore,
+  extraAfter,
 }: {
   amountValue: string;
   onAmountChange: (v: string) => void;
@@ -37,6 +44,7 @@ function AmountDateMemoFields({
   submitLabel: string;
   disabled: boolean;
   extraBefore?: ReactNode;
+  extraAfter?: ReactNode;
 }) {
   return (
     <>
@@ -69,6 +77,7 @@ function AmountDateMemoFields({
         <textarea className="ldg-textarea" value={memoValue} onChange={(e) => onMemoChange(e.target.value)} />
       </div>
 
+      {extraAfter}
       <button className="ldg-submit-btn" type="submit" disabled={disabled} style={{ marginTop: 14 }}>
         {isIncome ? "+" : "-"}
         {fmtKRW(Number(amountValue.replace(/[^0-9]/g, "")) || 0)} {submitLabel}
@@ -99,6 +108,7 @@ export default function TransactionEntryPage() {
   );
   const [title, setTitle] = useState(() => editingTxn?.title ?? "");
   const [memo, setMemo] = useState(() => editingTxn?.memo ?? "");
+  const [createRecurring, setCreateRecurring] = useState(false);
   const [date, setDate] = useState(() => {
     if (editingTxn) return editingTxn.date;
     if (!isValidMonthKey(monthParam)) return nowDatetimeLocal();
@@ -121,6 +131,16 @@ export default function TransactionEntryPage() {
       navigate(-1);
     } else {
       addTxn({ title, cat, amount: amountNum, isIncome, date, memo });
+      if (createRecurring) {
+        const rule = addRecurringRule({
+          title: title.trim() || selectedCategory.label,
+          cat,
+          isIncome,
+          dayOfMonth: normalizeRecurringDay(Number(date.slice(8, 10))),
+          lastAmount: amountNum,
+        });
+        markRecurringMaterialized(rule.id, getSettlementMonthKeyForDate(date, loadSettlementDay()));
+      }
       navigate("/");
     }
   };
@@ -250,6 +270,16 @@ export default function TransactionEntryPage() {
                     />
                   </div>
                 ) : undefined
+              }
+              extraAfter={
+                <label className="ldg-recurring-check">
+                  <input
+                    type="checkbox"
+                    checked={createRecurring}
+                    onChange={(event) => setCreateRecurring(event.target.checked)}
+                  />
+                  <span>매월 {normalizeRecurringDay(Number(date.slice(8, 10)))}일 반복</span>
+                </label>
               }
             />
           </div>

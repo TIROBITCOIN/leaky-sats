@@ -7,6 +7,7 @@ import {
   saveCurrency,
   saveRefreshInterval,
 } from "./preferences";
+import { RECURRING_MATERIALIZED_KEY, RECURRING_RULES_KEY } from "./recurringRules";
 
 const APP_ID = "my-ledger";
 const BACKUP_VERSION = 1;
@@ -25,6 +26,8 @@ export const BACKUP_KEYS = {
   refreshInterval: REFRESH_INTERVAL_STORAGE_KEY,
   btcSellRecords: BTC_SELL_RECORDS_KEY,
   settlementDay: SETTLEMENT_DAY_KEY,
+  recurringRules: RECURRING_RULES_KEY,
+  recurringMaterialized: RECURRING_MATERIALIZED_KEY,
 } as const;
 
 export interface BackupPayload {
@@ -40,6 +43,8 @@ export interface BackupPayload {
     [REFRESH_INTERVAL_STORAGE_KEY]?: unknown;
     [BTC_SELL_RECORDS_KEY]?: unknown;
     [SETTLEMENT_DAY_KEY]?: unknown;
+    [RECURRING_RULES_KEY]?: unknown;
+    [RECURRING_MATERIALIZED_KEY]?: unknown;
   };
 }
 
@@ -76,6 +81,8 @@ export function createBackupPayload(): BackupPayload {
         localStorage.getItem(REFRESH_INTERVAL_STORAGE_KEY) ?? String(DEFAULT_REFRESH_INTERVAL_MS),
       [BTC_SELL_RECORDS_KEY]: readParsedStorage(BTC_SELL_RECORDS_KEY, []),
       [SETTLEMENT_DAY_KEY]: localStorage.getItem(SETTLEMENT_DAY_KEY) ?? "1",
+      [RECURRING_RULES_KEY]: readParsedStorage(RECURRING_RULES_KEY, []),
+      [RECURRING_MATERIALIZED_KEY]: readParsedStorage(RECURRING_MATERIALIZED_KEY, []),
     },
   };
 }
@@ -139,5 +146,14 @@ export function restoreBackupPayload(payload: BackupPayload) {
   }
   if (SETTLEMENT_DAY_KEY in payload.data && payload.data[SETTLEMENT_DAY_KEY] != null) {
     localStorage.setItem(SETTLEMENT_DAY_KEY, String(payload.data[SETTLEMENT_DAY_KEY]));
+  }
+  if (RECURRING_RULES_KEY in payload.data && payload.data[RECURRING_RULES_KEY] != null) {
+    localStorage.setItem(RECURRING_RULES_KEY, JSON.stringify(payload.data[RECURRING_RULES_KEY]));
+  }
+  if (RECURRING_MATERIALIZED_KEY in payload.data && payload.data[RECURRING_MATERIALIZED_KEY] != null) {
+    localStorage.setItem(
+      RECURRING_MATERIALIZED_KEY,
+      JSON.stringify(payload.data[RECURRING_MATERIALIZED_KEY])
+    );
   }
 }

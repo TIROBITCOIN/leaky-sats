@@ -392,6 +392,51 @@
   font-family: var(--ldg-mono);
   font-size: 14px;
 }
+.ldg-recurring-card .ldg-card-head {
+  align-items: flex-start;
+}
+.ldg-recurring-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+.ldg-recurring-item {
+  padding-top: 12px;
+  border-top: 0.5px solid var(--ldg-border);
+}
+.ldg-recurring-item:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+.ldg-recurring-item-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.ldg-recurring-preview {
+  flex-shrink: 0;
+  color: var(--ldg-fg-2);
+  font-family: var(--ldg-mono);
+  font-size: 13px;
+}
+.ldg-recurring-actions {
+  display: grid;
+  grid-template-columns: minmax(88px, 0.7fr) minmax(140px, 1.3fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+.ldg-recurring-actions .ldg-submit-btn,
+.ldg-recurring-actions .ldg-secondary-btn {
+  min-height: 42px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+.ldg-recurring-actions .ldg-submit-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
 
 /* ---- Price ---- */
 .ldg-kimchi {

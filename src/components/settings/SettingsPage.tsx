@@ -11,6 +11,7 @@ import { getCurrentMonthKey } from "../../lib/month";
 import AppLockSettings from "../security/AppLockSettings";
 import CategoryManager from "./CategoryManager";
 import BackupRestoreCard from "./BackupRestoreCard";
+import RecurringRulesSettings from "./RecurringRulesSettings";
 
 const UNITS = ["BTC", "sats"] as const;
 const SOURCES = ["Upbit", "Binance"] as const;
@@ -297,6 +298,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        <RecurringRulesSettings />
         <CategoryManager />
         <BackupRestoreCard />
         <AppLockSettings />

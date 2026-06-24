@@ -197,6 +197,27 @@
   cursor: pointer;
   width: 100%;
 }
+.ldg-recurring-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--ldg-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--ldg-fg-2);
+  font-size: 13px;
+  cursor: pointer;
+}
+.ldg-recurring-check input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--ldg-orange);
+}
+.ldg-link.danger {
+  color: var(--ldg-neg);
+}
 
 /* ---- Settings list ---- */
 .ldg-setting-row {
