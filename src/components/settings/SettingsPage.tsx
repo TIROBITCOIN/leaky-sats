@@ -36,6 +36,7 @@ export default function SettingsPage() {
     priceError,
     priceUpdatedAt,
     isPriceFallback,
+    priceSourceMeta,
     refreshPrices,
   } = useLedger();
   const [unit, setUnit] = useState<BtcUnit>(loadBtcUnit);
@@ -139,6 +140,11 @@ export default function SettingsPage() {
               <div className="ldg-setting-desc">
                 {statusText}
                 {priceError ? ` (${priceError})` : ""}
+                {priceSourceMeta.usdKrw === "Frankfurter" && priceSourceMeta.fxReferenceDate
+                  ? ` · 환율 기준일 ${priceSourceMeta.fxReferenceDate}`
+                  : priceSourceMeta.usdKrw
+                  ? ` · 환율 ${priceSourceMeta.usdKrw}`
+                  : ""}
               </div>
             </div>
             <button type="button" className="ldg-link" onClick={refreshPrices}>

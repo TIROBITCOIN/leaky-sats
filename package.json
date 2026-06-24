@@ -25,7 +25,8 @@
     "verify:calendar-ui": "node verify-calendar-ui.mjs",
     "verify:settlement-sale-ux": "node verify-settlement-sale-ux.mjs",
     "verify:remove-assets-tab": "node verify-remove-assets-tab.mjs",
-    "verify:held-btc-card": "node verify-held-btc-card.mjs"
+    "verify:held-btc-card": "node verify-held-btc-card.mjs",
+    "verify:price-fallbacks": "node verify-price-fallbacks.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

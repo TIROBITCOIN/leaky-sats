@@ -11,7 +11,7 @@ const TONE_LABEL: Record<ReturnType<typeof getPriceTone>, (time: string) => stri
 };
 
 export default function PriceWidget({ d }: { d: LedgerData }) {
-  const { priceStatus, isPriceFallback, priceUpdatedAt } = useLedger();
+  const { priceStatus, isPriceFallback, priceUpdatedAt, priceSourceMeta } = useLedger();
   const kimchi = kimchiPremium(d.btcKRW, d.btcUSD, d.usdKRW);
   const kimchiClass = kimchi > 3 ? "danger" : kimchi >= 0 ? "warn" : "good";
 
@@ -23,7 +23,7 @@ export default function PriceWidget({ d }: { d: LedgerData }) {
       <div className="ldg-card-head">
         <div className="ldg-label">Bitcoin Price</div>
         <div className={`ldg-kimchi ${kimchiClass}`}>
-          김프 {kimchi >= 0 ? "+" : ""}
+          김프 근사 {kimchi >= 0 ? "+" : ""}
           {kimchi.toFixed(2)}%
         </div>
       </div>
@@ -33,13 +33,20 @@ export default function PriceWidget({ d }: { d: LedgerData }) {
           <div className="ldg-price-val">₩{(d.btcKRW / 1_000_000).toFixed(1)}M</div>
         </div>
         <div>
-          <div className="ldg-tiny">BINANCE · USD</div>
+          <div className="ldg-tiny">{(priceSourceMeta.btcUsd ?? "BINANCE").toUpperCase()} · USD</div>
           <div className="ldg-price-val">${d.btcUSD.toLocaleString("en-US")}</div>
         </div>
         <div>
-          <div className="ldg-tiny">USD/KRW</div>
+          <div className="ldg-tiny">{priceSourceMeta.usdKrw ? `${priceSourceMeta.usdKrw.toUpperCase()} · ` : ""}USD/KRW</div>
           <div className="ldg-price-val mono">{d.usdKRW.toLocaleString("en-US")}</div>
         </div>
+      </div>
+      <div className="ldg-tiny" style={{ marginTop: 8 }}>
+        {priceSourceMeta.usdKrw === "Frankfurter" && priceSourceMeta.fxReferenceDate
+          ? `환율 기준일 ${priceSourceMeta.fxReferenceDate} · 일일 환율 기준 김프(근사)`
+          : priceSourceMeta.usdKrw === "Coinbase"
+          ? "Coinbase 환율 기준 김프(근사)"
+          : "환율 기준 김프(근사)"}
       </div>
       <div className="ldg-tiny" style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 6 }}>
         <span

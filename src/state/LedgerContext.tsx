@@ -13,7 +13,7 @@ import type { CategoryDef, Currency, LedgerData, NewTxnInput, Txn } from "../typ
 import { DUMMY } from "../lib/dummyData";
 import { BUILT_IN_CATEGORIES, DEFAULT_FALLBACK, PROTECTED_IDS } from "../lib/categories";
 import { formatTxnTime, formatCategoryLabel } from "../lib/format";
-import { fetchLivePrices, type PriceFetchResult } from "../lib/priceApi";
+import { fetchLivePrices, type PriceFetchResult, type PriceSourceMeta } from "../lib/priceApi";
 
 export type PriceStatus = "idle" | "loading" | "ok" | "error";
 
@@ -22,6 +22,7 @@ interface PriceMeta {
   error: string | null;
   updatedAt: number | null;
   liveFields: { btcKRW: boolean; btcUSD: boolean; usdKRW: boolean };
+  sourceMeta: PriceSourceMeta;
 }
 
 export const CATEGORIES_STORAGE_KEY = "myledger.categories.v1";
@@ -96,6 +97,7 @@ interface LedgerContextValue {
   priceError: string | null;
   priceUpdatedAt: number | null;
   isPriceFallback: boolean;
+  priceSourceMeta: PriceSourceMeta;
   refreshPrices: () => void;
   categories: CategoryDef[];
   categoriesById: Record<string, CategoryDef>;
@@ -318,7 +320,7 @@ function reducer(state: State, action: Action): State {
     case "PRICE_FETCH_START":
       return { ...state, priceMeta: { ...state.priceMeta, status: "loading" } };
     case "PRICE_FETCH_SETTLED": {
-      const { btcKRW, btcUSD, usdKRW, errors } = action;
+      const { btcKRW, btcUSD, usdKRW, errors, sourceMeta } = action;
       return {
         ...state,
         data: {
@@ -335,6 +337,14 @@ function reducer(state: State, action: Action): State {
             btcKRW: state.priceMeta.liveFields.btcKRW || btcKRW !== undefined,
             btcUSD: state.priceMeta.liveFields.btcUSD || btcUSD !== undefined,
             usdKRW: state.priceMeta.liveFields.usdKRW || usdKRW !== undefined,
+          },
+          sourceMeta: {
+            btcUsd: sourceMeta.btcUsd ?? state.priceMeta.sourceMeta.btcUsd,
+            usdKrw: sourceMeta.usdKrw ?? state.priceMeta.sourceMeta.usdKrw,
+            fxReferenceDate:
+              sourceMeta.usdKrw !== null
+                ? sourceMeta.fxReferenceDate
+                : state.priceMeta.sourceMeta.fxReferenceDate,
           },
         },
       };
@@ -453,6 +463,7 @@ function buildInitialState(): State {
       error: null,
       updatedAt: null,
       liveFields: { btcKRW: false, btcUSD: false, usdKRW: false },
+      sourceMeta: { btcUsd: null, usdKrw: null },
     },
     categories: loadCategories(),
   };
@@ -531,6 +542,7 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
       priceError: state.priceMeta.error,
       priceUpdatedAt: state.priceMeta.updatedAt,
       isPriceFallback: !(liveFields.btcKRW && liveFields.btcUSD && liveFields.usdKRW),
+      priceSourceMeta: state.priceMeta.sourceMeta,
       refreshPrices: fetchAndApplyPrices,
       categories: state.categories,
       categoriesById: Object.fromEntries(state.categories.map((c) => [c.id, c])),
