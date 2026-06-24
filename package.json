@@ -29,6 +29,7 @@
     "verify:preferences-persist": "node scripts/verify-preferences-persist.mjs",
     "verify:price-staleness": "node scripts/verify-price-staleness.mjs",
     "verify:price-fallbacks": "node scripts/verify-price-fallbacks.mjs",
+    "verify:row-actions": "node scripts/verify-row-actions.mjs",
     "verify:repo-layout": "node scripts/verify-repo-layout.mjs"
   },
   "dependencies": {

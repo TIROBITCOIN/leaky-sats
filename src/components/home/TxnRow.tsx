@@ -22,7 +22,14 @@ export default function TxnRow({ t, currency, btcKRW }: { t: Txn; currency: Curr
     <>
       <CategoryIcon cat={t.cat} />
       <div className="ldg-txn-mid">
-        <div className="ldg-txn-title">{t.title}</div>
+        <div className="ldg-txn-title">
+          {t.title}
+          {t.memo?.trim() && (
+            <span className="ldg-txn-memo-indicator" aria-label="메모 있음">
+              ●
+            </span>
+          )}
+        </div>
         <div className="ldg-txn-meta">{showCatLabel ? `${catLabel} · ${t.time}` : t.time}</div>
       </div>
       <div className="ldg-txn-amt">

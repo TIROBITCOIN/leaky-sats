@@ -27,7 +27,7 @@ export default function SelectedDayTransactions({ dateKey, txns, currency, btcKR
       </div>
       <div className="ldg-txn-list">
         {txns.map((t) => (
-          <SwipeableRow key={t.id} onEdit={() => navigate(`/add?edit=${t.id}`)} onDelete={() => deleteTxn(t.id)}>
+          <SwipeableRow key={t.id} txn={t} onEdit={() => navigate(`/add?edit=${t.id}`)} onDelete={() => deleteTxn(t.id)}>
             <TxnRow t={t} currency={currency} btcKRW={btcKRW} />
           </SwipeableRow>
         ))}
