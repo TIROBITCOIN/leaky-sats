@@ -42,11 +42,11 @@ export const fmtSats = (sats: number): string => `${sats.toLocaleString("en-US")
 
 export type BtcUnit = "BTC" | "sats";
 
-const DISPLAY_UNIT_KEY = "myledger.displayUnit.v1";
+export const DISPLAY_UNIT_STORAGE_KEY = "myledger.displayUnit.v1";
 
 export function loadBtcUnit(): BtcUnit {
   try {
-    const raw = localStorage.getItem(DISPLAY_UNIT_KEY);
+    const raw = localStorage.getItem(DISPLAY_UNIT_STORAGE_KEY);
     if (raw === "sats") return "sats";
   } catch { /* fall through */ }
   return "BTC";
@@ -54,7 +54,7 @@ export function loadBtcUnit(): BtcUnit {
 
 export function saveBtcUnit(unit: BtcUnit) {
   try {
-    localStorage.setItem(DISPLAY_UNIT_KEY, unit);
+    localStorage.setItem(DISPLAY_UNIT_STORAGE_KEY, unit);
   } catch { /* ignore */ }
 }
 

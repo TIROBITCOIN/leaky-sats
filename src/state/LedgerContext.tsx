@@ -14,6 +14,13 @@ import { DUMMY } from "../lib/dummyData";
 import { BUILT_IN_CATEGORIES, DEFAULT_FALLBACK, PROTECTED_IDS } from "../lib/categories";
 import { formatTxnTime, formatCategoryLabel } from "../lib/format";
 import { fetchLivePrices, type PriceFetchResult } from "../lib/priceApi";
+import {
+  loadCurrency,
+  loadRefreshInterval,
+  normalizeRefreshInterval,
+  saveCurrency,
+  saveRefreshInterval,
+} from "../lib/preferences";
 
 export type PriceStatus = "idle" | "loading" | "ok" | "error";
 
@@ -314,7 +321,7 @@ function reducer(state: State, action: Action): State {
     case "RESTORE_TXN":
       return applyRestoreTxn(state, action.txn, action.index);
     case "SET_REFRESH_INTERVAL":
-      return { ...state, refreshIntervalMs: action.ms };
+      return { ...state, refreshIntervalMs: normalizeRefreshInterval(action.ms) };
     case "PRICE_FETCH_START":
       return { ...state, priceMeta: { ...state.priceMeta, status: "loading" } };
     case "PRICE_FETCH_SETTLED": {
@@ -444,10 +451,10 @@ function buildInitialState(): State {
   const initialTxns = persisted?.txns ?? DUMMY.txns;
   const data = withTxnSummary(DUMMY, initialTxns);
   return {
-    currency: "KRW",
+    currency: loadCurrency(),
     data,
     nextTxnId: persisted?.nextTxnId ?? nextTxnIdFrom(initialTxns),
-    refreshIntervalMs: 60_000,
+    refreshIntervalMs: loadRefreshInterval(),
     priceMeta: {
       status: "idle",
       error: null,
@@ -478,6 +485,14 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     saveCategories(state.categories);
   }, [state.categories]);
+
+  useEffect(() => {
+    saveCurrency(state.currency);
+  }, [state.currency]);
+
+  useEffect(() => {
+    saveRefreshInterval(state.refreshIntervalMs);
+  }, [state.refreshIntervalMs]);
 
   useEffect(() => {
     saveTxnsState({ txns: state.data.txns, nextTxnId: state.nextTxnId });

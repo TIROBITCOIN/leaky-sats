@@ -1,9 +1,18 @@
+import { DISPLAY_UNIT_STORAGE_KEY } from "./format";
+import {
+  CURRENCY_STORAGE_KEY,
+  DEFAULT_CURRENCY,
+  DEFAULT_REFRESH_INTERVAL_MS,
+  REFRESH_INTERVAL_STORAGE_KEY,
+  saveCurrency,
+  saveRefreshInterval,
+} from "./preferences";
+
 const APP_ID = "my-ledger";
 const BACKUP_VERSION = 1;
 const TXNS_KEY = "myledger.txns.v1";
 const CATEGORIES_KEY = "myledger.categories.v1";
 const HELD_BTC_KEY = "myledger.heldBtc.v1";
-const DISPLAY_UNIT_KEY = "myledger.displayUnit.v1";
 const BTC_SELL_RECORDS_KEY = "myledger.btcSellRecords.v1";
 const SETTLEMENT_DAY_KEY = "myledger.settlementDay.v1";
 
@@ -11,7 +20,9 @@ export const BACKUP_KEYS = {
   txns: TXNS_KEY,
   categories: CATEGORIES_KEY,
   heldBtc: HELD_BTC_KEY,
-  displayUnit: DISPLAY_UNIT_KEY,
+  displayUnit: DISPLAY_UNIT_STORAGE_KEY,
+  currency: CURRENCY_STORAGE_KEY,
+  refreshInterval: REFRESH_INTERVAL_STORAGE_KEY,
   btcSellRecords: BTC_SELL_RECORDS_KEY,
   settlementDay: SETTLEMENT_DAY_KEY,
 } as const;
@@ -24,7 +35,9 @@ export interface BackupPayload {
     [TXNS_KEY]: unknown;
     [CATEGORIES_KEY]: unknown;
     [HELD_BTC_KEY]?: unknown;
-    [DISPLAY_UNIT_KEY]?: unknown;
+    [DISPLAY_UNIT_STORAGE_KEY]?: unknown;
+    [CURRENCY_STORAGE_KEY]?: unknown;
+    [REFRESH_INTERVAL_STORAGE_KEY]?: unknown;
     [BTC_SELL_RECORDS_KEY]?: unknown;
     [SETTLEMENT_DAY_KEY]?: unknown;
   };
@@ -57,7 +70,10 @@ export function createBackupPayload(): BackupPayload {
       [TXNS_KEY]: readParsedStorage(TXNS_KEY, { txns: [], nextTxnId: Date.now() }),
       [CATEGORIES_KEY]: readParsedStorage(CATEGORIES_KEY, []),
       [HELD_BTC_KEY]: localStorage.getItem(HELD_BTC_KEY) ?? "0",
-      [DISPLAY_UNIT_KEY]: localStorage.getItem(DISPLAY_UNIT_KEY) ?? "BTC",
+      [DISPLAY_UNIT_STORAGE_KEY]: localStorage.getItem(DISPLAY_UNIT_STORAGE_KEY) ?? "BTC",
+      [CURRENCY_STORAGE_KEY]: localStorage.getItem(CURRENCY_STORAGE_KEY) ?? DEFAULT_CURRENCY,
+      [REFRESH_INTERVAL_STORAGE_KEY]:
+        localStorage.getItem(REFRESH_INTERVAL_STORAGE_KEY) ?? String(DEFAULT_REFRESH_INTERVAL_MS),
       [BTC_SELL_RECORDS_KEY]: readParsedStorage(BTC_SELL_RECORDS_KEY, []),
       [SETTLEMENT_DAY_KEY]: localStorage.getItem(SETTLEMENT_DAY_KEY) ?? "1",
     },
@@ -109,8 +125,14 @@ export function restoreBackupPayload(payload: BackupPayload) {
   if (HELD_BTC_KEY in payload.data && payload.data[HELD_BTC_KEY] != null) {
     localStorage.setItem(HELD_BTC_KEY, String(payload.data[HELD_BTC_KEY]));
   }
-  if (DISPLAY_UNIT_KEY in payload.data && payload.data[DISPLAY_UNIT_KEY] != null) {
-    localStorage.setItem(DISPLAY_UNIT_KEY, String(payload.data[DISPLAY_UNIT_KEY]));
+  if (DISPLAY_UNIT_STORAGE_KEY in payload.data && payload.data[DISPLAY_UNIT_STORAGE_KEY] != null) {
+    localStorage.setItem(DISPLAY_UNIT_STORAGE_KEY, String(payload.data[DISPLAY_UNIT_STORAGE_KEY]));
+  }
+  if (CURRENCY_STORAGE_KEY in payload.data && payload.data[CURRENCY_STORAGE_KEY] != null) {
+    saveCurrency(payload.data[CURRENCY_STORAGE_KEY]);
+  }
+  if (REFRESH_INTERVAL_STORAGE_KEY in payload.data && payload.data[REFRESH_INTERVAL_STORAGE_KEY] != null) {
+    saveRefreshInterval(Number(payload.data[REFRESH_INTERVAL_STORAGE_KEY]));
   }
   if (BTC_SELL_RECORDS_KEY in payload.data && payload.data[BTC_SELL_RECORDS_KEY] != null) {
     localStorage.setItem(BTC_SELL_RECORDS_KEY, JSON.stringify(payload.data[BTC_SELL_RECORDS_KEY]));

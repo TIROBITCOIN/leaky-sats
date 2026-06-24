@@ -20,6 +20,8 @@ assert.match(backup, /version: BACKUP_VERSION/, "backup payload includes version
 assert.match(backup, /createdAt:/, "backup payload includes createdAt");
 assert.match(backup, /myledger\.txns\.v1/, "txns key included");
 assert.match(backup, /myledger\.categories\.v1/, "categories key included");
+assert.match(backup, /CURRENCY_STORAGE_KEY/, "currency preference included");
+assert.match(backup, /REFRESH_INTERVAL_STORAGE_KEY/, "refresh interval preference included");
 assert.doesNotMatch(backup, /pendingUndo.*createBackupPayload/s, "pendingUndo is not backed up");
 assert.match(backup, /value\.app !== APP_ID/, "wrong app is rejected");
 assert.match(backup, /value\.version !== BACKUP_VERSION/, "wrong version is rejected");

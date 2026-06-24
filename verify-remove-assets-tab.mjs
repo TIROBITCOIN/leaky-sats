@@ -51,6 +51,9 @@ assert.match(settlementSrc, /myledger\.settlementDay\.v1/, "settlement.ts still 
 
 // 11. 백업/복원 기능은 유지됨
 const backupSrc = read("src/lib/backup.ts");
+const formatSrc = read("src/lib/format.ts");
+const preferencesSrc = read("src/lib/preferences.ts");
+const backupContractSrc = backupSrc + formatSrc + preferencesSrc;
 assert.match(backupSrc, /createBackupPayload/, "backup.ts still exports createBackupPayload");
 assert.match(backupSrc, /restoreBackupPayload/, "backup.ts still exports restoreBackupPayload");
 for (const key of [
@@ -58,9 +61,12 @@ for (const key of [
   "myledger.categories.v1",
   "myledger.heldBtc.v1",
   "myledger.displayUnit.v1",
+  "myledger.currency.v1",
+  "myledger.refreshInterval.v1",
   "myledger.btcSellRecords.v1",
+  "myledger.settlementDay.v1",
 ]) {
-  assert.ok(backupSrc.includes(key), `backup.ts still includes ${key}`);
+  assert.ok(backupContractSrc.includes(key), `backup contract still includes ${key}`);
 }
 
 // 12. "매수/매도" 문구 재도입 없음
