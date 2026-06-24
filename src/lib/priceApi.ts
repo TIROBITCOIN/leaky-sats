@@ -36,11 +36,13 @@ export async function fetchUsdKrwRate(): Promise<number> {
   return rate;
 }
 
+export type PriceSource = "Upbit" | "Binance" | "FX";
+
 export interface PriceFetchResult {
   btcKRW?: number;
   btcUSD?: number;
   usdKRW?: number;
-  errors: string[];
+  errors: PriceSource[];
 }
 
 // 세 소스를 독립적으로 호출 — 일부가 실패해도 성공한 값만 반환하고

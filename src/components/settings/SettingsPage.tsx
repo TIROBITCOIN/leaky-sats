@@ -2,7 +2,7 @@ import { useState } from "react";
 import "../../styles/ledger.css";
 import "../../styles/forms.css";
 import { useLedger } from "../../state/LedgerContext";
-import { formatUpdatedAt, getPriceTone } from "../../lib/priceStatus";
+import { formatStalePriceStatus, formatUpdatedAt, getPriceTone } from "../../lib/priceStatus";
 import { loadWalletName, saveWalletName, DEFAULT_NAME, MAX_LENGTH } from "../../lib/walletName";
 import { loadBtcUnit, saveBtcUnit, type BtcUnit } from "../../lib/format";
 import { getHeldBtc, setHeldBtc, normalizeHeldBtcInput } from "../../lib/heldBtc";
@@ -36,6 +36,9 @@ export default function SettingsPage() {
     priceError,
     priceUpdatedAt,
     isPriceFallback,
+    isPriceStale,
+    priceStaleSources,
+    priceSourceUpdatedAt,
     refreshPrices,
   } = useLedger();
   const [unit, setUnit] = useState<BtcUnit>(loadBtcUnit);
@@ -54,15 +57,16 @@ export default function SettingsPage() {
   const examplePeriod = getSettlementPeriod(currentMonthKey, 17);
   const [exampleY, exampleM] = currentMonthKey.split("-").map(Number);
 
-  const priceTone = getPriceTone(priceStatus, isPriceFallback);
+  const priceTone = getPriceTone(priceStatus, isPriceFallback, isPriceStale);
   const updatedAtText = formatUpdatedAt(priceUpdatedAt);
+  const staleStatusText = formatStalePriceStatus(priceStaleSources, priceSourceUpdatedAt);
   const statusText =
     priceTone === "loading"
       ? "시세를 불러오는 중..."
       : priceTone === "offline"
       ? "시세 연동 실패, 더미 시세 사용 중"
       : priceTone === "stale"
-      ? `일부 시세 갱신 실패, ${updatedAtText} 값 유지 중`
+      ? staleStatusText
       : `마지막 갱신 ${updatedAtText}`;
 
   return (
@@ -138,7 +142,7 @@ export default function SettingsPage() {
               <div className="ldg-setting-label">시세 상태</div>
               <div className="ldg-setting-desc">
                 {statusText}
-                {priceError ? ` (${priceError})` : ""}
+                {priceError && priceTone !== "stale" ? ` (${priceError})` : ""}
               </div>
             </div>
             <button type="button" className="ldg-link" onClick={refreshPrices}>

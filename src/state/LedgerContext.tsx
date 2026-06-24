@@ -13,7 +13,7 @@ import type { CategoryDef, Currency, LedgerData, NewTxnInput, Txn } from "../typ
 import { DUMMY } from "../lib/dummyData";
 import { BUILT_IN_CATEGORIES, DEFAULT_FALLBACK, PROTECTED_IDS } from "../lib/categories";
 import { formatTxnTime, formatCategoryLabel } from "../lib/format";
-import { fetchLivePrices, type PriceFetchResult } from "../lib/priceApi";
+import { fetchLivePrices, type PriceFetchResult, type PriceSource } from "../lib/priceApi";
 import {
   loadCurrency,
   loadRefreshInterval,
@@ -21,14 +21,22 @@ import {
   saveCurrency,
   saveRefreshInterval,
 } from "../lib/preferences";
+import {
+  applyPriceFetchResult,
+  createInitialPriceFreshness,
+  getLatestPriceUpdateAt,
+  hasPriceFallback,
+  isPriceStale as isPriceFreshnessStale,
+  type PriceFreshness,
+  type PriceSourceUpdatedAt,
+} from "../lib/priceFreshness";
 
 export type PriceStatus = "idle" | "loading" | "ok" | "error";
 
 interface PriceMeta {
   status: PriceStatus;
   error: string | null;
-  updatedAt: number | null;
-  liveFields: { btcKRW: boolean; btcUSD: boolean; usdKRW: boolean };
+  freshness: PriceFreshness;
 }
 
 export const CATEGORIES_STORAGE_KEY = "myledger.categories.v1";
@@ -103,6 +111,9 @@ interface LedgerContextValue {
   priceError: string | null;
   priceUpdatedAt: number | null;
   isPriceFallback: boolean;
+  isPriceStale: boolean;
+  priceStaleSources: PriceSource[];
+  priceSourceUpdatedAt: PriceSourceUpdatedAt;
   refreshPrices: () => void;
   categories: CategoryDef[];
   categoriesById: Record<string, CategoryDef>;
@@ -326,6 +337,7 @@ function reducer(state: State, action: Action): State {
       return { ...state, priceMeta: { ...state.priceMeta, status: "loading" } };
     case "PRICE_FETCH_SETTLED": {
       const { btcKRW, btcUSD, usdKRW, errors } = action;
+      const freshness = applyPriceFetchResult(state.priceMeta.freshness, action);
       return {
         ...state,
         data: {
@@ -337,12 +349,7 @@ function reducer(state: State, action: Action): State {
         priceMeta: {
           status: errors.length > 0 ? "error" : "ok",
           error: errors.length > 0 ? errors.join(" / ") : null,
-          updatedAt: Date.now(),
-          liveFields: {
-            btcKRW: state.priceMeta.liveFields.btcKRW || btcKRW !== undefined,
-            btcUSD: state.priceMeta.liveFields.btcUSD || btcUSD !== undefined,
-            usdKRW: state.priceMeta.liveFields.usdKRW || usdKRW !== undefined,
-          },
+          freshness,
         },
       };
     }
@@ -458,8 +465,7 @@ function buildInitialState(): State {
     priceMeta: {
       status: "idle",
       error: null,
-      updatedAt: null,
-      liveFields: { btcKRW: false, btcUSD: false, usdKRW: false },
+      freshness: createInitialPriceFreshness(),
     },
     categories: loadCategories(),
   };
@@ -515,7 +521,7 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
   }, [pendingUndo]);
 
   const value = useMemo<LedgerContextValue>(() => {
-    const { liveFields } = state.priceMeta;
+    const { freshness } = state.priceMeta;
 
     const deleteTxn = (id: number) => {
       const idx = state.data.txns.findIndex((t) => t.id === id);
@@ -544,8 +550,11 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
       setRefreshIntervalMs: (ms) => dispatch({ type: "SET_REFRESH_INTERVAL", ms }),
       priceStatus: state.priceMeta.status,
       priceError: state.priceMeta.error,
-      priceUpdatedAt: state.priceMeta.updatedAt,
-      isPriceFallback: !(liveFields.btcKRW && liveFields.btcUSD && liveFields.usdKRW),
+      priceUpdatedAt: getLatestPriceUpdateAt(freshness),
+      isPriceFallback: hasPriceFallback(freshness),
+      isPriceStale: isPriceFreshnessStale(freshness),
+      priceStaleSources: freshness.staleSources,
+      priceSourceUpdatedAt: freshness.lastOkAt,
       refreshPrices: fetchAndApplyPrices,
       categories: state.categories,
       categoriesById: Object.fromEntries(state.categories.map((c) => [c.id, c])),

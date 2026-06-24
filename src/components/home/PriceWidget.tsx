@@ -1,7 +1,7 @@
 import type { LedgerData } from "../../types";
 import { kimchiPremium } from "../../lib/format";
 import { useLedger } from "../../state/LedgerContext";
-import { formatUpdatedAt, getPriceTone, PRICE_TONE_COLOR } from "../../lib/priceStatus";
+import { formatStalePriceStatus, formatUpdatedAt, getPriceTone, PRICE_TONE_COLOR } from "../../lib/priceStatus";
 
 const TONE_LABEL: Record<ReturnType<typeof getPriceTone>, (time: string) => string> = {
   live: (time) => `LIVE${time ? ` · ${time} 갱신` : ""}`,
@@ -11,12 +11,22 @@ const TONE_LABEL: Record<ReturnType<typeof getPriceTone>, (time: string) => stri
 };
 
 export default function PriceWidget({ d }: { d: LedgerData }) {
-  const { priceStatus, isPriceFallback, priceUpdatedAt } = useLedger();
+  const {
+    priceStatus,
+    isPriceFallback,
+    isPriceStale,
+    priceUpdatedAt,
+    priceStaleSources,
+    priceSourceUpdatedAt,
+  } = useLedger();
   const kimchi = kimchiPremium(d.btcKRW, d.btcUSD, d.usdKRW);
   const kimchiClass = kimchi > 3 ? "danger" : kimchi >= 0 ? "warn" : "good";
 
-  const tone = getPriceTone(priceStatus, isPriceFallback);
-  const statusLabel = TONE_LABEL[tone](formatUpdatedAt(priceUpdatedAt));
+  const tone = getPriceTone(priceStatus, isPriceFallback, isPriceStale);
+  const statusLabel =
+    priceStaleSources.length > 0
+      ? formatStalePriceStatus(priceStaleSources, priceSourceUpdatedAt)
+      : TONE_LABEL[tone](formatUpdatedAt(priceUpdatedAt));
 
   return (
     <div className="ldg-card ldg-price">
