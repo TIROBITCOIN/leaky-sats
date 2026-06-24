@@ -95,9 +95,8 @@ export default function TransactionEntryPage() {
   const editingTxn = editId ? data.txns.find((t) => t.id === Number(editId)) ?? null : null;
   const monthParam = searchParams.get("month");
 
-  // 거래 추가(편집 아님)일 때만 "큰 항목 선택 → 세부 입력" 2단계 흐름을 쓴다. 편집은 과거에 쓰이던
-  // 카테고리(간소화된 기본 seed에는 없는 것 포함)도 그대로 다룰 수 있도록 기존 전체 카테고리
-  // 피커를 유지한다.
+  // 거래 추가(편집 아님)일 때만 "큰 항목 선택 → 세부 입력" 2단계 흐름을 쓴다.
+  // 편집은 정본(큰 카테고리 + 사용자 추가) 집합만 선택지로 보여준다.
   const [selectedItem, setSelectedItem] = useState<MajorItem | null>(null);
 
   const [amount, setAmount] = useState(() => (editingTxn ? String(Math.abs(editingTxn.amount)) : ""));
@@ -163,7 +162,7 @@ export default function TransactionEntryPage() {
     setAmount("");
   };
 
-  // ---- 편집: 기존 전체 카테고리 피커 화면 그대로 ----
+  // ---- 편집: 정본 카테고리만 노출하는 피커 ----
   if (editingTxn) {
     return (
       <div className="ldg-screen">
@@ -175,7 +174,7 @@ export default function TransactionEntryPage() {
             <div className="ldg-card">
               <div className="ldg-field">
                 <div className="ldg-label">카테고리</div>
-                <CategoryGroupPicker value={cat} onSelect={(category) => setCat(category.id)} />
+                <CategoryGroupPicker value={cat} onSelect={(category) => setCat(category.id)} canonicalOnly />
               </div>
 
               <div className="ldg-field" style={{ marginTop: 12 }}>

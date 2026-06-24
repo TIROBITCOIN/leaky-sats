@@ -1,7 +1,7 @@
 import { useState, type CSSProperties } from "react";
 import type { CategoryDef, CategoryGroup, CategoryId } from "../../types";
 import { useLedger } from "../../state/LedgerContext";
-import { GROUP_LABEL } from "../../lib/categories";
+import { GROUP_LABEL, isCanonicalCategory } from "../../lib/categories";
 import { ICONS_BY_ID } from "../../lib/categoryIcons";
 import { hexToRgba } from "../../lib/colorUtils";
 
@@ -19,9 +19,12 @@ function ChipIcon({ iconId }: { iconId: string }) {
 export default function CategoryGroupPicker({
   value,
   onSelect,
+  canonicalOnly = false,
 }: {
   value: CategoryId;
   onSelect: (category: CategoryDef) => void;
+  /** true이면 정본(큰 카테고리 + 사용자 추가) 카테고리만 표시, 레거시 제외 */
+  canonicalOnly?: boolean;
 }) {
   const { categories } = useLedger();
   const [expanded, setExpanded] = useState<Record<CategoryGroup, boolean>>({
@@ -30,9 +33,10 @@ export default function CategoryGroupPicker({
     invest: false,
   });
 
+  const filtered = canonicalOnly ? categories.filter((c) => isCanonicalCategory(c.id)) : categories;
   const byGroup = GROUP_ORDER.map((group) => ({
     group,
-    items: categories.filter((c) => c.group === group),
+    items: filtered.filter((c) => c.group === group),
   })).filter((g) => g.items.length > 0);
 
   return (

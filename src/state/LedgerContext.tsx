@@ -11,7 +11,7 @@ import {
 } from "react";
 import type { CategoryDef, Currency, LedgerData, NewTxnInput, Txn } from "../types";
 import { DUMMY } from "../lib/dummyData";
-import { BUILT_IN_CATEGORIES, DEFAULT_FALLBACK, PROTECTED_IDS } from "../lib/categories";
+import { BUILT_IN_CATEGORIES, DEFAULT_FALLBACK, PROTECTED_IDS, isCanonicalCategory } from "../lib/categories";
 import { formatTxnTime, formatCategoryLabel } from "../lib/format";
 import {
   fetchLivePrices,
@@ -100,7 +100,8 @@ type Action =
   | ({ type: "PRICE_FETCH_SETTLED" } & PriceFetchResult)
   | { type: "ADD_CATEGORY"; category: CategoryDef }
   | { type: "UPDATE_CATEGORY"; id: string; patch: Partial<Pick<CategoryDef, "label" | "fg" | "icon">> }
-  | { type: "DELETE_CATEGORY"; id: string };
+  | { type: "DELETE_CATEGORY"; id: string }
+  | { type: "MIGRATE_LEGACY_CATEGORIES" };
 
 interface LedgerContextValue {
   currency: Currency;
@@ -127,6 +128,7 @@ interface LedgerContextValue {
   addCategory: (input: NewCategoryInput) => void;
   updateCategory: (id: string, patch: Partial<Pick<CategoryDef, "label" | "fg" | "icon">>) => void;
   deleteCategory: (id: string) => void;
+  migrateLegacyCategories: () => void;
 }
 
 const LedgerContext = createContext<LedgerContextValue | null>(null);
@@ -400,6 +402,31 @@ function reducer(state: State, action: Action): State {
         data: withTxnSummary(state.data, nextTxns),
       };
     }
+    case "MIGRATE_LEGACY_CATEGORIES": {
+      // 레거시(정본 집합에 없는 비보호) 카테고리에 묶인 거래를 그룹의 기타 카테고리로 재배정하고,
+      // 더 이상 쓰이지 않는 레거시 카테고리를 제거한다. 금액/btcAt 불변, cat/catLabel만 갱신.
+      const legacyIds = new Set(
+        state.categories
+          .filter((c) => !isCanonicalCategory(c.id) && !PROTECTED_IDS.has(c.id))
+          .map((c) => c.id)
+      );
+      if (legacyIds.size === 0) return state;
+
+      const catById = new Map(state.categories.map((c) => [c.id, c]));
+      const nextTxns = state.data.txns.map((t) => {
+        if (!legacyIds.has(t.cat)) return t;
+        const old = catById.get(t.cat);
+        const fallbackFlow = old?.flow === "income" ? "income" : "expense";
+        const fb = findFallbackCategory(state.categories, fallbackFlow);
+        if (!fb) return t;
+        return { ...t, cat: fb.id, catLabel: fb.label };
+      });
+      return {
+        ...state,
+        categories: state.categories.filter((c) => !legacyIds.has(c.id)),
+        data: withTxnSummary(state.data, nextTxns),
+      };
+    }
   }
 }
 
@@ -589,6 +616,7 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
         }),
       updateCategory: (id, patch) => dispatch({ type: "UPDATE_CATEGORY", id, patch }),
       deleteCategory: (id) => dispatch({ type: "DELETE_CATEGORY", id }),
+      migrateLegacyCategories: () => dispatch({ type: "MIGRATE_LEGACY_CATEGORIES" }),
     };
   }, [state, pendingUndo, fetchAndApplyPrices]);
 

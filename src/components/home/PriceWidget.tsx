@@ -39,16 +39,16 @@ export default function PriceWidget({ d }: { d: LedgerData }) {
         </div>
       </div>
       <div className="ldg-price-grid">
-        <div>
-          <div className="ldg-tiny">UPBIT · KRW</div>
+        <div className="ldg-price-col">
+          <div className="ldg-tiny">BTC · KRW</div>
           <div className="ldg-price-val">₩{(d.btcKRW / 1_000_000).toFixed(1)}M</div>
         </div>
-        <div>
-          <div className="ldg-tiny">{(priceSourceMeta.btcUsd ?? "BINANCE").toUpperCase()} · USD</div>
+        <div className="ldg-price-col">
+          <div className="ldg-tiny">BTC · USD</div>
           <div className="ldg-price-val">${d.btcUSD.toLocaleString("en-US")}</div>
         </div>
-        <div>
-          <div className="ldg-tiny">{priceSourceMeta.usdKrw ? `${priceSourceMeta.usdKrw.toUpperCase()} · ` : ""}USD/KRW</div>
+        <div className="ldg-price-col">
+          <div className="ldg-tiny">USD/KRW</div>
           <div className="ldg-price-val mono">{d.usdKRW.toLocaleString("en-US")}</div>
         </div>
       </div>

@@ -15,7 +15,7 @@ assert.match(balanceCard, /otherUnit.*unit === "sats" \? "BTC" : "sats"/, "sub l
 
 // 3. PriceWidget (BTC Price card) still shows KRW price
 const priceWidget = readFileSync("src/components/home/PriceWidget.tsx", "utf8");
-assert.match(priceWidget, /UPBIT · KRW/, "PriceWidget still shows UPBIT KRW price label");
+assert.match(priceWidget, /BTC · KRW/, "PriceWidget still shows KRW price label");
 assert.match(priceWidget, /d\.btcKRW/, "PriceWidget still reads btcKRW");
 
 // 4. SellNeededCard still exists and still uses current BTC/KRW price via sellCalculator

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import "../../styles/ledger.css";
 import "../../styles/forms.css";
 import { useLedger } from "../../state/LedgerContext";
@@ -8,6 +8,7 @@ import { loadBtcUnit, saveBtcUnit, type BtcUnit } from "../../lib/format";
 import { getHeldBtc, setHeldBtc, normalizeHeldBtcInput } from "../../lib/heldBtc";
 import { loadSettlementDay, saveSettlementDay, getSettlementPeriod } from "../../lib/settlement";
 import { getCurrentMonthKey } from "../../lib/month";
+import { isCanonicalCategory } from "../../lib/categories";
 import AppLockSettings from "../security/AppLockSettings";
 import CategoryManager from "./CategoryManager";
 import BackupRestoreCard from "./BackupRestoreCard";
@@ -42,6 +43,8 @@ export default function SettingsPage() {
     priceSourceUpdatedAt,
     priceSourceMeta,
     refreshPrices,
+    categories,
+    migrateLegacyCategories,
   } = useLedger();
   const [unit, setUnit] = useState<BtcUnit>(loadBtcUnit);
   const [source, setSource] = useState<(typeof SOURCES)[number]>("Upbit");
@@ -53,6 +56,12 @@ export default function SettingsPage() {
   });
   const [heldBtcSaved, setHeldBtcSaved] = useState(false);
   const [settlementDay, setSettlementDay] = useState(loadSettlementDay);
+  const [migrateDone, setMigrateDone] = useState(false);
+
+  const legacyCount = useMemo(
+    () => categories.filter((c) => !isCanonicalCategory(c.id) && !c.protected).length,
+    [categories],
+  );
 
   const currentMonthKey = getCurrentMonthKey();
   const currentPeriod = getSettlementPeriod(currentMonthKey, settlementDay);
@@ -297,6 +306,33 @@ export default function SettingsPage() {
             현재 정산기간: {currentPeriod.rangeLabel} ({currentPeriod.label})
           </div>
         </div>
+
+        {legacyCount > 0 && (
+          <div className="ldg-card">
+            <div className="ldg-setting-label">세분화 카테고리 정리</div>
+            <div className="ldg-setting-desc" style={{ marginBottom: 10 }}>
+              현재 큰 카테고리에 포함되지 않는 세분화/레거시 카테고리가 {legacyCount}개 있습니다.
+              해당 카테고리에 묶인 거래를 그룹의 "기타" 카테고리로 재배정하고, 사용되지 않는 레거시
+              카테고리를 제거합니다. 거래 금액은 변하지 않습니다.
+            </div>
+            <button
+              type="button"
+              className="ldg-submit-btn"
+              onClick={() => {
+                if (window.confirm(`세분화 카테고리 ${legacyCount}개를 정리하시겠습니까? 해당 거래는 기타 카테고리로 재배정됩니다.`)) {
+                  migrateLegacyCategories();
+                  setMigrateDone(true);
+                  setTimeout(() => setMigrateDone(false), 3000);
+                }
+              }}
+            >
+              정리하기
+            </button>
+            {migrateDone && (
+              <div className="ldg-backup-status ok" style={{ marginTop: 8 }}>정리 완료</div>
+            )}
+          </div>
+        )}
 
         <RecurringRulesSettings />
         <CategoryManager />

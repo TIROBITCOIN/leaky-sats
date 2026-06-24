@@ -193,7 +193,7 @@ export const BTC_MAJOR_ITEMS: MajorItem[] = [
 export const MAJOR_ITEM_GROUPS: { label: string; items: MajorItem[] }[] = [
   { label: "수입", items: INCOME_MAJOR_ITEMS },
   { label: "지출", items: EXPENSE_MAJOR_ITEMS },
-  { label: "BTC", items: BTC_MAJOR_ITEMS },
+  { label: "투자", items: BTC_MAJOR_ITEMS },
 ];
 
 export const ALL_MAJOR_ITEMS: MajorItem[] = [...INCOME_MAJOR_ITEMS, ...EXPENSE_MAJOR_ITEMS, ...BTC_MAJOR_ITEMS];

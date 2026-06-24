@@ -462,8 +462,12 @@
 .ldg-price-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  grid-template-rows: auto auto;
+  gap: 4px 8px;
   margin-top: 4px;
+}
+.ldg-price-col {
+  display: contents;
 }
 .ldg-tiny {
   font-family: var(--ldg-mono);
@@ -471,12 +475,12 @@
   letter-spacing: 0.05em;
   color: var(--ldg-fg-4);
   text-transform: uppercase;
+  white-space: nowrap;
 }
 .ldg-price-val {
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 0;
-  margin-top: 4px;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
 }
@@ -552,6 +556,48 @@
   color: var(--ldg-pos);
 }
 .ldg-calendar-amt.expense {
+  color: var(--ldg-neg);
+}
+
+/* ---- Segment control (전체보기 필터) ---- */
+.ldg-segment-control {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--ldg-border);
+  border-radius: 12px;
+  padding: 3px;
+  gap: 3px;
+}
+.ldg-segment-btn {
+  font: inherit;
+  background: transparent;
+  border: 0;
+  color: var(--ldg-fg-3);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.ldg-segment-btn.active {
+  background: rgba(247, 147, 26, 0.18);
+  color: var(--ldg-orange);
+}
+.ldg-segment-total {
+  font-size: 13px;
+  color: var(--ldg-fg-3);
+  text-align: center;
+}
+.ldg-segment-total strong {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.ldg-segment-total strong.pos {
+  color: var(--ldg-pos);
+}
+.ldg-segment-total strong.neg {
   color: var(--ldg-neg);
 }
 

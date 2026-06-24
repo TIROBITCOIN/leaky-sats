@@ -65,6 +65,14 @@ export const BUILT_IN_CATEGORIES: CategoryDef[] = [
   },
 ];
 
+// 현재 정본(canonical) 카테고리 id 집합. BUILT_IN_CATEGORIES에 포함된 id.
+export const CANONICAL_IDS = new Set(BUILT_IN_CATEGORIES.map((c) => c.id));
+
+// 카테고리가 정본 집합에 속하는지 판별. BUILT_IN id이거나 사용자가 추가한(cat_ 접두어) 카테고리.
+export function isCanonicalCategory(id: string): boolean {
+  return CANONICAL_IDS.has(id) || id.startsWith("cat_");
+}
+
 export const GROUP_LABEL: Record<CategoryGroup, string> = {
   expense: "지출",
   income: "수입",
