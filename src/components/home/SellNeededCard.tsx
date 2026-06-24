@@ -16,23 +16,25 @@ export default function SellNeededCard({ result, unit, selectedMonth, onConfirmS
   const monthLabel = getMonthLabel(selectedMonth);
 
   return (
-    <div className="ldg-card">
-      <div className="ldg-label">판매해야 하는 비트코인</div>
+    <div className="ldg-card ldg-settlement-card">
+      <div className="ldg-card-context">
+        <div className="ldg-label">판매해야 하는 비트코인</div>
+        <span className="ldg-card-badge estimate">예상</span>
+      </div>
+      <div className="ldg-card-helper">현재 BTC 가격 기준 예상 판매량입니다.</div>
       {noSellNeeded ? (
-        <>
-          <div className="ldg-inout-main pos" style={{ marginTop: 6 }}>
-            {fmtBtcValue(0, unit)}
-          </div>
-          <div className="ldg-balance-sub">판매 필요 없음</div>
+        <div className="ldg-sell-empty">
+          <div className="ldg-sell-empty-title">이번 정산기간에는 판매가 필요하지 않습니다.</div>
+          <div className="ldg-balance-sub">{fmtBtcValue(0, unit)}</div>
           {hasConfirmed && (
             <div className="ldg-balance-sub" style={{ marginTop: 4 }}>
-              이미 반영 {fmtKRW(confirmedCoverageKrw)}
+              판매 확정 기록으로 충당 {fmtKRW(confirmedCoverageKrw)}
             </div>
           )}
-        </>
+        </div>
       ) : (
         <>
-          <div className="ldg-inout-main neg" style={{ marginTop: 6 }}>
+          <div className="ldg-inout-main neg ldg-settlement-value">
             {fmtBtcValue(sellBtc, unit)}
           </div>
           <div className="ldg-balance-sub">
@@ -40,7 +42,7 @@ export default function SellNeededCard({ result, unit, selectedMonth, onConfirmS
           </div>
           {hasConfirmed && (
             <div className="ldg-balance-sub" style={{ marginTop: 4 }}>
-              이미 반영 {fmtKRW(confirmedCoverageKrw)} / 총 부족분 {fmtKRW(totalDeficitKrw)}
+              판매 확정 {fmtKRW(confirmedCoverageKrw)} / 총 부족분 {fmtKRW(totalDeficitKrw)}
             </div>
           )}
           <div style={{ marginTop: 8, borderTop: "0.5px solid var(--ldg-border)", paddingTop: 8 }}>

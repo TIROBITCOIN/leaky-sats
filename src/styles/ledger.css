@@ -292,6 +292,56 @@
   color: var(--ldg-fg-3);
   font-weight: 500;
 }
+.ldg-card-context {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.ldg-card-badge {
+  flex-shrink: 0;
+  border: 1px solid transparent;
+  border-radius: 99px;
+  padding: 3px 7px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.ldg-card-badge.estimate {
+  border-color: rgba(247, 147, 26, 0.28);
+  background: rgba(247, 147, 26, 0.1);
+  color: var(--ldg-orange);
+}
+.ldg-card-badge.confirmed {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ldg-fg-2);
+}
+.ldg-card-helper {
+  margin-top: 7px;
+  color: var(--ldg-fg-4);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.ldg-settlement-card {
+  padding-block: 17px;
+}
+.ldg-settlement-value {
+  margin-top: 10px;
+}
+.ldg-sell-empty {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+}
+.ldg-sell-empty-title {
+  color: var(--ldg-pos);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.45;
+}
 .ldg-link {
   font: inherit;
   background: transparent;
