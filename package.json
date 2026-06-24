@@ -27,7 +27,8 @@
     "verify:remove-assets-tab": "node verify-remove-assets-tab.mjs",
     "verify:held-btc-card": "node verify-held-btc-card.mjs",
     "verify:preferences-persist": "node verify-preferences-persist.mjs",
-    "verify:price-staleness": "node verify-price-staleness.mjs"
+    "verify:price-staleness": "node verify-price-staleness.mjs",
+    "verify:price-fallbacks": "node verify-price-fallbacks.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

@@ -13,7 +13,12 @@ import type { CategoryDef, Currency, LedgerData, NewTxnInput, Txn } from "../typ
 import { DUMMY } from "../lib/dummyData";
 import { BUILT_IN_CATEGORIES, DEFAULT_FALLBACK, PROTECTED_IDS } from "../lib/categories";
 import { formatTxnTime, formatCategoryLabel } from "../lib/format";
-import { fetchLivePrices, type PriceFetchResult, type PriceSource } from "../lib/priceApi";
+import {
+  fetchLivePrices,
+  type PriceFetchResult,
+  type PriceSource,
+  type PriceSourceMeta,
+} from "../lib/priceApi";
 import {
   loadCurrency,
   loadRefreshInterval,
@@ -37,6 +42,7 @@ interface PriceMeta {
   status: PriceStatus;
   error: string | null;
   freshness: PriceFreshness;
+  sourceMeta: PriceSourceMeta;
 }
 
 export const CATEGORIES_STORAGE_KEY = "myledger.categories.v1";
@@ -114,6 +120,7 @@ interface LedgerContextValue {
   isPriceStale: boolean;
   priceStaleSources: PriceSource[];
   priceSourceUpdatedAt: PriceSourceUpdatedAt;
+  priceSourceMeta: PriceSourceMeta;
   refreshPrices: () => void;
   categories: CategoryDef[];
   categoriesById: Record<string, CategoryDef>;
@@ -336,7 +343,7 @@ function reducer(state: State, action: Action): State {
     case "PRICE_FETCH_START":
       return { ...state, priceMeta: { ...state.priceMeta, status: "loading" } };
     case "PRICE_FETCH_SETTLED": {
-      const { btcKRW, btcUSD, usdKRW, errors } = action;
+      const { btcKRW, btcUSD, usdKRW, errors, sourceMeta } = action;
       const freshness = applyPriceFetchResult(state.priceMeta.freshness, action);
       return {
         ...state,
@@ -350,6 +357,14 @@ function reducer(state: State, action: Action): State {
           status: errors.length > 0 ? "error" : "ok",
           error: errors.length > 0 ? errors.join(" / ") : null,
           freshness,
+          sourceMeta: {
+            btcUsd: sourceMeta.btcUsd ?? state.priceMeta.sourceMeta.btcUsd,
+            usdKrw: sourceMeta.usdKrw ?? state.priceMeta.sourceMeta.usdKrw,
+            fxReferenceDate:
+              sourceMeta.usdKrw !== null
+                ? sourceMeta.fxReferenceDate
+                : state.priceMeta.sourceMeta.fxReferenceDate,
+          },
         },
       };
     }
@@ -466,6 +481,7 @@ function buildInitialState(): State {
       status: "idle",
       error: null,
       freshness: createInitialPriceFreshness(),
+      sourceMeta: { btcUsd: null, usdKrw: null },
     },
     categories: loadCategories(),
   };
@@ -555,6 +571,7 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
       isPriceStale: isPriceFreshnessStale(freshness),
       priceStaleSources: freshness.staleSources,
       priceSourceUpdatedAt: freshness.lastOkAt,
+      priceSourceMeta: state.priceMeta.sourceMeta,
       refreshPrices: fetchAndApplyPrices,
       categories: state.categories,
       categoriesById: Object.fromEntries(state.categories.map((c) => [c.id, c])),

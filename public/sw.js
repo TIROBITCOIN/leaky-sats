@@ -9,7 +9,12 @@ const APP_SHELL = [
   "/icons/apple-touch-icon.svg"
 ];
 
-const API_HOSTS = new Set(["api.upbit.com", "api.binance.com", "api.frankfurter.dev"]);
+const API_HOSTS = new Set([
+  "api.upbit.com",
+  "api.binance.com",
+  "api.frankfurter.dev",
+  "api.coinbase.com"
+]);
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
