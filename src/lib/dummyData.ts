@@ -1,6 +1,6 @@
 import type { LedgerData } from "../types";
 
-// 디자인 레퍼런스(myledger.jsx)의 DUMMY를 그대로 포팅. date 필드만 통계 탭의
+// 과거 디자인 레퍼런스의 DUMMY를 포팅한 데이터. date 필드만 통계 탭의
 // 기간 필터링을 위해 time 라벨에 맞춰 추가했다.
 export const DUMMY: LedgerData = {
   month: "2026년 4월",

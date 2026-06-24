@@ -4,7 +4,7 @@ import {
   calculateCategorySpending,
   calculatePeriodStats,
   txnToBitcoinSats,
-} from "./src/lib/ledgerCalc.js";
+} from "../src/lib/ledgerCalc.js";
 
 const txns = [
   {
