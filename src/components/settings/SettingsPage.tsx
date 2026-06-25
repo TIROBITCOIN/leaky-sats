@@ -150,17 +150,6 @@ export default function SettingsPage() {
               지금 갱신
             </button>
           </div>
-          <div className="ldg-setting-row">
-            <div>
-              <div className="ldg-setting-label">테마</div>
-              <div className="ldg-setting-desc">다크 모드 고정</div>
-            </div>
-            <div className="ldg-radio-group">
-              <button type="button" className="on">
-                Dark
-              </button>
-            </div>
-          </div>
         </div>
 
         <div className="ldg-card">
