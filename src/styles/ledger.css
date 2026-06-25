@@ -22,8 +22,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(420px 320px at 90% 8%, rgba(247, 147, 26, 0.12), transparent 65%),
-    radial-gradient(600px 400px at 0% 100%, rgba(247, 147, 26, 0.05), transparent 60%);
+  background: none;
   pointer-events: none;
   z-index: 0;
 }
@@ -41,20 +40,14 @@
   flex-direction: column;
   gap: 14px;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
-  background: linear-gradient(
-    180deg,
-    rgba(10, 10, 10, 0) 0%,
-    rgba(10, 10, 10, 0.55) 28%,
-    rgba(10, 10, 10, 0.85) 60%,
-    rgba(10, 10, 10, 0.95) 100%
-  );
+  scrollbar-color: rgba(17, 17, 20, 0.18) transparent;
+  background: transparent;
 }
 .ldg-content::-webkit-scrollbar {
   width: 4px;
 }
 .ldg-content::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(17, 17, 20, 0.18);
   border-radius: 99px;
 }
 
@@ -71,6 +64,29 @@
   width: min(100%, 392px);
   height: auto;
   object-fit: contain;
+}
+.ldg-slogan-text {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  font-family: "Trajan Pro", "Cinzel", serif;
+  text-transform: uppercase;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
+.ldg-slogan-text .ldg-slogan-main {
+  color: var(--ldg-fg);
+}
+.ldg-slogan-text .ldg-slogan-accent {
+  color: var(--ldg-orange);
+}
+.ldg-slogan-text .ldg-slogan-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ldg-orange);
+  flex-shrink: 0;
 }
 
 /* ---- Header ---- */
@@ -116,7 +132,7 @@
 }
 .ldg-month-nav-btn {
   font: inherit;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(17, 17, 20, 0.05);
   border: 1px solid var(--ldg-border);
   color: var(--ldg-fg-2);
   font-size: 16px;
@@ -132,7 +148,7 @@
   transition: background 0.15s, border-color 0.15s;
 }
 .ldg-month-nav-btn:active {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(17, 17, 20, 0.1);
 }
 .ldg-month-selector-label {
   font: inherit;
@@ -150,7 +166,7 @@
   transition: background 0.15s, color 0.15s;
 }
 .ldg-month-selector-label:active {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(17, 17, 20, 0.07);
 }
 .ldg-month-selector-label.ldg-month-selector-label-past {
   color: var(--ldg-orange);
@@ -176,7 +192,7 @@
 }
 .ldg-month-picker-cell {
   font: inherit;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(17, 17, 20, 0.045);
   border: 1px solid var(--ldg-border);
   color: var(--ldg-fg-2);
   font-size: 14px;
@@ -188,10 +204,10 @@
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 .ldg-month-picker-cell.today {
-  border-color: rgba(247, 147, 26, 0.45);
+  border-color: rgba(230, 154, 51, 0.45);
 }
 .ldg-month-picker-cell.selected {
-  background: rgba(247, 147, 26, 0.18);
+  background: rgba(230, 154, 51, 0.18);
   border-color: var(--ldg-orange);
   color: var(--ldg-orange);
 }
@@ -205,8 +221,8 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(247, 147, 26, 0.12);
-  border: 1px solid rgba(247, 147, 26, 0.3);
+  background: rgba(230, 154, 51, 0.12);
+  border: 1px solid rgba(230, 154, 51, 0.3);
   color: var(--ldg-orange);
   border-radius: 99px;
   padding: 5px 9px;
@@ -219,15 +235,15 @@
   height: 6px;
   border-radius: 50%;
   background: var(--ldg-orange);
-  box-shadow: 0 0 0 0 rgba(247, 147, 26, 0.7);
+  box-shadow: 0 0 0 0 rgba(230, 154, 51, 0.7);
   animation: ldg-pulse 1.6s ease-out infinite;
 }
 @keyframes ldg-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(247, 147, 26, 0.7);
+    box-shadow: 0 0 0 0 rgba(230, 154, 51, 0.7);
   }
   100% {
-    box-shadow: 0 0 0 8px rgba(247, 147, 26, 0);
+    box-shadow: 0 0 0 8px rgba(230, 154, 51, 0);
   }
 }
 
@@ -235,7 +251,7 @@
 .ldg-toggle {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(17, 17, 20, 0.045);
   border: 1px solid var(--ldg-border);
   border-radius: 99px;
   padding: 4px;
@@ -260,11 +276,13 @@
 }
 .ldg-toggle-btn.active.krw {
   background: #ffffff;
-  color: #0a0a0a;
+  color: var(--ldg-fg);
+  box-shadow: 0 1px 3px rgba(20, 20, 30, 0.12);
 }
 .ldg-toggle-btn.active.btc {
   background: var(--ldg-orange);
-  color: #0a0a0a;
+  color: #3a2200;
+  box-shadow: 0 1px 4px rgba(230, 154, 51, 0.28);
 }
 .ldg-toggle-glyph {
   font-weight: 700;
@@ -274,10 +292,9 @@
 .ldg-card {
   background: var(--ldg-card);
   border: 1px solid var(--ldg-border);
-  border-radius: 18px;
-  padding: 16px;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 17px 16px;
+  box-shadow: var(--ldg-card-shadow);
 }
 .ldg-card-head {
   display: flex;
@@ -343,7 +360,7 @@
   color: var(--ldg-pos);
 }
 .ldg-net-value.neg {
-  color: var(--ldg-neg);
+  color: var(--ldg-expense);
 }
 .ldg-inout-main {
   font-size: 17px;
@@ -357,7 +374,7 @@
   color: var(--ldg-pos);
 }
 .ldg-inout-main.neg {
-  color: var(--ldg-neg);
+  color: var(--ldg-expense);
 }
 .ldg-inout-sub {
   font-family: var(--ldg-mono);
@@ -457,19 +474,19 @@
   font-weight: 600;
   border-radius: 99px;
   padding: 3px 8px;
-  background: rgba(247, 147, 26, 0.12);
+  background: rgba(230, 154, 51, 0.12);
   color: var(--ldg-orange);
-  border: 1px solid rgba(247, 147, 26, 0.3);
+  border: 1px solid rgba(230, 154, 51, 0.3);
 }
 .ldg-kimchi.good {
-  background: rgba(74, 222, 128, 0.12);
-  color: #4ade80;
-  border-color: rgba(74, 222, 128, 0.3);
+  background: rgba(22, 137, 90, 0.12);
+  color: var(--ldg-pos);
+  border-color: rgba(22, 137, 90, 0.28);
 }
 .ldg-kimchi.danger {
-  background: rgba(248, 113, 113, 0.15);
-  color: #f87171;
-  border-color: rgba(248, 113, 113, 0.35);
+  background: rgba(213, 107, 99, 0.12);
+  color: var(--ldg-neg);
+  border-color: rgba(213, 107, 99, 0.3);
 }
 .ldg-price-grid {
   display: grid;
@@ -529,7 +546,7 @@
 }
 .ldg-calendar-cell {
   font: inherit;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(17, 17, 20, 0.035);
   border: 1px solid transparent;
   border-radius: 10px;
   color: var(--ldg-fg-2);
@@ -547,10 +564,10 @@
   cursor: default;
 }
 .ldg-calendar-cell.today {
-  border-color: rgba(247, 147, 26, 0.4);
+  border-color: rgba(230, 154, 51, 0.4);
 }
 .ldg-calendar-cell.selected {
-  background: rgba(247, 147, 26, 0.16);
+  background: rgba(230, 154, 51, 0.16);
   border-color: var(--ldg-orange);
 }
 .ldg-calendar-date {
@@ -570,14 +587,14 @@
   color: var(--ldg-pos);
 }
 .ldg-calendar-amt.expense {
-  color: var(--ldg-neg);
+  color: var(--ldg-expense);
 }
 
 /* ---- Segment control (전체보기 필터) ---- */
 .ldg-segment-control {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(17, 17, 20, 0.045);
   border: 1px solid var(--ldg-border);
   border-radius: 12px;
   padding: 3px;
@@ -596,7 +613,7 @@
   transition: background 0.15s, color 0.15s;
 }
 .ldg-segment-btn.active {
-  background: rgba(247, 147, 26, 0.18);
+  background: rgba(230, 154, 51, 0.18);
   color: var(--ldg-orange);
 }
 .ldg-segment-total {
@@ -674,10 +691,10 @@
   grid-template-columns: 36px 1fr auto auto;
   gap: 10px;
   align-items: center;
-  padding: 10px 0;
+  padding: 11px 0;
   position: relative;
   z-index: 1;
-  background: #141414;
+  background: var(--ldg-card);
 }
 .swipe-row-content:not(.dragging) {
   transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -714,7 +731,7 @@
   inset: 0;
   width: 100%;
   border: 0;
-  background: rgba(0, 0, 0, 0.62);
+  background: rgba(17, 17, 22, 0.4);
 }
 .ldg-action-sheet {
   position: relative;
@@ -724,9 +741,9 @@
   padding: 18px 18px calc(18px + env(safe-area-inset-bottom));
   border: 1px solid var(--ldg-border);
   border-bottom: 0;
-  border-radius: 20px 20px 0 0;
-  background: #181818;
-  box-shadow: 0 -16px 40px rgba(0, 0, 0, 0.48);
+  border-radius: 22px 22px 0 0;
+  background: #ffffff;
+  box-shadow: 0 -12px 40px rgba(20, 20, 30, 0.16);
 }
 .ldg-action-sheet-summary {
   display: flex;
@@ -755,13 +772,13 @@
   color: var(--ldg-pos);
 }
 .ldg-action-sheet-amount.neg {
-  color: var(--ldg-neg);
+  color: var(--ldg-expense);
 }
 .ldg-action-sheet-memo {
   margin-bottom: 16px;
   padding: 12px 14px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(17, 17, 20, 0.045);
   color: var(--ldg-fg-2);
   font-size: 14px;
   line-height: 1.55;
@@ -779,7 +796,7 @@
   min-height: 46px;
   border: 1px solid var(--ldg-border);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(17, 17, 20, 0.045);
   color: var(--ldg-fg-2);
   font: inherit;
   font-weight: 700;
@@ -828,7 +845,7 @@
   color: var(--ldg-pos);
 }
 .ldg-txn-main.neg {
-  color: var(--ldg-fg);
+  color: var(--ldg-expense);
 }
 .ldg-txn-sub {
   font-family: var(--ldg-mono);

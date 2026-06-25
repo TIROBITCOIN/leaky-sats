@@ -3,10 +3,12 @@ body {
   margin: 0;
   padding: 0;
   height: 100%;
-  background: #05060a;
+  background: var(--ldg-bg);
   font-family: var(--ldg-sans);
   font-variant-numeric: tabular-nums;
-  color: #fff;
+  color: var(--ldg-fg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   overflow: hidden;
   overscroll-behavior-y: none;
   -webkit-text-size-adjust: 100%;

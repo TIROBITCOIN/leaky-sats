@@ -18,7 +18,7 @@ export default function CategoryDonut({ txns }: { txns: Txn[] }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
       <svg width="120" height="120" viewBox="0 0 120 120" style={{ flexShrink: 0 }}>
-        <circle cx="60" cy="60" r={R} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="14" />
+        <circle cx="60" cy="60" r={R} fill="none" stroke="rgba(17,17,20,0.07)" strokeWidth="14" />
         {entries.map((entry) => {
           const c = categoriesById[entry.cat] ?? categoriesById.etc;
           const frac = entry.amount / total;

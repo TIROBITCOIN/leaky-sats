@@ -4,7 +4,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(1200px 700px at 80% -10%, #1a2030 0%, #08090f 55%, #04050a 100%);
+  background: radial-gradient(1200px 700px at 80% -10%, #ffffff 0%, #efedE8 52%, #e4e2db 100%);
   overflow: hidden;
 }
 
@@ -23,9 +23,9 @@
 
 @media (min-width: 481px) {
   .app-frame {
-    border-radius: 32px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    box-shadow: 0 60px 120px -30px rgba(0, 0, 0, 0.7);
+    border-radius: 40px;
+    border: 1px solid rgba(17, 17, 20, 0.08);
+    box-shadow: 0 40px 90px -34px rgba(20, 20, 35, 0.28), 0 2px 8px rgba(20, 20, 35, 0.04);
   }
 }
 
@@ -47,11 +47,11 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  background: #1c1c1c;
+  background: #ffffff;
   border: 1px solid var(--ldg-border);
   border-radius: 14px;
   padding: 12px 14px;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 12px 32px -8px rgba(20, 20, 35, 0.22);
   font-size: 13px;
   color: var(--ldg-fg-2);
   animation: ldg-toast-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -79,10 +79,10 @@
   right: 14px;
   z-index: 24;
   padding: 8px 12px;
-  border: 1px solid rgba(248, 113, 113, 0.35);
+  border: 1px solid rgba(213, 107, 99, 0.3);
   border-radius: 12px;
-  background: rgba(28, 12, 12, 0.9);
-  color: #fecaca;
+  background: rgba(213, 107, 99, 0.1);
+  color: var(--ldg-neg);
   font-size: 12px;
   font-weight: 700;
   text-align: center;
@@ -100,10 +100,10 @@
   justify-content: space-between;
   gap: 12px;
   padding: 12px 14px;
-  border: 1px solid rgba(247, 147, 26, 0.28);
+  border: 1px solid rgba(230, 154, 51, 0.28);
   border-radius: 14px;
-  background: rgba(18, 18, 18, 0.94);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 12px 32px -8px rgba(20, 20, 35, 0.22);
   color: var(--ldg-fg-2);
   font-size: 12px;
   backdrop-filter: blur(10px);
@@ -131,7 +131,7 @@
   border: 0;
   border-radius: 10px;
   padding: 8px 10px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(17, 17, 20, 0.07);
   color: var(--ldg-fg-2);
   font: inherit;
   font-weight: 700;
@@ -140,7 +140,7 @@
 
 .ldg-install-actions button:first-child {
   background: var(--ldg-orange);
-  color: #14100a;
+  color: #3a2200;
 }
 
 .ldg-lock-screen {
@@ -150,7 +150,7 @@
   display: grid;
   place-items: center;
   padding: calc(var(--safe-top) + 24px) 24px calc(var(--safe-bottom) + 24px);
-  background: #0a0a0a;
+  background: var(--ldg-bg);
   color: var(--ldg-fg);
   font-family: var(--ldg-sans);
 }
@@ -161,10 +161,10 @@
   flex-direction: column;
   gap: 12px;
   padding: 24px;
-  border: 1px solid rgba(247, 147, 26, 0.25);
+  border: 1px solid rgba(230, 154, 51, 0.25);
   border-radius: 18px;
-  background: rgba(20, 20, 20, 0.92);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+  background: #ffffff;
+  box-shadow: 0 24px 60px -20px rgba(20, 20, 35, 0.28);
 }
 
 .ldg-lock-mark {
@@ -174,7 +174,7 @@
   place-items: center;
   border-radius: 14px;
   background: var(--ldg-orange);
-  color: #0a0a0a;
+  color: #3a2200;
   font-size: 26px;
   font-weight: 900;
 }
@@ -198,7 +198,7 @@
   width: 100%;
   border: 1px solid var(--ldg-border);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(17, 17, 20, 0.06);
   color: var(--ldg-fg);
   padding: 14px 16px;
   font-size: 24px;
@@ -220,7 +220,7 @@
 }
 
 .ldg-submit-btn.secondary {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(17, 17, 20, 0.07);
   color: var(--ldg-fg);
   border: 1px solid var(--ldg-border);
 }
@@ -233,11 +233,11 @@
 }
 
 .ldg-backup-status.ok {
-  color: #86efac;
+  color: var(--ldg-pos);
 }
 
 .ldg-backup-status.error {
-  color: #fca5a5;
+  color: var(--ldg-neg);
 }
 @keyframes ldg-toast-in {
   from {
@@ -257,7 +257,7 @@
   z-index: 50;
   display: grid;
   place-items: center;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(17, 17, 22, 0.45);
   backdrop-filter: blur(4px);
   padding: 16px;
 }
@@ -270,10 +270,10 @@
   flex-direction: column;
   gap: 12px;
   padding: 20px;
-  border: 1px solid rgba(247, 147, 26, 0.25);
+  border: 1px solid var(--ldg-border);
   border-radius: 18px;
-  background: rgba(20, 20, 20, 0.96);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+  background: #ffffff;
+  box-shadow: 0 28px 70px -22px rgba(20, 20, 35, 0.3);
 }
 
 .ldg-modal-title {
