@@ -67,7 +67,7 @@ function AmountDateMemoFields({
         </div>
       </div>
 
-      <div className="ldg-field">
+      <div className="ldg-field ldg-date-field">
         <div className="ldg-label">날짜</div>
         <input
           className="ldg-input"

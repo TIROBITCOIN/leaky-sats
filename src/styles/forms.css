@@ -67,6 +67,21 @@
 .ldg-select:focus {
   border-color: rgba(247, 147, 26, 0.5);
 }
+.ldg-date-field {
+  overflow: hidden;
+}
+.ldg-input[type="date"] {
+  display: block;
+  inline-size: 100%;
+  max-inline-size: 100%;
+  min-inline-size: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.ldg-input[type="date"]::-webkit-date-and-time-value {
+  min-width: 0;
+  text-align: left;
+}
 .ldg-textarea {
   resize: none;
   min-height: 48px;
