@@ -1,16 +1,20 @@
 :root {
-  --ldg-bg: #0a0a0a;
-  --ldg-card: rgba(20, 20, 20, 0.85);
-  --ldg-border: rgba(255, 255, 255, 0.08);
-  --ldg-orange: #f7931a;
-  --ldg-orange-glow: #ffd57a;
-  --ldg-bolt: #fff8d4;
-  --ldg-fg: #ffffff;
-  --ldg-fg-2: #d4d4d4;
-  --ldg-fg-3: #8a8a8a;
-  --ldg-fg-4: #6b6b6b;
-  --ldg-pos: #4ade80;
-  --ldg-neg: #f87171;
+  --ldg-bg: #f4f3ef;
+  --ldg-card: #ffffff;
+  --ldg-border: rgba(17, 17, 20, 0.08);
+  --ldg-orange: #e69a33;
+  --ldg-orange-glow: #f4cf92;
+  --ldg-bolt: #ffce8a;
+  --ldg-fg: #1b1b1f;
+  --ldg-fg-2: #45464d;
+  --ldg-fg-3: #80828c;
+  --ldg-fg-4: #a7a9b3;
+  --ldg-pos: #16895a;
+  --ldg-neg: #d56b63;
+  --ldg-expense: #4d80c9;
+  --ldg-fill: rgba(17, 17, 20, 0.045);
+  --ldg-fill-2: rgba(17, 17, 20, 0.07);
+  --ldg-card-shadow: 0 1px 2px rgba(20, 20, 30, 0.04), 0 10px 28px -16px rgba(20, 20, 30, 0.16);
   --ldg-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR",
     "Malgun Gothic", sans-serif;
   --ldg-mono: var(--ldg-sans);

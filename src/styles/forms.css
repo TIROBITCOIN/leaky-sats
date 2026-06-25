@@ -46,7 +46,7 @@
 .ldg-textarea,
 .ldg-select {
   font: inherit;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(17, 17, 20, 0.045);
   border: 1px solid var(--ldg-border);
   color: var(--ldg-fg);
   border-radius: 12px;
@@ -65,7 +65,7 @@
 .ldg-input:focus,
 .ldg-textarea:focus,
 .ldg-select:focus {
-  border-color: rgba(247, 147, 26, 0.5);
+  border-color: rgba(230, 154, 51, 0.5);
 }
 .ldg-date-field {
   overflow: hidden;
@@ -97,7 +97,7 @@
   font-size: 13px;
   font-weight: 600;
   border: 1px solid var(--ldg-border);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(17, 17, 20, 0.045);
   color: var(--ldg-fg-2);
   border-radius: 99px;
   padding: 8px 14px;
@@ -105,7 +105,7 @@
   transition: background 0.18s, border-color 0.18s, color 0.18s;
 }
 .ldg-chip.active {
-  background: var(--chip-bg, rgba(247, 147, 26, 0.18));
+  background: var(--chip-bg, rgba(230, 154, 51, 0.18));
   border-color: var(--chip-fg, var(--ldg-orange));
   color: var(--chip-fg, var(--ldg-orange));
 }
@@ -125,11 +125,11 @@
   text-transform: none;
 }
 .ldg-flow-badge.expense {
-  background: rgba(248, 113, 113, 0.12);
-  color: var(--ldg-neg);
+  background: rgba(77, 128, 201, 0.12);
+  color: var(--ldg-expense);
 }
 .ldg-flow-badge.income {
-  background: rgba(74, 222, 128, 0.12);
+  background: rgba(22, 137, 90, 0.12);
   color: var(--ldg-pos);
 }
 
@@ -150,7 +150,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(17, 17, 20, 0.035);
   border: 0;
   color: var(--ldg-fg-2);
   font-size: 13px;
@@ -178,8 +178,8 @@
   font-family: var(--ldg-mono);
   font-size: 13px;
   color: var(--ldg-fg-3);
-  background: rgba(247, 147, 26, 0.08);
-  border: 1px solid rgba(247, 147, 26, 0.25);
+  background: rgba(230, 154, 51, 0.08);
+  border: 1px solid rgba(230, 154, 51, 0.25);
   border-radius: 12px;
   padding: 10px 14px;
   word-break: keep-all;
@@ -211,7 +211,7 @@
   font: inherit;
   font-size: 14px;
   font-weight: 700;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(17, 17, 20, 0.06);
   color: var(--ldg-fg-2);
   border: 1px solid var(--ldg-border);
   border-radius: 99px;
@@ -227,7 +227,7 @@
   padding: 12px 14px;
   border: 1px solid var(--ldg-border);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(17, 17, 20, 0.035);
   color: var(--ldg-fg-2);
   font-size: 13px;
   cursor: pointer;
@@ -281,7 +281,7 @@
 .ldg-radio-group {
   display: inline-flex;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(17, 17, 20, 0.045);
   border-radius: 99px;
   padding: 3px;
 }
@@ -328,7 +328,7 @@
   height: 28px;
   display: grid;
   place-items: center;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(17, 17, 20, 0.045);
   border: 1px solid var(--ldg-border);
   border-radius: 9px;
   color: var(--ldg-fg-2);
@@ -338,12 +338,12 @@
   color: var(--ldg-neg);
 }
 .ldg-icon-action.danger:hover {
-  background: rgba(248, 113, 113, 0.12);
-  border-color: rgba(248, 113, 113, 0.3);
+  background: rgba(213, 107, 99, 0.12);
+  border-color: rgba(213, 107, 99, 0.3);
 }
 
 .ldg-cat-form {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(17, 17, 20, 0.035);
   border: 1px solid var(--ldg-border);
   border-radius: 14px;
   padding: 12px;
