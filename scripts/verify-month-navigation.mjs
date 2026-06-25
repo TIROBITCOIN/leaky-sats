@@ -72,6 +72,63 @@ assert.match(
 const inOutCardsSrc = readFileSync("src/components/home/InOutCards.tsx", "utf8");
 assert.doesNotMatch(inOutCardsSrc, /\bd\.(income|expense)\b/, "InOutCards does not display LedgerData income or expense");
 
+const txnsCardSrc = readFileSync("src/components/home/TxnsCard.tsx", "utf8");
+assert.doesNotMatch(
+  txnsCardSrc,
+  /d\.txns\.slice\(0,\s*HOME_TXN_LIMIT\)/,
+  "home transactions are not sliced before settlement-period filtering"
+);
+assert.match(
+  txnsCardSrc,
+  /d\.txns\.filter\(\(t\) => isIsoWithinPeriod\(t\.date, period\)\)\.slice\(0, HOME_TXN_LIMIT\)/,
+  "home transactions are filtered to the settlement period before limiting"
+);
+assert.match(
+  txnsCardSrc,
+  /to=\{`\/transactions\?month=\$\{selectedMonth\}`\}/,
+  "home full transaction link preserves selectedMonth"
+);
+
+const txnListPageSrc = readFileSync("src/components/transaction/TxnListPage.tsx", "utf8");
+assert.match(
+  txnListPageSrc,
+  /useSelectedMonth\(defaultSettlementMonthKey\)/,
+  "TxnListPage uses the settlement month as its default selection"
+);
+assert.match(
+  txnListPageSrc,
+  /getSettlementPeriod\(selectedMonth, settlementDay\)/,
+  "TxnListPage derives the selected settlement period"
+);
+assert.match(
+  txnListPageSrc,
+  /const periodTxns = useMemo\([\s\S]*isIsoWithinPeriod\(t\.date, period\)/,
+  "TxnListPage filters transactions by settlement period first"
+);
+assert.match(
+  txnListPageSrc,
+  /if \(segment === "all"\) return periodTxns;[\s\S]*periodTxns\.filter/,
+  "TxnListPage applies segment filters after settlement-period filtering"
+);
+assert.match(
+  txnListPageSrc,
+  /return filtered\.reduce/,
+  "segment totals use the settlement-scoped filtered transactions"
+);
+assert.match(
+  txnListPageSrc,
+  /\/add\?edit=\$\{t\.id\}&month=\$\{selectedMonth\}/,
+  "transaction editing preserves selectedMonth"
+);
+
+const tabBarSrc = readFileSync("src/components/layout/TabBar.tsx", "utf8");
+assert.match(tabBarSrc, /isValidMonthKey\(monthParam\)/, "TabBar only preserves a valid month query");
+assert.match(
+  tabBarSrc,
+  /selectedMonth && path !== "\/settings" \? `\$\{path\}\?month=\$\{selectedMonth\}` : path/,
+  "TabBar preserves selectedMonth across home, add, and stats"
+);
+
 const ledgerCss = readFileSync("src/styles/ledger.css", "utf8");
 assert.doesNotMatch(
   ledgerCss,

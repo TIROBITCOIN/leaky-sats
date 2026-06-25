@@ -154,7 +154,7 @@ export default function HomePage() {
           />
           <YearlySellSummaryCard summary={yearlySellSummary} unit={btcUnit} year={yearKey} />
           <PriceWidget d={data} />
-          <TxnsCard d={data} currency={currency} />
+          <TxnsCard d={data} currency={currency} selectedMonth={selectedMonth} period={period} />
         </div>
       </div>
       {sellModalState && (

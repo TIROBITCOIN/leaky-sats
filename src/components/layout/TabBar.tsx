@@ -1,4 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
+import { isValidMonthKey } from "../../lib/month";
 import "../../styles/tabbar.css";
 
 interface TabDef {
@@ -15,18 +16,18 @@ const TABS: TabDef[] = [
 ];
 
 export default function TabBar() {
-  // 홈에서 특정 월(?month=YYYY-MM)을 보고 있을 때 "입력" 탭을 누르면 그 월을 기본값으로
-  // 들고 들어가도록 쿼리스트링을 그대로 전달한다.
   const location = useLocation();
-  const monthParam = location.pathname === "/" ? new URLSearchParams(location.search).get("month") : null;
-  const addTo = monthParam ? `/add?month=${monthParam}` : "/add";
+  const monthParam = new URLSearchParams(location.search).get("month");
+  const selectedMonth = isValidMonthKey(monthParam) ? monthParam : null;
+  const getTabTarget = (path: string) =>
+    selectedMonth && path !== "/settings" ? `${path}?month=${selectedMonth}` : path;
 
   return (
     <nav className="ldg-tabbar">
       {TABS.map((tab) => (
         <NavLink
           key={tab.to}
-          to={tab.to === "/add" ? addTo : tab.to}
+          to={getTabTarget(tab.to)}
           end={tab.to === "/"}
           className={({ isActive }) => `ldg-tab ${isActive ? "active" : ""}`}
         >

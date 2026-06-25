@@ -1,9 +1,17 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../../styles/ledger.css";
 import "../../styles/forms.css";
 import { useLedger } from "../../state/LedgerContext";
 import { fmtKRW } from "../../lib/format";
+import { useSelectedMonth } from "../../lib/useSelectedMonth";
+import {
+  getSettlementMonthKeyForDate,
+  getSettlementPeriod,
+  isIsoWithinPeriod,
+  loadSettlementDay,
+} from "../../lib/settlement";
+import MonthSelector from "../common/MonthSelector";
 import SwipeableRow from "./SwipeableRow";
 import TxnRow from "../home/TxnRow";
 
@@ -15,7 +23,7 @@ const SEGMENTS: { key: Segment; label: string }[] = [
 ];
 
 const EMPTY_MESSAGES: Record<Segment, string> = {
-  all: "아직 거래 내역이 없어요.",
+  all: "이번 정산기간 거래 내역이 없어요.",
   income: "수입 내역이 없어요.",
   expense: "지출 내역이 없어요.",
 };
@@ -24,12 +32,34 @@ export default function TxnListPage() {
   const { data, currency, deleteTxn } = useLedger();
   const navigate = useNavigate();
   const [segment, setSegment] = useState<Segment>("all");
+  const [settlementDay, setSettlementDay] = useState(loadSettlementDay);
+  const defaultSettlementMonthKey = getSettlementMonthKeyForDate(new Date().toISOString(), settlementDay);
+  const [selectedMonth, setSelectedMonth] = useSelectedMonth(defaultSettlementMonthKey);
+  const period = useMemo(() => getSettlementPeriod(selectedMonth, settlementDay), [selectedMonth, settlementDay]);
+
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") setSettlementDay(loadSettlementDay());
+    };
+    const refresh = () => setSettlementDay(loadSettlementDay());
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", refresh);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", refresh);
+    };
+  }, []);
+
+  const periodTxns = useMemo(
+    () => data.txns.filter((t) => isIsoWithinPeriod(t.date, period)),
+    [data.txns, period]
+  );
 
   const filtered = useMemo(() => {
-    if (segment === "all") return data.txns;
-    if (segment === "income") return data.txns.filter((t) => t.amount > 0);
-    return data.txns.filter((t) => t.amount < 0);
-  }, [data.txns, segment]);
+    if (segment === "all") return periodTxns;
+    if (segment === "income") return periodTxns.filter((t) => t.amount > 0);
+    return periodTxns.filter((t) => t.amount < 0);
+  }, [periodTxns, segment]);
 
   const segmentTotal = useMemo(() => {
     if (segment === "all") return null;
@@ -41,6 +71,11 @@ export default function TxnListPage() {
       <div className="ldg-content">
         <div className="ldg-page-title">전체 거래</div>
         <div className="ldg-page-sub">왼쪽으로 밀면 삭제, 오른쪽으로 밀면 수정이에요.</div>
+
+        <div className="ldg-stats-month-selector">
+          <MonthSelector selectedMonth={selectedMonth} onChangeMonth={setSelectedMonth} label={period.label} />
+          <div className="ldg-settlement-range-label">{period.rangeLabel}</div>
+        </div>
 
         <div className="ldg-segment-control">
           {SEGMENTS.map((s) => (
@@ -67,7 +102,12 @@ export default function TxnListPage() {
         <div className="ldg-card ldg-txns">
           <div className="ldg-txn-list">
             {filtered.map((t) => (
-              <SwipeableRow key={t.id} txn={t} onEdit={() => navigate(`/add?edit=${t.id}`)} onDelete={() => deleteTxn(t.id)}>
+              <SwipeableRow
+                key={t.id}
+                txn={t}
+                onEdit={() => navigate(`/add?edit=${t.id}&month=${selectedMonth}`)}
+                onDelete={() => deleteTxn(t.id)}
+              >
                 <TxnRow t={t} currency={currency} btcKRW={data.btcKRW} />
               </SwipeableRow>
             ))}
