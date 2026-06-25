@@ -5,11 +5,51 @@ import ts from "typescript";
 const source = readFileSync("src/lib/recurringRules.ts", "utf8");
 const monthSource = readFileSync("src/lib/month.ts", "utf8");
 const entry = readFileSync("src/components/transaction/TransactionEntryPage.tsx", "utf8");
+const pendingCard = readFileSync("src/components/home/RecurringPendingCard.tsx", "utf8");
+const settings = readFileSync("src/components/settings/RecurringRulesSettings.tsx", "utf8");
 assert.match(source, /myledger\.recurringRules\.v1/, "recurring rules use a versioned key");
 assert.match(source, /myledger\.recurringMaterialized\.v1/, "materialized months use a versioned key");
 assert.match(source, /try\s*\{[\s\S]*localStorage\.getItem/, "loads guard storage access");
 assert.match(source, /catch\s*\{/, "invalid storage falls back safely");
 assert.match(entry, /markRecurringMaterialized/, "the transaction that creates a rule marks its settlement month");
+assert.match(
+  entry,
+  /반복 예정 항목으로 등록/,
+  "transaction entry describes recurring rules as scheduled items"
+);
+assert.match(
+  entry,
+  /다음 달부터는 금액을 확인한 뒤 거래로 추가합니다/,
+  "transaction entry explains that future amounts require confirmation"
+);
+assert.match(pendingCard, /이번 달 금액/, "pending rules provide a monthly amount input");
+assert.match(pendingCard, /최근 입력 금액/, "lastAmount is described as the most recent entered amount");
+assert.match(
+  pendingCard,
+  /if \(!markRecurringMaterialized\(rule\.id, selectedMonth\)\)/,
+  "confirmation claims the rule and month before creating a transaction"
+);
+assert.ok(
+  pendingCard.indexOf("markRecurringMaterialized(rule.id, selectedMonth)") <
+    pendingCard.indexOf("addTxn({"),
+  "materialization is recorded before transaction creation to block duplicate clicks"
+);
+assert.match(
+  pendingCard,
+  /updateRecurringRule\(rule\.id, \{ lastAmount: amount \}\)/,
+  "confirmed amount becomes the next suggested amount"
+);
+assert.match(
+  pendingCard,
+  /const handleSkip[\s\S]*markRecurringMaterialized\(ruleId, selectedMonth\)[\s\S]*};/,
+  "skip records the month as handled"
+);
+assert.doesNotMatch(
+  pendingCard.match(/const handleSkip[\s\S]*?};/)?.[0] ?? "",
+  /addTxn|updateRecurringRule/,
+  "skip does not create a transaction or change lastAmount"
+);
+assert.match(settings, /다음 입력 때 기본 제안/, "settings describe lastAmount as a suggestion");
 
 const compilerOptions = { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 };
 const compiledMonth = ts.transpileModule(monthSource, {
@@ -54,6 +94,12 @@ const rule = recurring.addRecurringRule({
 });
 assert.equal(rule.dayOfMonth, 31, "stored rule supports the 31st");
 assert.equal(recurring.listRecurringRules().length, 1, "valid rule persists");
+recurring.updateRecurringRule(rule.id, { lastAmount: 980000 });
+assert.equal(
+  recurring.listRecurringRules()[0].lastAmount,
+  980000,
+  "the confirmed amount becomes the rule's next suggestion"
+);
 
 assert.equal(recurring.markRecurringMaterialized(rule.id, "2026-07"), true, "first confirmation is recorded");
 assert.equal(recurring.markRecurringMaterialized(rule.id, "2026-07"), false, "duplicate month confirmation is blocked");

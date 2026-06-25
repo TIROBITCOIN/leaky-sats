@@ -285,10 +285,13 @@ export default function TransactionEntryPage() {
                     checked={createRecurring}
                     onChange={(event) => setCreateRecurring(event.target.checked)}
                   />
-                  <span>
-                    매월 {recurringDay}일 반복
+                  <span className="ldg-recurring-check-copy">
+                    <span>매월 {recurringDay}일 반복 예정 항목으로 등록</span>
+                    <span className="ldg-setting-desc">
+                      다음 달부터는 금액을 확인한 뒤 거래로 추가합니다.
+                    </span>
                     {recurringDay >= 29 && (
-                      <span className="ldg-setting-desc"> · 해당 날짜가 없는 달은 말일로 처리됩니다.</span>
+                      <span className="ldg-setting-desc">해당 날짜가 없는 달은 말일로 처리됩니다.</span>
                     )}
                   </span>
                 </label>

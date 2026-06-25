@@ -421,9 +421,21 @@
   font-family: var(--ldg-mono);
   font-size: 13px;
 }
+.ldg-recurring-amount-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  color: var(--ldg-fg-3);
+  font-size: 12px;
+}
+.ldg-recurring-amount-label span:last-child {
+  color: var(--ldg-fg-4);
+  text-align: right;
+}
 .ldg-recurring-actions {
   display: grid;
-  grid-template-columns: minmax(88px, 0.7fr) minmax(140px, 1.3fr);
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
   gap: 8px;
   margin-top: 8px;
 }
