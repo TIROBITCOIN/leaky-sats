@@ -1,4 +1,4 @@
-const CACHE_NAME = "myledger-shell-v1";
+const CACHE_NAME = "myledger-shell-v2";
 const APP_SHELL = [
   "/",
   "/index.html",
