@@ -15,7 +15,6 @@ import BackupRestoreCard from "./BackupRestoreCard";
 import RecurringRulesSettings from "./RecurringRulesSettings";
 
 const UNITS = ["BTC", "sats"] as const;
-const SOURCES = ["Upbit", "Binance"] as const;
 const SETTLEMENT_DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 
 function formatFullDate(dateKeyStr: string): string {
@@ -47,7 +46,6 @@ export default function SettingsPage() {
     migrateLegacyCategories,
   } = useLedger();
   const [unit, setUnit] = useState<BtcUnit>(loadBtcUnit);
-  const [source, setSource] = useState<(typeof SOURCES)[number]>("Upbit");
   const [walletNameInput, setWalletNameInput] = useState(loadWalletName);
   const [walletNameSaved, setWalletNameSaved] = useState(false);
   const [heldBtcInput, setHeldBtcInput] = useState(() => {
@@ -119,21 +117,8 @@ export default function SettingsPage() {
         <div className="ldg-card">
           <div className="ldg-setting-row">
             <div>
-              <div className="ldg-setting-label">시세 소스</div>
-              <div className="ldg-setting-desc">현재 시세 재평가 기준</div>
-            </div>
-            <div className="ldg-radio-group">
-              {SOURCES.map((s) => (
-                <button type="button" key={s} className={source === s ? "on" : ""} onClick={() => setSource(s)}>
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="ldg-setting-row">
-            <div>
               <div className="ldg-setting-label">새로고침 주기</div>
-              <div className="ldg-setting-desc">시세 자동 갱신 간격</div>
+              <div className="ldg-setting-desc">여러 공개 API를 fallback으로 사용하는 시세 자동 갱신 간격</div>
             </div>
             <div className="ldg-radio-group">
               {INTERVALS.map((i) => (
