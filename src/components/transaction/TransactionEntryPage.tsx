@@ -121,6 +121,7 @@ export default function TransactionEntryPage() {
 
   const amountNum = Number(amount.replace(/[^0-9]/g, "")) || 0;
   const sats = useMemo(() => krwToSats(amountNum, data.btcKRW), [amountNum, data.btcKRW]);
+  const recurringDay = normalizeRecurringDay(Number(date.slice(8, 10)));
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -135,7 +136,7 @@ export default function TransactionEntryPage() {
           title: title.trim() || selectedCategory.label,
           cat,
           isIncome,
-          dayOfMonth: normalizeRecurringDay(Number(date.slice(8, 10))),
+          dayOfMonth: recurringDay,
           lastAmount: amountNum,
         });
         markRecurringMaterialized(rule.id, getSettlementMonthKeyForDate(date, loadSettlementDay()));
@@ -277,7 +278,12 @@ export default function TransactionEntryPage() {
                     checked={createRecurring}
                     onChange={(event) => setCreateRecurring(event.target.checked)}
                   />
-                  <span>매월 {normalizeRecurringDay(Number(date.slice(8, 10)))}일 반복</span>
+                  <span>
+                    매월 {recurringDay}일 반복
+                    {recurringDay >= 29 && (
+                      <span className="ldg-setting-desc"> · 해당 날짜가 없는 달은 말일로 처리됩니다.</span>
+                    )}
+                  </span>
                 </label>
               }
             />

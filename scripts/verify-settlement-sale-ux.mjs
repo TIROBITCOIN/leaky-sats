@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
+import ts from "typescript";
 
 const root = process.cwd();
 const read = (p) => readFileSync(join(root, p), "utf8");
@@ -33,38 +34,88 @@ assert.match(settlementSrc, /myledger\.settlementDay\.v1/, "settlement.ts uses m
 // 3. 정산 기준일 기본값 1일
 assert.match(settlementSrc, /DEFAULT_DAY\s*=\s*1/, "default settlement day is 1");
 
-// 4. 정산 기준일 17일이면 2026-07 기간이 2026-06-17 ~ 2026-07-16으로 계산되는지.
-// settlement.ts는 TypeScript라 이 검증 스크립트(plain Node)에서 직접 import해 실행할 수 없으므로,
-// 문서화된 동일 알고리즘을 그대로 재구현해 계약(contract)을 검증한다 — verify-sell-calculator.mjs가
-// sellCalculator.ts의 산식을 인라인으로 재검증하는 것과 같은 방식이다.
-function pad2(n) {
-  return String(n).padStart(2, "0");
-}
-function getSettlementPeriodForTest(monthKey, settlementDay) {
-  const [y, m] = monthKey.split("-").map(Number);
-  let startY = y;
-  let startM = m;
-  if (settlementDay > 1) {
-    const prev = new Date(y, m - 2, 1);
-    startY = prev.getFullYear();
-    startM = prev.getMonth() + 1;
-  }
-  const startDate = `${startY}-${pad2(startM)}-${pad2(settlementDay)}`;
-  const endDay = settlementDay === 1 ? new Date(y, m, 0).getDate() : settlementDay - 1;
-  const endDate = `${y}-${pad2(m)}-${pad2(endDay)}`;
-  return { startDate, endDate };
-}
-const period17 = getSettlementPeriodForTest("2026-07", 17);
+// 4. 실제 settlement.ts를 실행해 1~31일, 월말 fallback, 윤년과 정산월 역산을 검증한다.
+const monthSrc = read("src/lib/month.ts");
+const compilerOptions = { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 };
+const compiledMonth = ts.transpileModule(monthSrc, { compilerOptions }).outputText;
+const monthModuleUrl = `data:text/javascript;base64,${Buffer.from(compiledMonth).toString("base64")}`;
+const compiledSettlement = ts
+  .transpileModule(settlementSrc, { compilerOptions })
+  .outputText.replace('"./month"', `"${monthModuleUrl}"`);
+const settlementModuleUrl = `data:text/javascript;base64,${Buffer.from(compiledSettlement).toString("base64")}`;
+const settlement = await import(settlementModuleUrl);
+
+assert.equal(settlement.normalizeSettlementDay(31), 31, "settlement day 31 is valid");
+assert.equal(settlement.normalizeSettlementDay(32), 1, "settlement day above 31 falls back to 1");
+assert.equal(settlement.normalizeSettlementDay(0), 1, "settlement day below 1 falls back to 1");
+assert.equal(settlement.getEffectiveDayInMonth("2026-01", 31), 31, "January keeps the 31st");
+assert.equal(settlement.getEffectiveDayInMonth("2026-02", 31), 28, "common-year February falls back to 28");
+assert.equal(settlement.getEffectiveDayInMonth("2028-02", 31), 29, "leap-year February falls back to 29");
+assert.equal(settlement.getEffectiveDayInMonth("2026-04", 31), 30, "April falls back to 30");
+
+const period17 = settlement.getSettlementPeriod("2026-07", 17);
 assert.equal(period17.startDate, "2026-06-17", "settlementDay=17: 2026-07 period starts 2026-06-17");
 assert.equal(period17.endDate, "2026-07-16", "settlementDay=17: 2026-07 period ends 2026-07-16");
-const period1 = getSettlementPeriodForTest("2026-07", 1);
+const period1 = settlement.getSettlementPeriod("2026-07", 1);
 assert.equal(period1.startDate, "2026-07-01", "settlementDay=1: 2026-07 period starts 2026-07-01 (calendar month)");
 assert.equal(period1.endDate, "2026-07-31", "settlementDay=1: 2026-07 period ends 2026-07-31 (calendar month)");
+
+assert.deepEqual(
+  (({ startDate, endDate }) => ({ startDate, endDate }))(settlement.getSettlementPeriod("2026-02", 31)),
+  { startDate: "2026-01-31", endDate: "2026-02-27" },
+  "31st: February settlement uses valid month-end boundaries"
+);
+assert.deepEqual(
+  (({ startDate, endDate }) => ({ startDate, endDate }))(settlement.getSettlementPeriod("2026-03", 31)),
+  { startDate: "2026-02-28", endDate: "2026-03-30" },
+  "31st: March settlement starts at February month end"
+);
+assert.deepEqual(
+  (({ startDate, endDate }) => ({ startDate, endDate }))(settlement.getSettlementPeriod("2028-03", 31)),
+  { startDate: "2028-02-29", endDate: "2028-03-30" },
+  "31st: leap-year March settlement starts February 29"
+);
+assert.deepEqual(
+  (({ startDate, endDate }) => ({ startDate, endDate }))(settlement.getSettlementPeriod("2026-04", 31)),
+  { startDate: "2026-03-31", endDate: "2026-04-29" },
+  "31st: April settlement ends before April month end"
+);
+assert.deepEqual(
+  (({ startDate, endDate }) => ({ startDate, endDate }))(settlement.getSettlementPeriod("2027-01", 31)),
+  { startDate: "2026-12-31", endDate: "2027-01-30" },
+  "31st: January settlement crosses the year boundary safely"
+);
+assert.deepEqual(
+  (({ startDate, endDate }) => ({ startDate, endDate }))(settlement.getSettlementPeriod("2026-03", 30)),
+  { startDate: "2026-02-28", endDate: "2026-03-29" },
+  "30th: March settlement starts at February month end"
+);
+assert.deepEqual(
+  (({ startDate, endDate }) => ({ startDate, endDate }))(settlement.getSettlementPeriod("2026-03", 29)),
+  { startDate: "2026-02-28", endDate: "2026-03-28" },
+  "29th: common-year March settlement starts February 28"
+);
+assert.equal(
+  settlement.getSettlementMonthKeyForDate("2026-02-27T12:00", 31),
+  "2026-02",
+  "February 27 stays in February settlement for a 31st boundary"
+);
+assert.equal(
+  settlement.getSettlementMonthKeyForDate("2026-02-28T12:00", 31),
+  "2026-03",
+  "February 28 moves to March settlement for a 31st boundary"
+);
+assert.equal(
+  settlement.getSettlementMonthKeyForDate("2026-03-31T12:00", 31),
+  "2026-04",
+  "March 31 moves to April settlement"
+);
 
 // 5. SettingsPage에 "정산 기준일" 문구 존재
 const settingsSrc = read("src/components/settings/SettingsPage.tsx");
 assert.match(settingsSrc, /정산 기준일/, "SettingsPage has 정산 기준일 setting");
-assert.match(settingsSrc, /1~28일|1일.*28일|SETTLEMENT_DAYS/, "SettingsPage offers a 1~28 day range");
+assert.match(settingsSrc, /Array\.from\(\{ length: 31 \}/, "SettingsPage offers settlement days through the 31st");
+assert.match(settingsSrc, /29~31일.*말일/, "SettingsPage explains month-end fallback");
 
 // 6. HomePage가 정산기간 rangeLabel을 표시
 const homePageSrc = read("src/components/home/HomePage.tsx");

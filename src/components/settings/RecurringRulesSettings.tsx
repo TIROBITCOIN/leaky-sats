@@ -21,6 +21,7 @@ export default function RecurringRulesSettings() {
               <div className="ldg-setting-desc">
                 매월 {rule.dayOfMonth}일 · {rule.isIncome ? "수입" : "지출"}
                 {rule.lastAmount ? ` · 최근 ${fmtKRW(rule.lastAmount)}` : ""}
+                {rule.dayOfMonth >= 29 ? " · 없는 달은 말일" : ""}
               </div>
             </div>
             <button
