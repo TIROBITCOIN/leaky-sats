@@ -38,6 +38,7 @@ assert.match(combinedDocs, /localStorage-first|localStorage/, "localStorage priv
 assert.match(combinedDocs, /DevTools/, "DevTools limitation is documented");
 assert.match(combinedDocs, /캐주얼|casual/i, "casual protection limitation is documented");
 assert.match(combinedDocs, /myledger\.appLock\.v1/, "app lock backup exclusion key is documented");
+assert.match(combinedDocs, /myledger\.preRestoreBackup\.v1/, "pre-restore safety backup key is documented");
 assert.match(combinedDocs, /백업 제외|backup/i, "backup exclusion policy is documented");
 assert.match(combinedDocs, /시드|seed/i, "seed/private-key warning is documented");
 

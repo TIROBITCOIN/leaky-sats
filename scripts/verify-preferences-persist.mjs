@@ -33,8 +33,21 @@ assert.match(backup, /CURRENCY_STORAGE_KEY/, "backup includes currency preferenc
 assert.match(backup, /REFRESH_INTERVAL_STORAGE_KEY/, "backup includes refresh interval preference");
 assert.match(backup, /currency:\s*CURRENCY_STORAGE_KEY/, "currency is part of BACKUP_KEYS");
 assert.match(backup, /refreshInterval:\s*REFRESH_INTERVAL_STORAGE_KEY/, "refresh interval is part of BACKUP_KEYS");
-assert.match(backup, /saveCurrency\(payload\.data\[CURRENCY_STORAGE_KEY\]\)/, "backup restore validates currency");
-assert.match(backup, /saveRefreshInterval\(Number\(payload\.data\[REFRESH_INTERVAL_STORAGE_KEY\]\)\)/, "backup restore validates refresh interval");
+assert.match(
+  backup,
+  /rawCurrency === "KRW" \|\| rawCurrency === "BTC"[\s\S]*normalizeCurrency\(rawCurrency\)/,
+  "backup preparation validates currency"
+);
+assert.match(
+  backup,
+  /ALLOWED_REFRESH_INTERVALS\.includes\(refreshInterval[\s\S]*normalizeRefreshInterval\(refreshInterval\)/,
+  "backup preparation validates refresh interval"
+);
+assert.match(
+  backup,
+  /writeBackupData\(prepared\.payload\.data\)/,
+  "backup restore writes only prepared preference values"
+);
 
 const compiled = ts.transpileModule(preferences, {
   compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
