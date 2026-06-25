@@ -16,7 +16,7 @@ import RecurringRulesSettings from "./RecurringRulesSettings";
 
 const UNITS = ["BTC", "sats"] as const;
 const SOURCES = ["Upbit", "Binance"] as const;
-const SETTLEMENT_DAYS = Array.from({ length: 28 }, (_, i) => i + 1);
+const SETTLEMENT_DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 
 function formatFullDate(dateKeyStr: string): string {
   const [y, m, d] = dateKeyStr.split("-").map(Number);
@@ -284,6 +284,8 @@ export default function SettingsPage() {
           <div className="ldg-setting-label">정산 기준일</div>
           <div className="ldg-setting-desc" style={{ marginBottom: 10 }}>
             매월 선택한 날짜부터 다음 달 전날까지를 한 정산기간으로 계산합니다.
+            <br />
+            29~31일은 해당 월에 그 날짜가 없으면 말일로 처리됩니다.
             <br />
             예: 정산 기준일이 17일이면, {exampleY}년 {exampleM}월 정산기간은 {formatFullDate(examplePeriod.startDate)} ~{" "}
             {formatFullDate(examplePeriod.endDate)}입니다.

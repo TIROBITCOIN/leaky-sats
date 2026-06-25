@@ -1,7 +1,9 @@
+import { getDaysInMonth } from "./month";
+
 const RULES_STORAGE_KEY = "myledger.recurringRules.v1";
 const MATERIALIZED_STORAGE_KEY = "myledger.recurringMaterialized.v1";
 const MIN_DAY = 1;
-const MAX_DAY = 28;
+const MAX_DAY = 31;
 
 export interface RecurringRule {
   id: string;
@@ -163,7 +165,8 @@ export function markRecurringMaterialized(ruleId: string, monthKey: string): boo
 }
 
 function dateForMonth(monthKey: string, day: number): string {
-  return `${monthKey}-${String(day).padStart(2, "0")}`;
+  const effectiveDay = Math.min(day, getDaysInMonth(monthKey));
+  return `${monthKey}-${String(effectiveDay).padStart(2, "0")}`;
 }
 
 export function mapRecurringRuleDate(

@@ -53,7 +53,10 @@ export default function RecurringPendingCard({ selectedMonth, period, addTxn }: 
               <div className="ldg-recurring-item-head">
                 <div>
                   <div className="ldg-setting-label">{rule.title}</div>
-                  <div className="ldg-setting-desc">매월 {rule.dayOfMonth}일 · {rule.isIncome ? "수입" : "지출"}</div>
+                  <div className="ldg-setting-desc">
+                    매월 {rule.dayOfMonth}일 · {rule.isIncome ? "수입" : "지출"}
+                    {rule.dayOfMonth >= 29 ? " · 없는 달은 말일" : ""}
+                  </div>
                 </div>
                 {amount > 0 && <div className="ldg-recurring-preview">{fmtKRW(amount)}</div>}
               </div>

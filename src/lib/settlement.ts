@@ -2,7 +2,7 @@ import { dateKeyFromIso, getDaysInMonth, getTodayDateKey } from "./month";
 
 const STORAGE_KEY = "myledger.settlementDay.v1";
 const MIN_DAY = 1;
-const MAX_DAY = 28;
+const MAX_DAY = 31;
 const DEFAULT_DAY = 1;
 
 export interface SettlementPeriod {
@@ -12,7 +12,7 @@ export interface SettlementPeriod {
   rangeLabel: string; // "6월 17일 ~ 7월 16일"
 }
 
-/** 1~28 범위로 정규화. 범위를 벗어나거나 숫자가 아니면 기본값(1일)로 폴백한다. */
+/** 1~31 범위로 정규화. 범위를 벗어나거나 숫자가 아니면 기본값(1일)로 폴백한다. */
 export function normalizeSettlementDay(day: unknown): number {
   const n = typeof day === "string" ? Number(day) : day;
   if (typeof n !== "number" || !Number.isFinite(n)) return DEFAULT_DAY;
@@ -49,10 +49,16 @@ function dateKey(y: number, m: number, d: number): string {
   return `${y}-${pad2(m)}-${pad2(d)}`;
 }
 
+/** 해당 월에 설정일이 없으면 그 달의 마지막 날을 반환한다. */
+export function getEffectiveDayInMonth(monthKey: string, day: number): number {
+  return Math.min(normalizeSettlementDay(day), getDaysInMonth(monthKey));
+}
+
 /**
  * 선택 월(monthKey)에 대응하는 정산기간을 계산한다.
  * settlementDay가 1이면 해당 월의 1일~말일(기존 달력월과 동일).
- * settlementDay가 N(>1)이면 전월 N일 ~ 해당 월 (N-1)일.
+ * settlementDay가 N(>1)이면 전월의 유효 N일 ~ 해당 월의 유효 N일 하루 전.
+ * 29~31일이 없는 달에는 그 달의 마지막 날을 유효 기준일로 쓴다.
  *
  * 예: getSettlementPeriod("2026-07", 17)
  *  → { startDate: "2026-06-17", endDate: "2026-07-16",
@@ -62,27 +68,40 @@ export function getSettlementPeriod(monthKey: string, settlementDay: number): Se
   const day = normalizeSettlementDay(settlementDay);
   const [y, m] = monthKey.split("-").map(Number);
 
-  let startY = y;
-  let startM = m;
-  if (day > 1) {
-    const prev = new Date(y, m - 2, 1); // 0-based Date 생성자가 연도 경계를 알아서 처리한다
-    startY = prev.getFullYear();
-    startM = prev.getMonth() + 1;
+  if (day === 1) {
+    const endDay = getDaysInMonth(monthKey);
+    return {
+      startDate: dateKey(y, m, 1),
+      endDate: dateKey(y, m, endDay),
+      label: `${y}년 ${m}월 정산`,
+      rangeLabel: `${m}월 1일 ~ ${m}월 ${endDay}일`,
+    };
   }
-  const startDate = dateKey(startY, startM, day);
 
-  const endDay = day === 1 ? getDaysInMonth(monthKey) : day - 1;
-  const endDate = dateKey(y, m, endDay);
+  const prev = new Date(y, m - 2, 1);
+  const startY = prev.getFullYear();
+  const startM = prev.getMonth() + 1;
+  const startMonthKey = `${startY}-${pad2(startM)}`;
+  const startDay = getEffectiveDayInMonth(startMonthKey, day);
+  const startDate = dateKey(startY, startM, startDay);
+
+  const effectiveEndBoundaryDay = getEffectiveDayInMonth(monthKey, day);
+  const endBoundary = new Date(y, m - 1, effectiveEndBoundaryDay);
+  endBoundary.setDate(endBoundary.getDate() - 1);
+  const endY = endBoundary.getFullYear();
+  const endM = endBoundary.getMonth() + 1;
+  const endDay = endBoundary.getDate();
+  const endDate = dateKey(endY, endM, endDay);
 
   const label = `${y}년 ${m}월 정산`;
-  const rangeLabel = `${startM}월 ${day}일 ~ ${m}월 ${endDay}일`;
+  const rangeLabel = `${startM}월 ${startDay}일 ~ ${endM}월 ${endDay}일`;
 
   return { startDate, endDate, label, rangeLabel };
 }
 
 /**
  * 임의의 날짜가 어느 정산기간(monthKey)에 속하는지 계산한다.
- * settlementDay가 1이면 그냥 달력월. 그 외에는 일자가 settlementDay 이상이면 다음 달 라벨,
+ * settlementDay가 1이면 그냥 달력월. 그 외에는 해당 달의 유효 기준일 이상이면 다음 달 라벨,
  * 미만이면 같은 달 라벨로 묶인다 — getSettlementPeriod의 역연산에 해당한다.
  */
 export function getSettlementMonthKeyForDate(dateIso: string, settlementDay: number): string {
@@ -94,7 +113,9 @@ export function getSettlementMonthKeyForDate(dateIso: string, settlementDay: num
   if (day === 1) return `${y}-${pad2(m)}`;
 
   const dom = d.getDate();
-  if (dom >= day) {
+  const monthKey = `${y}-${pad2(m)}`;
+  const effectiveDay = getEffectiveDayInMonth(monthKey, day);
+  if (dom >= effectiveDay) {
     const next = new Date(y, m, 1); // m은 1-based라 그대로 넘기면 다음 달 1일이 된다
     return `${next.getFullYear()}-${pad2(next.getMonth() + 1)}`;
   }
