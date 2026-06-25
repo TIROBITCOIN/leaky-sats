@@ -33,7 +33,8 @@
     "verify:row-actions": "node scripts/verify-row-actions.mjs",
     "verify:recurring": "node scripts/verify-recurring.mjs",
     "verify:repo-layout": "node scripts/verify-repo-layout.mjs",
-    "verify:category-unify": "node scripts/verify-category-unify.mjs"
+    "verify:category-unify": "node scripts/verify-category-unify.mjs",
+    "verify:date-input": "node scripts/verify-date-only-input.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

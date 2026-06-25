@@ -3,12 +3,12 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import "../../styles/ledger.css";
 import "../../styles/forms.css";
 import { useLedger } from "../../state/LedgerContext";
-import { fmtKRW, krwToSats, nowDatetimeLocal } from "../../lib/format";
-import { isValidMonthKey } from "../../lib/month";
+import { fmtKRW, krwToSats } from "../../lib/format";
+import { getTodayDateKey, isValidMonthKey } from "../../lib/month";
 import {
   loadSettlementDay,
   getSettlementPeriod,
-  getDefaultDatetimeLocalForPeriod,
+  getDefaultDateKeyForPeriod,
   getSettlementMonthKeyForDate,
 } from "../../lib/settlement";
 import type { CategoryId } from "../../types";
@@ -16,7 +16,7 @@ import CategoryGroupPicker from "./CategoryGroupPicker";
 import { MAJOR_ITEM_GROUPS, type MajorItem } from "../../lib/majorItems";
 import { addRecurringRule, markRecurringMaterialized, normalizeRecurringDay } from "../../lib/recurringRules";
 
-/** 금액 · 날짜/시간 · 메모 · 저장 버튼 — 수정 화면과 큰 항목 2단계 입력 화면이 공유한다. */
+/** 금액 · 날짜 · 메모 · 저장 버튼 — 수정 화면과 큰 항목 2단계 입력 화면이 공유한다. */
 function AmountDateMemoFields({
   amountValue,
   onAmountChange,
@@ -68,8 +68,14 @@ function AmountDateMemoFields({
       </div>
 
       <div className="ldg-field">
-        <div className="ldg-label">월/날짜</div>
-        <input className="ldg-input" type="datetime-local" value={dateValue} onChange={(e) => onDateChange(e.target.value)} />
+        <div className="ldg-label">날짜</div>
+        <input
+          className="ldg-input"
+          type="date"
+          value={dateValue}
+          onChange={(e) => onDateChange(e.target.value)}
+          required
+        />
       </div>
 
       <div className="ldg-field">
@@ -109,11 +115,11 @@ export default function TransactionEntryPage() {
   const [memo, setMemo] = useState(() => editingTxn?.memo ?? "");
   const [createRecurring, setCreateRecurring] = useState(false);
   const [date, setDate] = useState(() => {
-    if (editingTxn) return editingTxn.date;
-    if (!isValidMonthKey(monthParam)) return nowDatetimeLocal();
+    if (editingTxn) return editingTxn.date.slice(0, 10);
+    if (!isValidMonthKey(monthParam)) return getTodayDateKey();
     // 홈에서 보던 정산기간으로 들어오면, 오늘이 그 기간 안이면 오늘을, 아니면 기간 시작일을 기본값으로 쓴다.
     const period = getSettlementPeriod(monthParam, loadSettlementDay());
-    return getDefaultDatetimeLocalForPeriod(period);
+    return getDefaultDateKeyForPeriod(period);
   });
 
   const selectedCategory = categories.find((c) => c.id === cat) ?? categories[0];
@@ -125,12 +131,13 @@ export default function TransactionEntryPage() {
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (amountNum <= 0) return;
+    if (amountNum <= 0 || !date) return;
+    const storedDate = `${date}T00:00`;
     if (editingTxn) {
-      updateTxn(editingTxn.id, { title, cat, amount: amountNum, isIncome, date, memo });
+      updateTxn(editingTxn.id, { title, cat, amount: amountNum, isIncome, date: storedDate, memo });
       navigate(-1);
     } else {
-      addTxn({ title, cat, amount: amountNum, isIncome, date, memo });
+      addTxn({ title, cat, amount: amountNum, isIncome, date: storedDate, memo });
       if (createRecurring) {
         const rule = addRecurringRule({
           title: title.trim() || selectedCategory.label,
@@ -139,7 +146,7 @@ export default function TransactionEntryPage() {
           dayOfMonth: recurringDay,
           lastAmount: amountNum,
         });
-        markRecurringMaterialized(rule.id, getSettlementMonthKeyForDate(date, loadSettlementDay()));
+        markRecurringMaterialized(rule.id, getSettlementMonthKeyForDate(storedDate, loadSettlementDay()));
       }
       navigate("/");
     }
@@ -199,7 +206,7 @@ export default function TransactionEntryPage() {
                 memoValue={memo}
                 onMemoChange={setMemo}
                 submitLabel="수정 완료"
-                disabled={amountNum <= 0}
+                disabled={amountNum <= 0 || !date}
               />
             </div>
           </form>
@@ -257,7 +264,7 @@ export default function TransactionEntryPage() {
               memoValue={memo}
               onMemoChange={setMemo}
               submitLabel="기록하기"
-              disabled={amountNum <= 0}
+              disabled={amountNum <= 0 || !date}
               extraBefore={
                 showDetailField ? (
                   <div className="ldg-field">
