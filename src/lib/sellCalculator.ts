@@ -31,8 +31,9 @@ function isInvestCategory(catId: string, categoriesById: Record<string, Category
 }
 
 /**
- * Calculate living cashflow for a settlement period, excluding invest (btc_buy/btc_sell)
- * transactions. period는 src/lib/settlement.ts의 getSettlementPeriod() 결과를 그대로 넘기면 된다 —
+ * Calculate living cashflow for a settlement period, excluding invest transactions.
+ * DCA / BTC 매수는 입력 화면에서 지출로 기록되지만 btc_buy의 invest 분류 덕분에 여기서는 제외된다.
+ * period는 src/lib/settlement.ts의 getSettlementPeriod() 결과를 그대로 넘기면 된다 —
  * settlementDay가 1이면 기존처럼 달력월 전체와 동일하다.
  */
 export function calculateMonthlyLivingCashflow(

@@ -3,23 +3,22 @@
 //
 // 각 MajorItem은 기존 카테고리 체계(categoryId)에 매핑된다 — 새 분류 체계를 따로 만들지 않고
 // src/lib/categories.ts의 BUILT_IN_CATEGORIES를 그대로 재사용한다.
-export type MajorItemFlow = "income" | "expense" | "btc";
+export type MajorItemFlow = "income" | "expense";
 
 export interface MajorItem {
   id: string;
   label: string;
   flow: MajorItemFlow;
-  /** 매핑되는 카테고리 id. "BTC 판매 확정"처럼 일반 거래가 아닌 항목은 비워둔다. */
-  categoryId?: string;
+  /** 기존 카테고리 체계에 매핑되는 id. */
+  categoryId: string;
   categoryLabel?: string;
-  /** false면 세부 입력 필드를 보여주지 않는다(예: BTC 구매). 기본값은 true로 취급. */
+  /** false면 세부 입력 필드를 보여주지 않는다(예: DCA / BTC 매수). 기본값은 true로 취급. */
   requiresDetail?: boolean;
   detailLabel?: string;
   amountLabel?: string;
   placeholder?: string;
+  description?: string;
   protected?: boolean;
-  /** true면 일반 거래 입력 대신 기존 BTC 판매 확정(SellConfirmModal) 흐름을 연다. */
-  opensSellConfirm?: boolean;
 }
 
 export const INCOME_MAJOR_ITEMS: MajorItem[] = [
@@ -160,6 +159,15 @@ export const EXPENSE_MAJOR_ITEMS: MajorItem[] = [
     requiresDetail: false,
   },
   {
+    id: "btc_buy",
+    label: "DCA / BTC 매수",
+    flow: "expense",
+    categoryId: "btc_buy",
+    requiresDetail: false,
+    description: "BTC를 산 금액입니다. 생활비 부족 계산에서는 제외됩니다.",
+    protected: true,
+  },
+  {
     id: "etc_expense",
     label: "기타지출",
     flow: "expense",
@@ -170,30 +178,9 @@ export const EXPENSE_MAJOR_ITEMS: MajorItem[] = [
   },
 ];
 
-export const BTC_MAJOR_ITEMS: MajorItem[] = [
-  {
-    id: "btc_buy",
-    label: "BTC 구매",
-    flow: "btc",
-    categoryId: "btc_buy",
-    requiresDetail: false,
-    protected: true,
-  },
-  {
-    id: "btc_sell_confirm",
-    label: "BTC 판매 확정",
-    flow: "btc",
-    requiresDetail: false,
-    protected: true,
-    // 기존 SellConfirmModal/btcSellRecords 흐름을 그대로 연다 — 일반 거래로 별도 저장하지 않는다.
-    opensSellConfirm: true,
-  },
-];
-
 export const MAJOR_ITEM_GROUPS: { label: string; items: MajorItem[] }[] = [
   { label: "수입", items: INCOME_MAJOR_ITEMS },
   { label: "지출", items: EXPENSE_MAJOR_ITEMS },
-  { label: "투자", items: BTC_MAJOR_ITEMS },
 ];
 
-export const ALL_MAJOR_ITEMS: MajorItem[] = [...INCOME_MAJOR_ITEMS, ...EXPENSE_MAJOR_ITEMS, ...BTC_MAJOR_ITEMS];
+export const ALL_MAJOR_ITEMS: MajorItem[] = [...INCOME_MAJOR_ITEMS, ...EXPENSE_MAJOR_ITEMS];

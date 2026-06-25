@@ -47,7 +47,7 @@ export const BUILT_IN_CATEGORIES: CategoryDef[] = [
   // ---- 투자 2 ----
   {
     id: "btc_buy",
-    label: "BTC 구매",
+    label: "DCA / BTC 매수",
     group: "invest",
     flow: "expense",
     icon: "bitcoin",

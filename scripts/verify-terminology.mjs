@@ -43,15 +43,11 @@ assert.match(combined, /BTC 판매 확정/, "'BTC 판매 확정' label is presen
 // Phase 12: "BTC 판매 합계" → "{년}년 판매한 비트코인" 형태로 바뀌었다.
 assert.match(combined, /판매한 비트코인/, "'판매한 비트코인' label is present");
 
-// 7. "BTC 구매" 문구 존재.
-// Phase 13.1: 자산 탭(AssetsPage.tsx)이 제거되면서 "BTC 구매" 하드코딩 문구는 더 이상
-// src/components에 없다 — 실제로는 src/lib/categories.ts·majorItems.ts의 카테고리/큰 항목 라벨이
-// CategoryGroupPicker, TransactionEntryPage 등에서 동적으로 렌더링된다. 그래서 두 데이터 파일도
-// 함께 검사한다.
+// 7. "DCA / BTC 매수" 문구 존재
 const categoriesSrc = readFileSync(join(root, "src/lib/categories.ts"), "utf8");
 const majorItemsSrc = readFileSync(join(root, "src/lib/majorItems.ts"), "utf8");
 const combinedWithLabels = combined + categoriesSrc + majorItemsSrc;
-assert.match(combinedWithLabels, /BTC 구매/, "'BTC 구매' label is present");
+assert.match(combinedWithLabels, /DCA \/ BTC 매수/, "'DCA / BTC 매수' label is present");
 
 // 8. "BTC 판매" 문구 존재
 assert.match(combinedWithLabels, /BTC 판매/, "'BTC 판매' label is present");

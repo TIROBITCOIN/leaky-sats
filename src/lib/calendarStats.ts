@@ -24,7 +24,7 @@ function isInvestCategory(catId: string, categoriesById: Record<string, Category
 
 /**
  * 정산기간 달력 통계. sellCalculator.calculateMonthlyLivingCashflow와 같은 기준으로 invest 그룹
- * (BTC 구매/판매)을 생활 수입/지출 합계에서 제외해 판매해야 하는 비트코인 계산과 기준을 맞춘다.
+ * (DCA / BTC 매수와 BTC 판매)을 생활 수입/지출 합계에서 제외해 판매해야 하는 비트코인 계산과 기준을 맞춘다.
  * BTC 거래 자체는 txns에 그대로 남아있어 선택일 상세에서는 표시할 수 있다.
  * period는 settlementDay가 1이면 달력월 전체와 동일하고, 그 외에는 두 달에 걸칠 수 있다.
  */

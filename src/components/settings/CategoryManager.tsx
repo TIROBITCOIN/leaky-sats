@@ -12,9 +12,8 @@ const ADDABLE_GROUPS: Extract<CategoryGroup, "expense" | "income">[] = ["expense
 
 // Phase 10에서 큰 항목 중심으로 정리한 기본 카테고리(BUILT_IN_CATEGORIES) id 집합을 "현재" 카테고리로
 // 본다. 여기 없는 id(식비/카페 등 예전 기본 카테고리나 사용자 커스텀 카테고리)는 삭제하지 않고
-// "이전 카테고리" 섹션에 접어서 보여준다. btc_buy/btc_sell처럼 majorItems.ts에 직접 매핑되지 않는
-// 카테고리(예: BTC 판매는 별도 판매 확정 흐름이라 categoryId가 없다)도 BUILT_IN_CATEGORIES 기준이면
-// 빠짐없이 "현재" 취급된다.
+// "이전 카테고리" 섹션에 접어서 보여준다. 일반 거래 입력에 노출되지 않는 btc_sell도
+// BUILT_IN_CATEGORIES 기준이면 빠짐없이 "현재" 취급된다.
 const CURRENT_CATEGORY_IDS = new Set(BUILT_IN_CATEGORIES.map((c) => c.id));
 
 type FormMode = { kind: "add" } | { kind: "edit"; id: string };
@@ -200,6 +199,11 @@ export default function CategoryManager() {
             <div className="ldg-tiny" style={{ margin: "14px 0 6px" }}>
               {SECTION_LABEL[group].toUpperCase()} · {items.length}
             </div>
+            {group === "invest" && (
+              <div className="ldg-setting-desc" style={{ marginBottom: 8 }}>
+                DCA / BTC 매수는 거래 입력에서는 지출로 기록되지만 생활비 부족 계산에서는 제외됩니다.
+              </div>
+            )}
             <div className="ldg-cat-list">
               {items.map((c) => (
                 <CategoryRow key={c.id} c={c} onEdit={() => openEdit(c)} onDelete={() => handleDelete(c)} />

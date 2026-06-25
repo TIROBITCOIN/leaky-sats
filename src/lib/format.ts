@@ -1,7 +1,7 @@
-// 과거에 저장된 카테고리 라벨("BTC 매수"/"BTC 매도")을 강제 마이그레이션 없이
-// 현재 용어("BTC 구매"/"BTC 판매")로 표시하기 위한 alias.
+// 과거에 저장된 카테고리 라벨을 강제 마이그레이션 없이 현재 용어로 표시하기 위한 alias.
 const LEGACY_CATEGORY_LABEL_ALIASES: Record<string, string> = {
-  "BTC 매수": "BTC 구매",
+  "BTC 매수": "DCA / BTC 매수",
+  "BTC 구매": "DCA / BTC 매수",
   "BTC 매도": "BTC 판매",
 };
 

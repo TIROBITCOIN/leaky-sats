@@ -153,12 +153,6 @@ export default function TransactionEntryPage() {
   };
 
   const handleSelectMajorItem = (item: MajorItem) => {
-    if (item.opensSellConfirm) {
-      // BTC 판매 확정은 일반 거래 입력이 아니라 기존 SellConfirmModal/btcSellRecords 흐름을 재사용한다.
-      navigate("/", { state: { openSellModal: true } });
-      return;
-    }
-    if (!item.categoryId) return;
     setSelectedItem(item);
     setCat(item.categoryId);
     setTitle("");
@@ -249,7 +243,9 @@ export default function TransactionEntryPage() {
     <div className="ldg-screen">
       <div className="ldg-content">
         <div className="ldg-page-title">{selectedItem.label}</div>
-        <div className="ldg-page-sub">필요한 정보만 빠르게 입력하세요.</div>
+        <div className="ldg-page-sub">
+          {selectedItem.description ?? "필요한 정보만 빠르게 입력하세요."}
+        </div>
 
         <form onSubmit={handleSubmit}>
           <div className="ldg-card">

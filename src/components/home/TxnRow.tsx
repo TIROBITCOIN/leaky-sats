@@ -16,14 +16,15 @@ export default function TxnRow({ t, currency, btcKRW }: { t: Txn; currency: Curr
   // 큰 항목만 고르고 세부 기관명을 안 적으면 title이 catLabel과 같아진다(applyAddTxn의 fallback).
   // 이 경우 "월세 / 월세 · 시간"처럼 같은 말이 두 줄로 겹쳐 보이지 않게 둘째 줄엔 시간만 남긴다.
   const catLabel = formatCategoryLabel(t.catLabel);
-  const showCatLabel = catLabel !== t.title;
+  const title = t.cat === "btc_buy" ? formatCategoryLabel(t.title) : t.title;
+  const showCatLabel = catLabel !== title;
 
   return (
     <>
       <CategoryIcon cat={t.cat} />
       <div className="ldg-txn-mid">
         <div className="ldg-txn-title">
-          {t.title}
+          {title}
           {t.memo?.trim() && (
             <span className="ldg-txn-memo-indicator" aria-label="메모 있음">
               ●

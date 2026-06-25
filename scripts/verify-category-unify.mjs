@@ -33,10 +33,11 @@ assert.match(contextSrc, /MIGRATE_LEGACY_CATEGORIES/, "MIGRATE_LEGACY_CATEGORIES
 assert.match(contextSrc, /PROTECTED_IDS\.has/, "migration checks PROTECTED_IDS");
 assert.match(contextSrc, /migrateLegacyCategories/, "migrateLegacyCategories is exposed in context");
 
-// 7. majorItems.ts의 그룹명이 "투자"로 통일 ("BTC" 아님)
+// 7. 거래 입력의 큰 항목은 수입/지출만 사용하고 투자 그룹은 노출하지 않음
 const majorItemsSrc = read("src/lib/majorItems.ts");
-assert.match(majorItemsSrc, /label:\s*"투자"/, "BTC group label is '투자' matching GROUP_LABEL");
-assert.doesNotMatch(majorItemsSrc, /label:\s*"BTC"/, "no 'BTC' group label in MAJOR_ITEM_GROUPS");
+assert.doesNotMatch(majorItemsSrc, /label:\s*"투자"/, "MAJOR_ITEM_GROUPS does not expose an investment card");
+assert.match(majorItemsSrc, /label:\s*"DCA \/ BTC 매수"/, "DCA entry is available in the expense items");
+assert.match(majorItemsSrc, /categoryId:\s*"btc_buy"/, "DCA entry preserves the btc_buy id");
 
 // 8. SettingsPage에 세분화 카테고리 정리 UI가 존재
 const settingsSrc = read("src/components/settings/SettingsPage.tsx");

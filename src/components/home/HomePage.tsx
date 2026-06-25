@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
 import "../../styles/ledger.css";
 import { useLedger } from "../../state/LedgerContext";
 import { loadWalletName } from "../../lib/walletName";
@@ -38,8 +37,6 @@ export default function HomePage() {
   const [settlementDay, setSettlementDay] = useState(loadSettlementDay);
   const defaultSettlementMonthKey = getSettlementMonthKeyForDate(new Date().toISOString(), settlementDay);
   const [selectedMonth, setSelectedMonth] = useSelectedMonth(defaultSettlementMonthKey);
-  const location = useLocation();
-  const navigate = useNavigate();
   const [sellModalState, setSellModalState] = useState<{ mode: "add" } | { mode: "edit"; record: BtcSellRecord } | null>(
     null
   );
@@ -49,17 +46,6 @@ export default function HomePage() {
   useEffect(() => {
     document.title = walletName;
   }, [walletName]);
-
-  // 거래 입력 화면에서 "BTC 판매 확정"을 고르면 여기로 돌아오면서 모달을 바로 연다.
-  // 한 번 소비한 뒤에는 history state를 비워서 뒤로가기로 재트리거되지 않게 한다.
-  useEffect(() => {
-    const state = location.state as { openSellModal?: boolean } | null;
-    if (state?.openSellModal) {
-      setSellModalState({ mode: "add" });
-      navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   useEffect(() => {
     const refresh = () => {

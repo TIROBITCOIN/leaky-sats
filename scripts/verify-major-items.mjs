@@ -26,7 +26,7 @@ incomeIds.forEach((id, i) => {
   assert.match(block, /flow:\s*"income"/, `income item ${id} has flow income`);
 });
 
-// 3. 지출 큰 항목 10개
+// 3. 지출 큰 항목 11개 (DCA / BTC 매수는 입력 UI에서 지출로 노출)
 const expenseIds = [
   "card_bill",
   "insurance",
@@ -37,6 +37,7 @@ const expenseIds = [
   "loan_payment",
   "subscription",
   "events",
+  "btc_buy",
   "etc_expense",
 ];
 const expenseLabels = [
@@ -49,6 +50,7 @@ const expenseLabels = [
   "대출원리금",
   "구독료",
   "경조사비",
+  "DCA / BTC 매수",
   "기타지출",
 ];
 expenseIds.forEach((id, i) => {
@@ -57,12 +59,15 @@ expenseIds.forEach((id, i) => {
   assert.match(block, /flow:\s*"expense"/, `expense item ${id} has flow expense`);
 });
 
-// 4. BTC 큰 항목 2개: BTC 구매, BTC 판매 확정 (Phase 12: 반영 → 확정으로 재명명)
+// 4. DCA / BTC 매수는 기존 btc_buy id에 매핑되고 생활비 계산 제외 설명을 제공
 const btcBuyBlock = getItemBlock("btc_buy");
-assert.match(btcBuyBlock, /label:\s*"BTC 구매"/, "btc_buy major item labeled BTC 구매");
-assert.match(btcBuyBlock, /flow:\s*"btc"/, "btc_buy major item flow is btc");
-const btcSellConfirmBlock = getItemBlock("btc_sell_confirm");
-assert.match(btcSellConfirmBlock, /label:\s*"BTC 판매 확정"/, "btc_sell_confirm major item labeled BTC 판매 확정");
+assert.match(btcBuyBlock, /label:\s*"DCA \/ BTC 매수"/, "btc_buy major item uses the DCA label");
+assert.match(btcBuyBlock, /flow:\s*"expense"/, "btc_buy major item uses the expense entry flow");
+assert.match(btcBuyBlock, /categoryId:\s*"btc_buy"/, "DCA entry preserves the btc_buy category id");
+assert.match(btcBuyBlock, /requiresDetail:\s*false/, "DCA entry does not require a detail field");
+assert.match(btcBuyBlock, /생활비 부족 계산에서는 제외/, "DCA entry explains living cashflow exclusion");
+assert.doesNotMatch(majorItemsSrc, /id:\s*"btc_sell_confirm"/, "sell confirmation is absent from major items");
+assert.doesNotMatch(majorItemsSrc, /label:\s*"투자"/, "transaction entry has no investment group");
 
 // 5-8. detailLabel 확인
 assert.match(getItemBlock("card_bill"), /detailLabel:\s*"카드회사"/, "card_bill detailLabel is 카드회사");
@@ -91,7 +96,6 @@ function walk(dir) {
 }
 const componentFiles = walk(join(root, "src/components"));
 const combinedComponents = componentFiles.map((f) => readFileSync(f, "utf8")).join("\n");
-assert.doesNotMatch(combinedComponents, /BTC 매수/, "no 'BTC 매수' reintroduced in user-facing components");
 assert.doesNotMatch(combinedComponents, /BTC 매도/, "no 'BTC 매도' reintroduced in user-facing components");
 assert.doesNotMatch(combinedComponents, /팔아야 할 BTC/, "no '팔아야 할 BTC' reintroduced in user-facing components");
 
@@ -110,12 +114,13 @@ const entryPageSrc = readFileSync(join(root, "src/components/transaction/Transac
 assert.match(entryPageSrc, /from "\.\.\/\.\.\/lib\/majorItems"/, "TransactionEntryPage imports from lib/majorItems");
 assert.match(entryPageSrc, /MAJOR_ITEM_GROUPS/, "TransactionEntryPage renders MAJOR_ITEM_GROUPS");
 
-// 13. BTC 판매 반영은 일반 거래 입력이 아니라 기존 판매 기록 흐름(SellConfirmModal/openSellModal)을 재사용
-assert.match(entryPageSrc, /opensSellConfirm/, "TransactionEntryPage checks opensSellConfirm before treating item as a normal txn");
-assert.match(entryPageSrc, /openSellModal:\s*true/, "TransactionEntryPage hands off to the existing sell-confirm flow via navigation state");
+// 13. BTC 판매 확정은 일반 거래 입력에서 제거되고 SellNeededCard에서만 진입
+assert.doesNotMatch(entryPageSrc, /opensSellConfirm|openSellModal/, "transaction entry has no sell-confirm shortcut");
 const homePageSrc = readFileSync(join(root, "src/components/home/HomePage.tsx"), "utf8");
 assert.match(homePageSrc, /SellConfirmModal/, "HomePage still owns the SellConfirmModal flow");
-assert.match(homePageSrc, /openSellModal/, "HomePage listens for openSellModal navigation state");
+assert.match(homePageSrc, /onConfirmSell/, "HomePage opens sell confirmation from SellNeededCard");
+const sellNeededSrc = readFileSync(join(root, "src/components/home/SellNeededCard.tsx"), "utf8");
+assert.match(sellNeededSrc, /BTC 판매 확정/, "SellNeededCard keeps the BTC sale confirmation action");
 
 // 14. 기존 localStorage key가 변경되지 않았는지
 const expectedKeys = [
@@ -136,14 +141,19 @@ for (const key of expectedKeys) {
 }
 
 // 15. verify:terminology가 깨지지 않도록 동일한 핵심 조건을 다시 확인
-// Phase 12: "판매 필요 BTC" → "판매해야 하는 비트코인", "BTC 판매 반영" → "BTC 판매 확정"으로 재명명.
-// Phase 13.1: 자산 탭(AssetsPage.tsx) 제거로 "BTC 구매" 하드코딩 문구가 src/components에서 사라졌다 —
-// 실제로는 categories.ts/majorItems.ts의 라벨이 CategoryGroupPicker/TransactionEntryPage 등에서
-// 동적으로 렌더링되므로 두 데이터 파일도 함께 검사한다.
+// 현재 사용자 용어가 유지되는지 확인
 const combinedWithLabels = combinedComponents + categoriesSrc + majorItemsSrc;
 assert.match(combinedWithLabels, /판매해야 하는 비트코인/, "판매해야 하는 비트코인 label still present");
 assert.match(combinedWithLabels, /BTC 판매 확정/, "BTC 판매 확정 label still present");
-assert.match(combinedWithLabels, /BTC 구매/, "BTC 구매 label still present");
+assert.match(combinedWithLabels, /DCA \/ BTC 매수/, "DCA / BTC 매수 label is present");
 assert.match(combinedWithLabels, /BTC 판매/, "BTC 판매 label still present");
+
+// 16. btc_buy는 내부 invest 그룹으로 남아 생활비 부족 계산에서 제외
+const btcBuyCategoryBlock = categoriesSrc.match(/\{[\s\S]*?id:\s*"btc_buy"[\s\S]*?\}/)?.[0] ?? "";
+assert.match(btcBuyCategoryBlock, /label:\s*"DCA \/ BTC 매수"/, "btc_buy category uses the DCA label");
+assert.match(btcBuyCategoryBlock, /group:\s*"invest"/, "btc_buy remains in the invest calculation group");
+assert.match(btcBuyCategoryBlock, /flow:\s*"expense"/, "btc_buy remains a negative expense transaction");
+const sellCalculatorSrc = readFileSync(join(root, "src/lib/sellCalculator.ts"), "utf8");
+assert.match(sellCalculatorSrc, /cat\?\.group === "invest"/, "living cashflow continues to exclude invest categories");
 
 console.log("verify:major-items passed");

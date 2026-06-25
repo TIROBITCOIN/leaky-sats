@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
+import ts from "typescript";
 
 const root = process.cwd();
 
@@ -15,6 +16,51 @@ assert.ok(existsSync(sellCalcPath), "sellCalculator.ts exists");
 const sellCalcSrc = readFileSync(sellCalcPath, "utf8");
 assert.match(sellCalcSrc, /calculateMonthlyLivingCashflow/, "calculateMonthlyLivingCashflow exists");
 assert.match(sellCalcSrc, /calculateSellNeeded/, "calculateSellNeeded exists");
+
+// DCA / BTC 매수는 거래 자체는 지출이지만 생활비 부족 계산에서는 제외된다.
+const monthSrc = readFileSync("src/lib/month.ts", "utf8");
+const compilerOptions = { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 };
+const compiledMonth = ts.transpileModule(monthSrc, { compilerOptions }).outputText;
+const monthModuleUrl = `data:text/javascript;base64,${Buffer.from(compiledMonth).toString("base64")}`;
+const compiledSellCalculator = ts
+  .transpileModule(sellCalcSrc, { compilerOptions })
+  .outputText.replace('"./month"', `"${monthModuleUrl}"`);
+const sellCalculatorModuleUrl = `data:text/javascript;base64,${Buffer.from(compiledSellCalculator).toString("base64")}`;
+const sellCalculator = await import(sellCalculatorModuleUrl);
+const livingCashflow = sellCalculator.calculateMonthlyLivingCashflow(
+  [
+    {
+      id: 1,
+      title: "생활비",
+      cat: "card_bill",
+      catLabel: "카드대금",
+      time: "",
+      date: "2026-06-10T00:00",
+      amount: -300_000,
+      btcAt: 100_000_000,
+    },
+    {
+      id: 2,
+      title: "DCA / BTC 매수",
+      cat: "btc_buy",
+      catLabel: "DCA / BTC 매수",
+      time: "",
+      date: "2026-06-11T00:00",
+      amount: -100_000,
+      btcAt: 100_000_000,
+    },
+  ],
+  {
+    card_bill: { id: "card_bill", label: "카드대금", group: "expense", flow: "expense" },
+    btc_buy: { id: "btc_buy", label: "DCA / BTC 매수", group: "invest", flow: "expense" },
+  },
+  { startDate: "2026-06-01", endDate: "2026-06-30" }
+);
+assert.deepEqual(
+  livingCashflow,
+  { incomeKrw: 0, expenseKrw: 300_000 },
+  "DCA / BTC 매수 is excluded from living expense and sell-needed inputs"
+);
 
 // 3-6. Arithmetic verification (inline calculation tests)
 // Test: income 2,500,000 / expense 3,000,000 / btcKrw 96,700,000
