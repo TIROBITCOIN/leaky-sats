@@ -39,6 +39,18 @@ check("wallet name UI in SettingsPage", settingsPage.includes("지갑 이름"));
 check("wallet name form class in SettingsPage", settingsPage.includes("ldg-wallet-name-form"));
 check("BackupRestoreCard in SettingsPage", settingsPage.includes("BackupRestoreCard"));
 check("AppLockSettings in SettingsPage", settingsPage.includes("AppLockSettings"));
+check("stale dark mode copy removed", !settingsPage.includes("다크 모드 고정"));
+check(
+  "stale theme setting row removed",
+  !settingsPage.includes('<div className="ldg-setting-label">테마</div>')
+);
+check(
+  "stale Dark-only button removed",
+  !/<button[^>]*>\s*Dark\s*<\/button>/.test(settingsPage)
+);
+for (const label of ["기본 통화", "표시 단위", "새로고침 주기", "시세 상태"]) {
+  check(`${label} remains in SettingsPage`, settingsPage.includes(label));
+}
 
 const formsCss = fs.readFileSync("src/styles/forms.css", "utf8");
 check("wallet-name-form CSS class exists", formsCss.includes("ldg-wallet-name-form"));
