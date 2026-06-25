@@ -218,9 +218,15 @@
   cursor: pointer;
 }
 .ldg-recurring-check input {
+  flex: 0 0 auto;
   width: 18px;
   height: 18px;
   accent-color: var(--ldg-orange);
+}
+.ldg-recurring-check-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
 }
 .ldg-link.danger {
   color: var(--ldg-neg);
