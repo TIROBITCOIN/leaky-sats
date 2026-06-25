@@ -64,7 +64,7 @@ export default function AppLockGate({ children }: { children: ReactNode }) {
     const ok = await verifyAppLockPin(pin);
     if (!ok) {
       setFailCount((count) => count + 1);
-      setError("PIN이 올바르지 않습니다.");
+      setError("PIN이 맞지 않습니다.");
       setPin("");
       inputRef.current?.focus();
       return;
@@ -81,10 +81,14 @@ export default function AppLockGate({ children }: { children: ReactNode }) {
   return (
     <div className="ldg-lock-screen" role="dialog" aria-modal="true" aria-labelledby="app-lock-title">
       <form className="ldg-lock-card" onSubmit={handleSubmit}>
+        <div className="ldg-lock-mark" aria-hidden="true">
+          <span className="ldg-lock-mark-shackle" />
+          <span className="ldg-lock-mark-body" />
+        </div>
         <h1 id="app-lock-title" className="ldg-lock-title">
           잠금 해제
         </h1>
-        <p className="ldg-lock-sub">PIN을 입력하세요.</p>
+        <p className="ldg-lock-sub">PIN을 입력하세요</p>
         <input
           ref={inputRef}
           className="ldg-lock-input"
@@ -96,15 +100,14 @@ export default function AppLockGate({ children }: { children: ReactNode }) {
           maxLength={6}
           placeholder="PIN"
           aria-label="앱 잠금 PIN"
+          autoFocus
         />
         {error ? <div className="ldg-lock-error">{error}</div> : null}
         {failCount > 0 ? <div className="ldg-lock-note">실패 {failCount}회</div> : null}
         <button className="ldg-submit-btn" type="submit">
-          잠금 해제
+          열기
         </button>
-        <p className="ldg-lock-note">
-          이 PIN은 이 기기에서만 작동합니다.
-        </p>
+        <p className="ldg-lock-note">이 기기에서만 사용하는 로컬 잠금입니다.</p>
       </form>
     </div>
   );

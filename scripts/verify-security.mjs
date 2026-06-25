@@ -31,8 +31,28 @@ const storedConfigBlock = appLock.match(/const config: AppLockConfig = \{[\s\S]*
 assert.doesNotMatch(storedConfigBlock, /\bpin\s*:/i, "PIN is not stored as a property");
 assert.match(gate, /myledger-lock-now/, "manual lock event is handled");
 assert.match(gate, /visibilitychange/, "background auto-lock handling exists");
+assert.match(gate, /verifyAppLockPin/, "lock screen continues to verify the PIN through appLock");
+assert.match(gate, /type="password"/, "lock screen keeps password input behavior");
+assert.match(gate, /inputMode="numeric"/, "lock screen keeps the mobile numeric keyboard");
+assert.match(gate, /maxLength=\{6\}/, "lock screen keeps the six-digit PIN limit");
+assert.match(gate, /autoFocus/, "lock screen keeps autofocus behavior");
+assert.match(gate, /PIN이 맞지 않습니다\./, "lock screen uses short PIN error copy");
+assert.match(gate, />\s*열기\s*</, "lock screen uses the concise open action");
+assert.match(gate, /이 기기에서만 사용하는 로컬 잠금입니다\./, "lock screen uses concise local-lock guidance");
 assert.match(settings, /disableAppLock/, "PIN disable flow exists");
 assert.match(settings, /changeAppLockPin/, "PIN change flow exists");
+
+const layout = readFileSync(join(root, "src", "styles", "layout.css"), "utf8");
+const lockScreenCss = layout.match(/\.ldg-lock-screen\s*\{[\s\S]*?\}/)?.[0] ?? "";
+const lockCardCss = layout.match(/\.ldg-lock-card\s*\{[\s\S]*?\}/)?.[0] ?? "";
+const lockInputCss = layout.match(/\.ldg-lock-input\s*\{[\s\S]*?\}/)?.[0] ?? "";
+assert.match(lockScreenCss, /position:\s*fixed/, "lock screen covers the viewport independently");
+assert.match(lockScreenCss, /inset:\s*0/, "lock screen covers every viewport edge");
+assert.match(lockCardCss, /max-width:\s*360px/, "lock card stays compact on mobile");
+assert.match(lockInputCss, /width:\s*100%/, "lock input fills the card width");
+assert.match(lockInputCss, /max-width:\s*100%/, "lock input cannot exceed the card width");
+assert.match(lockInputCss, /min-width:\s*0/, "lock input can shrink inside the card");
+assert.match(lockInputCss, /box-sizing:\s*border-box/, "lock input includes padding inside its width");
 
 assert.match(combinedDocs, /localStorage-first|localStorage/, "localStorage privacy model is documented");
 assert.match(combinedDocs, /DevTools/, "DevTools limitation is documented");
