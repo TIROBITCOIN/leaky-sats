@@ -16,7 +16,8 @@ assert.equal(manifest.name, "My Ledger", "manifest name");
 assert.equal(manifest.short_name, "Ledger", "manifest short_name");
 assert.equal(manifest.start_url, "/", "manifest start_url");
 assert.equal(manifest.display, "standalone", "manifest display");
-assert.equal(manifest.theme_color, "#0a0a0a", "manifest theme_color");
+assert.equal(manifest.theme_color, "#f4f3ef", "manifest theme_color");
+assert.equal(manifest.background_color, "#f4f3ef", "manifest background_color");
 assert.ok(Array.isArray(manifest.icons) && manifest.icons.length >= 3, "manifest icons");
 
 for (const icon of manifest.icons) {
@@ -25,12 +26,12 @@ for (const icon of manifest.icons) {
 
 assert.equal(existsSync(swPath), true, "service worker exists");
 const sw = readFileSync(swPath, "utf8");
-assert.match(sw, /myledger-shell-v1/, "service worker cache name");
+assert.match(sw, /myledger-shell-v2/, "service worker cache name");
 assert.match(sw, /mode === "navigate"/, "service worker navigation handling");
 
 const index = readFileSync(indexPath, "utf8");
 assert.match(index, /<link rel="manifest" href="\/manifest\.webmanifest"/, "index manifest link");
-assert.match(index, /<meta name="theme-color" content="#0a0a0a"/, "index theme-color");
+assert.match(index, /<meta name="theme-color" content="#f4f3ef"/, "index theme-color");
 assert.match(index, /apple-mobile-web-app-capable/, "apple mobile meta");
 
 assert.equal(existsSync(registerPath), true, "service worker registration file exists");
