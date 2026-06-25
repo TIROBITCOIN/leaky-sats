@@ -12,11 +12,36 @@ assert.match(source, /myledger\.recurringMaterialized\.v1/, "materialized months
 assert.match(source, /try\s*\{[\s\S]*localStorage\.getItem/, "loads guard storage access");
 assert.match(source, /catch\s*\{/, "invalid storage falls back safely");
 assert.match(entry, /markRecurringMaterialized/, "the transaction that creates a rule marks its settlement month");
-assert.match(entry, /upsertRecurringRule/, "transaction edit can update an existing recurring rule");
 assert.match(
   entry,
-  /if \(editingTxn\)[\s\S]*if \(createRecurring\)[\s\S]*upsertRecurringRule[\s\S]*markRecurringMaterialized/,
+  /const matchingRecurringRule = useMemo\([\s\S]*findRecurringRule\([\s\S]*normalizeRecurringDay/,
+  "transaction edit finds a recurring rule from the stored transaction fields"
+);
+assert.match(
+  entry,
+  /useState\(\(\) => matchingRecurringRule !== null\)/,
+  "matching recurring transactions initialize the checkbox as checked"
+);
+assert.match(
+  entry,
+  /matchingRecurringRule\s*\?\s*updateRecurringRule\(matchingRecurringRule\.id, ruleInput\)[\s\S]*addRecurringRule\(ruleInput\)/,
+  "transaction edit updates a matched rule by id and only creates when no rule matches"
+);
+assert.match(
+  entry,
+  /if \(editingTxn\)[\s\S]*if \(createRecurring\)[\s\S]*markRecurringMaterialized/,
   "transaction edit updates the transaction and materializes its recurring rule"
+);
+assert.doesNotMatch(
+  entry.match(/if \(editingTxn\)[\s\S]*?navigate\(-1\);/)?.[0] ?? "",
+  /deleteRecurringRule/,
+  "unchecking during transaction edit does not delete the existing recurring rule"
+);
+assert.match(entry, /체크를 꺼도 기존 반복 규칙은 유지됩니다/, "edit copy explains that unchecking preserves the rule");
+assert.match(
+  entry,
+  /반복 항목 삭제는 설정 &gt; 반복 항목 관리에서 할 수 있습니다/,
+  "edit copy directs recurring deletion to settings"
 );
 assert.match(
   entry,
@@ -100,6 +125,26 @@ const rule = recurring.addRecurringRule({
 });
 assert.equal(rule.dayOfMonth, 31, "stored rule supports the 31st");
 assert.equal(recurring.listRecurringRules().length, 1, "valid rule persists");
+assert.equal(
+  recurring.findRecurringRule({
+    title: "월세",
+    cat: "housing",
+    isIncome: false,
+    dayOfMonth: recurring.normalizeRecurringDay(31),
+  })?.id,
+  rule.id,
+  "a transaction with matching title, category, flow, and normalized day finds its recurring rule"
+);
+assert.equal(
+  recurring.findRecurringRule({
+    title: "관리비",
+    cat: "housing",
+    isIncome: false,
+    dayOfMonth: 31,
+  }),
+  null,
+  "a non-recurring transaction does not match a different recurring rule"
+);
 recurring.updateRecurringRule(rule.id, { lastAmount: 980000 });
 assert.equal(
   recurring.listRecurringRules()[0].lastAmount,
@@ -126,6 +171,28 @@ assert.equal(editedRule.id, rule.id, "editing a matching transaction updates its
 assert.equal(recurring.listRecurringRules().length, 1, "editing does not duplicate a matching recurring rule");
 assert.equal(editedRule.title, "주거비", "edited title is saved to the recurring rule");
 assert.equal(editedRule.dayOfMonth, 30, "edited day is saved to the recurring rule");
+const editedAgain = recurring.upsertRecurringRule(
+  {
+    title: "주거비",
+    cat: "housing",
+    isIncome: false,
+    dayOfMonth: 30,
+  },
+  {
+    title: "주거비",
+    cat: "housing",
+    isIncome: false,
+    dayOfMonth: 30,
+    lastAmount: 1200000,
+  }
+);
+assert.equal(editedAgain.id, rule.id, "repeated edits keep updating the same recurring rule");
+assert.equal(recurring.listRecurringRules().length, 1, "repeated edits do not create duplicate recurring rules");
+assert.equal(
+  recurring.listRecurringRules()[0].lastAmount,
+  1200000,
+  "editing a matched recurring transaction updates lastAmount"
+);
 
 assert.equal(recurring.markRecurringMaterialized(rule.id, "2026-07"), true, "first confirmation is recorded");
 assert.equal(recurring.markRecurringMaterialized(rule.id, "2026-07"), false, "duplicate month confirmation is blocked");

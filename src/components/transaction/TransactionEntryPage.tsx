@@ -16,9 +16,10 @@ import CategoryGroupPicker from "./CategoryGroupPicker";
 import { MAJOR_ITEM_GROUPS, type MajorItem } from "../../lib/majorItems";
 import {
   addRecurringRule,
+  findRecurringRule,
   markRecurringMaterialized,
   normalizeRecurringDay,
-  upsertRecurringRule,
+  updateRecurringRule,
 } from "../../lib/recurringRules";
 
 /** 금액 · 날짜 · 메모 · 저장 버튼 — 수정 화면과 큰 항목 2단계 입력 화면이 공유한다. */
@@ -105,6 +106,18 @@ export default function TransactionEntryPage() {
   const editId = searchParams.get("edit");
   const editingTxn = editId ? data.txns.find((t) => t.id === Number(editId)) ?? null : null;
   const monthParam = searchParams.get("month");
+  const matchingRecurringRule = useMemo(
+    () =>
+      editingTxn
+        ? findRecurringRule({
+            title: editingTxn.title,
+            cat: editingTxn.cat,
+            isIncome: editingTxn.amount > 0,
+            dayOfMonth: normalizeRecurringDay(Number(editingTxn.date.slice(8, 10))),
+          })
+        : null,
+    [editingTxn]
+  );
 
   // 거래 추가(편집 아님)일 때만 "큰 항목 선택 → 세부 입력" 2단계 흐름을 쓴다.
   // 편집은 정본(큰 카테고리 + 사용자 추가) 집합만 선택지로 보여준다.
@@ -118,7 +131,7 @@ export default function TransactionEntryPage() {
   );
   const [title, setTitle] = useState(() => editingTxn?.title ?? "");
   const [memo, setMemo] = useState(() => editingTxn?.memo ?? "");
-  const [createRecurring, setCreateRecurring] = useState(false);
+  const [createRecurring, setCreateRecurring] = useState(() => matchingRecurringRule !== null);
   const [date, setDate] = useState(() => {
     if (editingTxn) return editingTxn.date.slice(0, 10);
     if (!isValidMonthKey(monthParam)) return getTodayDateKey();
@@ -141,21 +154,16 @@ export default function TransactionEntryPage() {
     if (editingTxn) {
       updateTxn(editingTxn.id, { title, cat, amount: amountNum, isIncome, date: storedDate, memo });
       if (createRecurring) {
-        const rule = upsertRecurringRule(
-          {
-            title: editingTxn.title,
-            cat: editingTxn.cat,
-            isIncome: editingTxn.amount > 0,
-            dayOfMonth: Number(editingTxn.date.slice(8, 10)),
-          },
-          {
-            title: title.trim() || selectedCategory.label,
-            cat,
-            isIncome,
-            dayOfMonth: recurringDay,
-            lastAmount: amountNum,
-          }
-        );
+        const ruleInput = {
+          title: title.trim() || selectedCategory.label,
+          cat,
+          isIncome,
+          dayOfMonth: recurringDay,
+          lastAmount: amountNum,
+        };
+        const rule = matchingRecurringRule
+          ? updateRecurringRule(matchingRecurringRule.id, ruleInput) ?? addRecurringRule(ruleInput)
+          : addRecurringRule(ruleInput);
         markRecurringMaterialized(rule.id, getSettlementMonthKeyForDate(storedDate, loadSettlementDay()));
       }
       navigate(-1);
@@ -195,10 +203,17 @@ export default function TransactionEntryPage() {
         onChange={(event) => setCreateRecurring(event.target.checked)}
       />
       <span className="ldg-recurring-check-copy">
-        <span>매월 {recurringDay}일 반복 예정 항목으로 등록</span>
-        <span className="ldg-setting-desc">
-          다음 달부터는 금액을 확인한 뒤 거래로 추가합니다.
+        <span>
+          {matchingRecurringRule ? "매월 반복 항목으로 등록됨" : `매월 ${recurringDay}일 반복 예정 항목으로 등록`}
         </span>
+        <span className="ldg-setting-desc">
+          {matchingRecurringRule && !createRecurring
+            ? "체크를 꺼도 기존 반복 규칙은 유지됩니다."
+            : "다음 달부터는 금액을 확인한 뒤 거래로 추가합니다."}
+        </span>
+        {matchingRecurringRule && (
+          <span className="ldg-setting-desc">반복 항목 삭제는 설정 &gt; 반복 항목 관리에서 할 수 있습니다.</span>
+        )}
         {recurringDay >= 29 && (
           <span className="ldg-setting-desc">해당 날짜가 없는 달은 말일로 처리됩니다.</span>
         )}
