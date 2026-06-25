@@ -12,6 +12,12 @@ assert.match(source, /myledger\.recurringMaterialized\.v1/, "materialized months
 assert.match(source, /try\s*\{[\s\S]*localStorage\.getItem/, "loads guard storage access");
 assert.match(source, /catch\s*\{/, "invalid storage falls back safely");
 assert.match(entry, /markRecurringMaterialized/, "the transaction that creates a rule marks its settlement month");
+assert.match(entry, /upsertRecurringRule/, "transaction edit can update an existing recurring rule");
+assert.match(
+  entry,
+  /if \(editingTxn\)[\s\S]*if \(createRecurring\)[\s\S]*upsertRecurringRule[\s\S]*markRecurringMaterialized/,
+  "transaction edit updates the transaction and materializes its recurring rule"
+);
 assert.match(
   entry,
   /반복 예정 항목으로 등록/,
@@ -100,6 +106,26 @@ assert.equal(
   980000,
   "the confirmed amount becomes the rule's next suggestion"
 );
+
+const editedRule = recurring.upsertRecurringRule(
+  {
+    title: "월세",
+    cat: "housing",
+    isIncome: false,
+    dayOfMonth: 31,
+  },
+  {
+    title: "주거비",
+    cat: "housing",
+    isIncome: false,
+    dayOfMonth: 30,
+    lastAmount: 990000,
+  }
+);
+assert.equal(editedRule.id, rule.id, "editing a matching transaction updates its recurring rule");
+assert.equal(recurring.listRecurringRules().length, 1, "editing does not duplicate a matching recurring rule");
+assert.equal(editedRule.title, "주거비", "edited title is saved to the recurring rule");
+assert.equal(editedRule.dayOfMonth, 30, "edited day is saved to the recurring rule");
 
 assert.equal(recurring.markRecurringMaterialized(rule.id, "2026-07"), true, "first confirmation is recorded");
 assert.equal(recurring.markRecurringMaterialized(rule.id, "2026-07"), false, "duplicate month confirmation is blocked");

@@ -14,7 +14,12 @@ import {
 import type { CategoryId } from "../../types";
 import CategoryGroupPicker from "./CategoryGroupPicker";
 import { MAJOR_ITEM_GROUPS, type MajorItem } from "../../lib/majorItems";
-import { addRecurringRule, markRecurringMaterialized, normalizeRecurringDay } from "../../lib/recurringRules";
+import {
+  addRecurringRule,
+  markRecurringMaterialized,
+  normalizeRecurringDay,
+  upsertRecurringRule,
+} from "../../lib/recurringRules";
 
 /** 금액 · 날짜 · 메모 · 저장 버튼 — 수정 화면과 큰 항목 2단계 입력 화면이 공유한다. */
 function AmountDateMemoFields({
@@ -135,6 +140,24 @@ export default function TransactionEntryPage() {
     const storedDate = `${date}T00:00`;
     if (editingTxn) {
       updateTxn(editingTxn.id, { title, cat, amount: amountNum, isIncome, date: storedDate, memo });
+      if (createRecurring) {
+        const rule = upsertRecurringRule(
+          {
+            title: editingTxn.title,
+            cat: editingTxn.cat,
+            isIncome: editingTxn.amount > 0,
+            dayOfMonth: Number(editingTxn.date.slice(8, 10)),
+          },
+          {
+            title: title.trim() || selectedCategory.label,
+            cat,
+            isIncome,
+            dayOfMonth: recurringDay,
+            lastAmount: amountNum,
+          }
+        );
+        markRecurringMaterialized(rule.id, getSettlementMonthKeyForDate(storedDate, loadSettlementDay()));
+      }
       navigate(-1);
     } else {
       addTxn({ title, cat, amount: amountNum, isIncome, date: storedDate, memo });
@@ -164,6 +187,25 @@ export default function TransactionEntryPage() {
     setAmount("");
   };
 
+  const recurringCheckbox = (
+    <label className="ldg-recurring-check">
+      <input
+        type="checkbox"
+        checked={createRecurring}
+        onChange={(event) => setCreateRecurring(event.target.checked)}
+      />
+      <span className="ldg-recurring-check-copy">
+        <span>매월 {recurringDay}일 반복 예정 항목으로 등록</span>
+        <span className="ldg-setting-desc">
+          다음 달부터는 금액을 확인한 뒤 거래로 추가합니다.
+        </span>
+        {recurringDay >= 29 && (
+          <span className="ldg-setting-desc">해당 날짜가 없는 달은 말일로 처리됩니다.</span>
+        )}
+      </span>
+    </label>
+  );
+
   // ---- 편집: 정본 카테고리만 노출하는 피커 ----
   if (editingTxn) {
     return (
@@ -179,16 +221,6 @@ export default function TransactionEntryPage() {
                 <CategoryGroupPicker value={cat} onSelect={(category) => setCat(category.id)} canonicalOnly />
               </div>
 
-              <div className="ldg-field" style={{ marginTop: 12 }}>
-                <div className="ldg-label">제목</div>
-                <input
-                  className="ldg-input"
-                  placeholder={selectedCategory.label}
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                />
-              </div>
-
               <AmountDateMemoFields
                 amountValue={amount}
                 onAmountChange={setAmount}
@@ -201,6 +233,18 @@ export default function TransactionEntryPage() {
                 onMemoChange={setMemo}
                 submitLabel="수정 완료"
                 disabled={amountNum <= 0 || !date}
+                extraBefore={
+                  <div className="ldg-field">
+                    <div className="ldg-label">제목</div>
+                    <input
+                      className="ldg-input"
+                      placeholder={selectedCategory.label}
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                    />
+                  </div>
+                }
+                extraAfter={recurringCheckbox}
               />
             </div>
           </form>
@@ -274,24 +318,7 @@ export default function TransactionEntryPage() {
                   </div>
                 ) : undefined
               }
-              extraAfter={
-                <label className="ldg-recurring-check">
-                  <input
-                    type="checkbox"
-                    checked={createRecurring}
-                    onChange={(event) => setCreateRecurring(event.target.checked)}
-                  />
-                  <span className="ldg-recurring-check-copy">
-                    <span>매월 {recurringDay}일 반복 예정 항목으로 등록</span>
-                    <span className="ldg-setting-desc">
-                      다음 달부터는 금액을 확인한 뒤 거래로 추가합니다.
-                    </span>
-                    {recurringDay >= 29 && (
-                      <span className="ldg-setting-desc">해당 날짜가 없는 달은 말일로 처리됩니다.</span>
-                    )}
-                  </span>
-                </label>
-              }
+              extraAfter={recurringCheckbox}
             />
           </div>
           <button type="button" className="ldg-secondary-btn" style={{ marginTop: 10 }} onClick={resetToPicker}>

@@ -14,7 +14,6 @@ import {
   listBtcSellRecordsByMonth,
   type BtcSellRecord,
 } from "../../lib/btcSellRecords";
-import LightningOverlay from "../lightning/LightningOverlay";
 import MonthSelector from "../common/MonthSelector";
 import Slogan from "./Slogan";
 import LedgerHeader from "./LedgerHeader";
@@ -105,7 +104,6 @@ export default function HomePage() {
 
   return (
     <div className="ldg-page-root">
-      <LightningOverlay />
       <div className="ldg-screen">
         <div className="ldg-content">
           <Slogan />

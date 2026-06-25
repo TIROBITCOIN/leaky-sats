@@ -23,6 +23,8 @@ export interface NewRecurringRule {
   lastAmount?: number;
 }
 
+export type RecurringRuleMatch = Pick<RecurringRule, "title" | "cat" | "isIncome" | "dayOfMonth">;
+
 export function normalizeRecurringDay(value: unknown): number {
   const numberValue = typeof value === "string" ? Number(value) : value;
   if (typeof numberValue !== "number" || !Number.isFinite(numberValue)) return MIN_DAY;
@@ -121,6 +123,29 @@ export function updateRecurringRule(
   rules[index] = next;
   saveRules(rules);
   return next;
+}
+
+export function findRecurringRule(match: RecurringRuleMatch): RecurringRule | null {
+  const title = match.title.trim();
+  const dayOfMonth = normalizeRecurringDay(match.dayOfMonth);
+  return (
+    listRecurringRules().find(
+      (rule) =>
+        rule.title === title &&
+        rule.cat === match.cat &&
+        rule.isIncome === match.isIncome &&
+        rule.dayOfMonth === dayOfMonth
+    ) ?? null
+  );
+}
+
+export function upsertRecurringRule(
+  previous: RecurringRuleMatch,
+  input: NewRecurringRule
+): RecurringRule {
+  const existing = findRecurringRule(previous);
+  if (!existing) return addRecurringRule(input);
+  return updateRecurringRule(existing.id, input) ?? addRecurringRule(input);
 }
 
 export function deleteRecurringRule(id: string): boolean {
