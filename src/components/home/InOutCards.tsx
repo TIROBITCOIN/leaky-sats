@@ -1,32 +1,36 @@
-import type { Currency, LedgerData } from "../../types";
+import type { Currency } from "../../types";
 import { fmtBTC, fmtKRW } from "../../lib/format";
 
 export default function InOutCards({
-  d,
-  currency,
+  incomeKrw,
+  expenseKrw,
   netKrw,
+  btcKRW,
+  currency,
 }: {
-  d: LedgerData;
-  currency: Currency;
+  incomeKrw: number;
+  expenseKrw: number;
   netKrw: number;
+  btcKRW: number;
+  currency: Currency;
 }) {
   const fmt = (value: number) =>
     currency === "KRW"
       ? (value >= 0 ? "+" : "") + fmtKRW(value)
-      : `${value >= 0 ? "+" : "-"}₿${(Math.abs(value) / d.btcKRW).toFixed(5)}`;
-  const sub = (value: number) => (currency === "KRW" ? fmtBTC(value, d.btcKRW) : `≈${fmtKRW(value)}`);
+      : `${value >= 0 ? "+" : "-"}₿${(Math.abs(value) / btcKRW).toFixed(5)}`;
+  const sub = (value: number) => (currency === "KRW" ? fmtBTC(value, btcKRW) : `≈${fmtKRW(value)}`);
 
   return (
     <div className="ldg-inout">
       <div className="ldg-card ldg-inout-card">
         <div className="ldg-label">수입</div>
-        <div className="ldg-inout-main pos">{fmt(d.income)}</div>
-        <div className="ldg-inout-sub">{sub(d.income)}</div>
+        <div className="ldg-inout-main pos">{fmt(incomeKrw)}</div>
+        <div className="ldg-inout-sub">{sub(incomeKrw)}</div>
       </div>
       <div className="ldg-card ldg-inout-card">
         <div className="ldg-label">지출</div>
-        <div className="ldg-inout-main neg">{fmt(-d.expense)}</div>
-        <div className="ldg-inout-sub">{sub(d.expense)}</div>
+        <div className="ldg-inout-main neg">{fmt(-expenseKrw)}</div>
+        <div className="ldg-inout-sub">{sub(expenseKrw)}</div>
       </div>
       <div className="ldg-card ldg-net-card">
         <div>

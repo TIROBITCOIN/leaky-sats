@@ -8,7 +8,7 @@ import { loadBtcUnit, type BtcUnit } from "../../lib/format";
 import { calculateMonthlyLivingCashflow, calculateSellNeeded } from "../../lib/sellCalculator";
 import { getYearFromMonthKey } from "../../lib/month";
 import { useSelectedMonth } from "../../lib/useSelectedMonth";
-import { loadSettlementDay, getSettlementPeriod } from "../../lib/settlement";
+import { getSettlementMonthKeyForDate, getSettlementPeriod, loadSettlementDay } from "../../lib/settlement";
 import {
   summarizeBtcSellRecordsByMonth,
   summarizeBtcSellRecordsByYear,
@@ -36,7 +36,8 @@ export default function HomePage() {
   const [heldBtc, setHeldBtc] = useState(getHeldBtc);
   const [btcUnit, setBtcUnit] = useState<BtcUnit>(loadBtcUnit);
   const [settlementDay, setSettlementDay] = useState(loadSettlementDay);
-  const [selectedMonth, setSelectedMonth] = useSelectedMonth();
+  const defaultSettlementMonthKey = getSettlementMonthKeyForDate(new Date().toISOString(), settlementDay);
+  const [selectedMonth, setSelectedMonth] = useSelectedMonth(defaultSettlementMonthKey);
   const location = useLocation();
   const navigate = useNavigate();
   const [sellModalState, setSellModalState] = useState<{ mode: "add" } | { mode: "edit"; record: BtcSellRecord } | null>(
@@ -90,6 +91,7 @@ export default function HomePage() {
     categoriesById,
     period,
   );
+  const netKrw = incomeKrw - expenseKrw;
   const sellResult = calculateSellNeeded({
     incomeKrw,
     expenseKrw,
@@ -128,7 +130,13 @@ export default function HomePage() {
             <MonthSelector selectedMonth={selectedMonth} onChangeMonth={setSelectedMonth} label={period.label} />
             <div className="ldg-settlement-range-label">{period.rangeLabel}</div>
           </div>
-          <InOutCards d={data} currency={currency} netKrw={sellResult.netKrw} />
+          <InOutCards
+            incomeKrw={incomeKrw}
+            expenseKrw={expenseKrw}
+            netKrw={netKrw}
+            btcKRW={data.btcKRW}
+            currency={currency}
+          />
           <RecurringPendingCard selectedMonth={selectedMonth} period={period} addTxn={addTxn} />
           <SellNeededCard
             result={sellResult}

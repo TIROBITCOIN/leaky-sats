@@ -4,7 +4,12 @@ import "../../styles/forms.css";
 import { useLedger } from "../../state/LedgerContext";
 import { fmtKRW } from "../../lib/format";
 import { useSelectedMonth } from "../../lib/useSelectedMonth";
-import { loadSettlementDay, getSettlementPeriod, getDefaultDateKeyForPeriod } from "../../lib/settlement";
+import {
+  getDefaultDateKeyForPeriod,
+  getSettlementMonthKeyForDate,
+  getSettlementPeriod,
+  loadSettlementDay,
+} from "../../lib/settlement";
 import { calculateMonthCalendarStats, listTxnsForDay } from "../../lib/calendarStats";
 import MonthSelector from "../common/MonthSelector";
 import CalendarMonthView from "./CalendarMonthView";
@@ -13,8 +18,9 @@ import CategoryDonut from "./CategoryDonut";
 
 export default function StatsPage() {
   const { data, currency, categoriesById } = useLedger();
-  const [selectedMonth, setSelectedMonth] = useSelectedMonth();
   const [settlementDay, setSettlementDay] = useState(loadSettlementDay);
+  const defaultSettlementMonthKey = getSettlementMonthKeyForDate(new Date().toISOString(), settlementDay);
+  const [selectedMonth, setSelectedMonth] = useSelectedMonth(defaultSettlementMonthKey);
   const period = useMemo(() => getSettlementPeriod(selectedMonth, settlementDay), [selectedMonth, settlementDay]);
   const [selectedDate, setSelectedDate] = useState<string>(() => getDefaultDateKeyForPeriod(period));
 
