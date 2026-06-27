@@ -43,11 +43,13 @@ assert.match(sellCardSrc, /BTC 판매 확정/, "SellNeededCard has BTC 판매 �
 
 // 9. Modal has required automated sell fields
 const modalSrc = readFileSync("src/components/home/SellConfirmModal.tsx", "utf8");
-assert.match(modalSrc, /자동 판매량/, "modal shows automatic sell amount");
+assert.match(modalSrc, /판매량 확정/, "modal uses the sell amount confirmation title");
+assert.match(modalSrc, /실제 판매량/, "modal shows actual sell amount");
+assert.doesNotMatch(modalSrc, /자동 판매량/, "modal no longer uses old automatic sell amount label");
 assert.match(modalSrc, /sellSats/, "modal calculates sats automatically");
 assert.match(modalSrc, /sellBtc/, "modal calculates BTC automatically");
 assert.match(modalSrc, /krwCovered:\s*sellKrw/, "modal saves auto-calculated krwCovered");
-assert.match(modalSrc, /현재 BTC 가격/, "modal shows current BTC price");
+assert.match(modalSrc, /현재 시세/, "modal shows current BTC price");
 assert.match(modalSrc, /btcKrwAtSell:\s*currentBtcKrw/, "modal snapshots current BTC price on save");
 assert.doesNotMatch(modalSrc, /보유 BTC에서 차감/, "modal no longer has deduct checkbox");
 

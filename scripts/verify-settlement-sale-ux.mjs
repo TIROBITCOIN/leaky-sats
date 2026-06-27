@@ -170,11 +170,13 @@ assert.match(modalSrc, /onClick=\{onClose\}/, "an explicit close control (X/痍�
 // 17. SellConfirmModal uses automated sats-first sell amount instead of BTC/sats input toggle
 assert.doesNotMatch(modalSrc, /sellUnit/, "SellConfirmModal no longer tracks a sellUnit toggle state");
 assert.doesNotMatch(modalSrc, /handleUnitToggle/, "SellConfirmModal no longer exposes BTC/sats input toggling");
-assert.match(modalSrc, /자동 판매량/, "SellConfirmModal shows the automated sell amount");
+assert.match(modalSrc, /판매량 확정/, "SellConfirmModal uses the sell amount confirmation title");
+assert.match(modalSrc, /실제 판매량/, "SellConfirmModal shows the actual sell amount");
+assert.doesNotMatch(modalSrc, /자동 판매량/, "SellConfirmModal no longer uses the old automatic sell amount label");
 assert.match(modalSrc, /sellSats/, "SellConfirmModal calculates sats automatically");
 
 // 18. Current BTC price display and monthly cash persistence exist
-assert.match(modalSrc, /현재 BTC 가격/, "SellConfirmModal has the current BTC price display");
+assert.match(modalSrc, /현재 시세/, "SellConfirmModal has the current BTC price display");
 assert.match(modalSrc, /setMonthlyCash/, "SellConfirmModal saves monthly cash");
 
 // 19. BTC ?먮ℓ 湲곕줉 row??"?? 硫붾돱 ?먮뒗 edit/delete action 議댁옱

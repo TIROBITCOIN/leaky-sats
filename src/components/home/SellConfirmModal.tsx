@@ -25,10 +25,6 @@ function formatKrwWon(value: number): string {
   return `${Math.round(value).toLocaleString("ko-KR")} 원`;
 }
 
-function formatBtcFixed(value: number): string {
-  return Number.isFinite(value) ? value.toFixed(8) : "0.00000000";
-}
-
 function safeNonNegative(value: number): number {
   return Number.isFinite(value) && value >= 0 ? value : 0;
 }
@@ -38,7 +34,6 @@ export default function SellConfirmModal({
   btcKrw,
   unit,
   selectedMonth,
-  period,
   monthlyCash,
   onMonthlyCashChanged,
   editRecord,
@@ -64,7 +59,6 @@ export default function SellConfirmModal({
   const sellSats = balanceAdjustedSell.sellSats;
   const sellBtc = sellSats / 100_000_000;
   const fullyCovered = balanceAdjustedSell.fullyCovered;
-  const saleAmountKrw = sellKrw;
 
   const currentHeldBtc = getHeldBtc();
   const previouslyDeductedBtc = editRecord?.deductedFromHeldBtc
@@ -159,54 +153,42 @@ export default function SellConfirmModal({
   return (
     <div className="ldg-modal-backdrop">
       <div className="ldg-modal-content" onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div className="ldg-sell-modal-head">
           <div className="ldg-modal-title" style={{ marginBottom: 0 }}>
-            BTC 판매 확정
+            판매량 확정
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="닫기"
-            style={{ background: "none", border: 0, color: "var(--ldg-fg-3)", fontSize: 20, lineHeight: 1, cursor: "pointer", padding: 4 }}
+            className="ldg-sell-modal-close"
           >
             ×
           </button>
         </div>
 
-        <div className="ldg-modal-field">
-          <label className="ldg-modal-label">정산기간</label>
-          <div className="ldg-modal-readonly">
-            {period.label}
-            <div className="ldg-tiny" style={{ marginTop: 2 }}>
-              {period.rangeLabel}
-            </div>
-          </div>
+        <div className="ldg-sell-highlight">
+          <div className="ldg-sell-highlight-label">실제 판매량</div>
+          {fullyCovered ? (
+            <div className="ldg-sell-covered">통장으로 충분 · 판매 불필요</div>
+          ) : (
+            <>
+              <div className="ldg-sell-sats-main">
+                <span>{sellSats.toLocaleString("en-US")}</span>
+                <span className="unit">sats</span>
+              </div>
+              <div className="ldg-sell-krw-main">{fmtKRW(sellKrw)}</div>
+            </>
+          )}
         </div>
 
-        <div className="ldg-modal-field">
-          <label className="ldg-modal-label">현재 BTC 가격</label>
-          <div className="ldg-modal-readonly">{formatKrwWon(currentBtcKrw)}</div>
-          <div className="ldg-tiny" style={{ marginTop: 2 }}>
-            앱의 현재 시세를 사용하며 저장 시점 가격으로 기록됩니다.
-          </div>
-        </div>
-
-        <div className="ldg-modal-field">
-          <label className="ldg-modal-label">자동 판매량</label>
-          <div className="ldg-inout-main neg" style={{ marginTop: 6 }}>
-            {sellSats.toLocaleString("en-US")} sats
-          </div>
-          <div className="ldg-balance-sub">= {formatBtcFixed(sellBtc)} BTC</div>
-          <div className="ldg-tiny" style={{ marginTop: 6 }}>
-            실제 판매 ≈ {fmtKRW(saleAmountKrw)}
-          </div>
+        <div className="ldg-modal-rate-row">
+          <span>현재 시세</span>
+          <strong>{formatKrwWon(currentBtcKrw)}</strong>
         </div>
 
         <div className="ldg-modal-field">
           <label className="ldg-modal-label">통장 보유액 (선택)</label>
-          <div className="ldg-tiny" style={{ marginBottom: 6 }}>
-            이번 달 통장에 있는 금액. 부족분에서 차감됩니다.
-          </div>
           <input
             type="text"
             inputMode="numeric"
@@ -217,15 +199,9 @@ export default function SellConfirmModal({
               setError("");
             }}
           />
-          {fullyCovered ? (
-            <div className="ldg-tiny" style={{ marginTop: 6 }}>
-              통장 보유액으로 충분 — BTC 판매 불필요
-            </div>
-          ) : (
-            <div className="ldg-tiny" style={{ marginTop: 6 }}>
-              통장 보유액 반영 후 실제 판매 ≈ {fmtKRW(sellKrw)}
-            </div>
-          )}
+          <div className="ldg-sell-cash-help">
+            통장에 가용 가능한 원화가 있으면 입력해주세요. 부족분에서 차감됩니다.
+          </div>
         </div>
 
         {overHeld && <div className="ldg-modal-error">보유 BTC({fmtBtcValue(availableHeldBtc, unit)})보다 많습니다.</div>}

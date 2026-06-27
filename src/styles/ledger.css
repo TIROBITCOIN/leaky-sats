@@ -453,6 +453,86 @@
   font-family: var(--ldg-mono);
   font-size: 14px;
 }
+.ldg-sell-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ldg-sell-modal-close {
+  padding: 4px;
+  border: 0;
+  background: none;
+  color: var(--ldg-fg-3);
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+}
+.ldg-sell-highlight {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--ldg-fill);
+}
+.ldg-sell-highlight-label {
+  color: var(--ldg-fg-3);
+  font-size: 12px;
+  font-weight: 700;
+}
+.ldg-sell-sats-main {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 6px;
+  color: #185FA5;
+  font-family: var(--ldg-mono);
+  font-size: 30px;
+  font-weight: 850;
+  letter-spacing: 0;
+  line-height: 1.08;
+  font-variant-numeric: tabular-nums;
+}
+.ldg-sell-sats-main .unit {
+  font-size: 0.5em;
+  font-weight: 800;
+}
+.ldg-sell-krw-main {
+  margin-top: 8px;
+  color: var(--ldg-fg);
+  font-family: var(--ldg-mono);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+.ldg-sell-covered {
+  margin-top: 8px;
+  color: var(--ldg-fg);
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+.ldg-modal-rate-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--ldg-fg-3);
+  font-size: 13px;
+}
+.ldg-modal-rate-row strong {
+  color: var(--ldg-fg-2);
+  font-family: var(--ldg-mono);
+  font-size: 14px;
+  font-weight: 750;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+.ldg-sell-cash-help {
+  margin-top: 4px;
+  color: var(--ldg-fg-3);
+  font-size: 12px;
+  line-height: 1.45;
+}
 .ldg-recurring-card .ldg-card-head {
   align-items: flex-start;
 }

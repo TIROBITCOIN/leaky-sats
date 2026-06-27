@@ -188,6 +188,29 @@ assert.match(sellConfirmModal, /applyAccountBalance/, "SellConfirmModal imports 
 assert.match(sellConfirmModal, /통장 보유액/, "SellConfirmModal has monthly cash label");
 assert.match(sellConfirmModal, /setMonthlyCash/, "SellConfirmModal persists monthly cash on save");
 assert.match(sellConfirmModal, /통장 보유액만 저장/, "SellConfirmModal can save monthly cash without a sell record");
+assert.match(sellConfirmModal, /판매량 확정/, "SellConfirmModal title is 판매량 확정");
+assert.doesNotMatch(sellConfirmModal, /BTC 판매 확정/, "SellConfirmModal no longer uses old BTC 판매 확정 title");
+assert.doesNotMatch(sellConfirmModal, /정산기간/, "SellConfirmModal removes the settlement-period display row");
+assert.match(sellConfirmModal, /실제 판매량/, "SellConfirmModal uses actual sale amount label");
+assert.doesNotMatch(sellConfirmModal, /자동 판매량/, "SellConfirmModal removes old automatic sale amount label");
+assert.match(sellConfirmModal, /ldg-sell-highlight/, "SellConfirmModal uses scoped sale highlight box");
+const saleHighlight = sellConfirmModal.match(/<div className="ldg-sell-highlight">([\s\S]*?)<\/div>\s*<div className="ldg-modal-rate-row">/)?.[1] ?? "";
+assert.ok(saleHighlight.length > 0, "SellConfirmModal sale highlight box can be inspected");
+assert.match(saleHighlight, /sellSats\.toLocaleString\("en-US"\)/, "sale highlight shows sats");
+assert.match(saleHighlight, /fmtKRW\(sellKrw\)/, "sale highlight shows KRW amount");
+assert.doesNotMatch(saleHighlight, /formatBtcFixed|BTC/, "sale highlight does not show BTC helper text");
+assert.match(sellConfirmModal, /현재 시세/, "SellConfirmModal shows current price row");
+assert.match(sellConfirmModal, /ldg-modal-rate-row[\s\S]*formatKrwWon\(currentBtcKrw\)/, "current price row is display-only text");
+const rateRow = sellConfirmModal.match(/<div className="ldg-modal-rate-row">([\s\S]*?)<\/div>/)?.[1] ?? "";
+assert.ok(rateRow.length > 0, "SellConfirmModal current price row can be inspected");
+assert.doesNotMatch(rateRow, /<input/, "current price row is not an input");
+assert.match(
+  sellConfirmModal,
+  /통장에 가용 가능한 원화가 있으면 입력해주세요\. 부족분에서 차감됩니다\./,
+  "SellConfirmModal has the requested monthly-cash helper copy"
+);
+assert.doesNotMatch(sellConfirmModal, /통장 보유액 반영 후 실제 판매/, "SellConfirmModal removes duplicate cash-adjusted sale copy");
+assert.match(sellConfirmModal, /통장으로 충분 · 판매 불필요/, "SellConfirmModal shows no-sale-needed copy when fully covered");
 assert.doesNotMatch(sellConfirmModal, /보유 BTC에서 차감/, "SellConfirmModal removes held-BTC deduction checkbox copy");
 assert.doesNotMatch(sellConfirmModal, /const \[deduct/, "SellConfirmModal no longer has user-controlled deduct state");
 assert.doesNotMatch(sellConfirmModal, /type="checkbox"[\s\S]{0,300}deduct/, "SellConfirmModal removes deduct checkbox input");
