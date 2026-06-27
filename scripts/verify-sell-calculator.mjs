@@ -29,6 +29,35 @@ const sellCalculatorModuleUrl = `data:text/javascript;base64,${Buffer.from(compi
 const sellCalculator = await import(sellCalculatorModuleUrl);
 assert.equal(typeof sellCalculator.applyAccountBalance, "function", "applyAccountBalance is exported");
 
+const surplusSellNeeded = sellCalculator.calculateSellNeeded({
+  incomeKrw: 3_000_000,
+  expenseKrw: 2_000_000,
+  btcKrw: 150_000_000,
+  heldBtc: 0.5,
+});
+assert.equal(surplusSellNeeded.totalDeficitKrw, 0, "surplus months have no original deficit");
+assert.equal(surplusSellNeeded.deficitKrw, 0, "surplus months need no sale");
+
+const settledSellNeeded = sellCalculator.calculateSellNeeded({
+  incomeKrw: 2_000_000,
+  expenseKrw: 3_000_000,
+  btcKrw: 150_000_000,
+  heldBtc: 0.5,
+  confirmedCoverageKrw: 1_000_000,
+});
+assert.equal(settledSellNeeded.totalDeficitKrw, 1_000_000, "settled months preserve the original deficit");
+assert.equal(settledSellNeeded.deficitKrw, 0, "full confirmed coverage clears the remaining deficit");
+
+const partialSellNeeded = sellCalculator.calculateSellNeeded({
+  incomeKrw: 2_000_000,
+  expenseKrw: 3_000_000,
+  btcKrw: 150_000_000,
+  heldBtc: 0.5,
+  confirmedCoverageKrw: 400_000,
+});
+assert.equal(partialSellNeeded.totalDeficitKrw, 1_000_000, "partial coverage preserves the original deficit");
+assert.equal(partialSellNeeded.deficitKrw, 600_000, "partial confirmed coverage leaves a sale deficit");
+
 const adjustedPartial = sellCalculator.applyAccountBalance(2_000_000, 500_000, 150_000_000);
 assert.equal(adjustedPartial.accountBalanceKrw, 500_000, "account balance is preserved when valid");
 assert.equal(adjustedPartial.requiredKrw, 2_000_000, "required KRW is preserved when valid");
@@ -250,11 +279,19 @@ const balanceSetItemCalls = [...sellConfirmModal.matchAll(/localStorage\.setItem
 assert.equal(balanceSetItemCalls.length, 0, "balanceInput is not persisted to localStorage");
 
 assert.match(sellCard, /정산 완료/, "SellNeededCard has settlement-complete branch");
+assert.match(sellCard, /everHadDeficit\s*=\s*totalDeficitKrw\s*>\s*0/, "SellNeededCard tracks whether a deficit originally existed");
+assert.match(sellCard, /if\s*\(\s*!everHadDeficit\s*\)\s*return\s+null/, "SellNeededCard hides itself when no deficit ever existed");
+assert.match(
+  sellCard,
+  /settled\s*=\s*everHadDeficit\s*&&\s*deficitKrw\s*===\s*0/,
+  "SellNeededCard requires an original deficit before showing settlement complete"
+);
+assert.match(sellCard, /needSell\s*=\s*deficitKrw\s*>\s*0/, "SellNeededCard keeps an explicit need-sell state");
 assert.match(sellCard, /ldg-settlement-done/, "SellNeededCard uses settlement-complete headline class");
 assert.match(sellCard, /monthlyCash/, "SellNeededCard displays monthly cash");
 assert.match(sellCard, /monthlySellSummary/, "SellNeededCard displays actual monthly sale summary");
 assert.match(sellCard, /sats/, "SellNeededCard displays sats alongside BTC");
-const completedBranch = sellCard.match(/noSellNeeded \? \(\s*<>\s*([\s\S]*?)\s*<\/>\s*\) : \(/)?.[1] ?? "";
+const completedBranch = sellCard.match(/settled \? \(\s*<>\s*([\s\S]*?)\s*<\/>\s*\) : needSell \? \(/)?.[1] ?? "";
 assert.ok(completedBranch.length > 0, "SellNeededCard settlement-complete branch can be inspected");
 assert.doesNotMatch(completedBranch, /이번 달/, "settlement-complete labels omit this-month wording");
 assert.doesNotMatch(completedBranch, /이미 반영|총 부족분/, "settlement-complete branch omits reflected/total-deficit line");
