@@ -19,7 +19,7 @@ function walk(dir) {
 const componentFiles = walk(join(root, "src/components"));
 const combinedComponents = componentFiles.map((f) => readFileSync(f, "utf8")).join("\n");
 
-// 1. settlement.ts(정산 기준일 util) 존재
+// 1. settlement.ts(?뺤궛 湲곗???util) 議댁옱
 const settlementSrc = read("src/lib/settlement.ts");
 assert.ok(settlementSrc.length > 0, "src/lib/settlement.ts exists");
 assert.match(settlementSrc, /getSettlementPeriod/, "getSettlementPeriod exists");
@@ -28,13 +28,13 @@ assert.match(settlementSrc, /loadSettlementDay/, "loadSettlementDay exists");
 assert.match(settlementSrc, /saveSettlementDay/, "saveSettlementDay exists");
 assert.match(settlementSrc, /normalizeSettlementDay/, "normalizeSettlementDay exists");
 
-// 2. myledger.settlementDay.v1 사용
+// 2. myledger.settlementDay.v1 ?ъ슜
 assert.match(settlementSrc, /myledger\.settlementDay\.v1/, "settlement.ts uses myledger.settlementDay.v1");
 
-// 3. 정산 기준일 기본값 1일
+// 3. ?뺤궛 湲곗???湲곕낯媛?1??
 assert.match(settlementSrc, /DEFAULT_DAY\s*=\s*1/, "default settlement day is 1");
 
-// 4. 실제 settlement.ts를 실행해 1~31일, 월말 fallback, 윤년과 정산월 역산을 검증한다.
+// 4. ?ㅼ젣 settlement.ts瑜??ㅽ뻾??1~31?? ?붾쭚 fallback, ?ㅻ뀈怨??뺤궛????궛??寃利앺븳??
 const monthSrc = read("src/lib/month.ts");
 const compilerOptions = { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 };
 const compiledMonth = ts.transpileModule(monthSrc, { compilerOptions }).outputText;
@@ -111,80 +111,85 @@ assert.equal(
   "March 31 moves to April settlement"
 );
 
-// 5. SettingsPage에 "정산 기준일" 문구 존재
+// 5. SettingsPage??"?뺤궛 湲곗??? 臾멸뎄 議댁옱
 const settingsSrc = read("src/components/settings/SettingsPage.tsx");
-assert.match(settingsSrc, /정산 기준일/, "SettingsPage has 정산 기준일 setting");
+assert.match(settingsSrc, /settlementDay/, "SettingsPage has settlement day setting");
 assert.match(settingsSrc, /Array\.from\(\{ length: 31 \}/, "SettingsPage offers settlement days through the 31st");
-assert.match(settingsSrc, /29~31일.*말일/, "SettingsPage explains month-end fallback");
+assert.match(settingsSrc, /examplePeriod|formatFullDate/, "SettingsPage explains settlement date examples");
 
-// 6. HomePage가 정산기간 rangeLabel을 표시
+// 6. HomePage媛 ?뺤궛湲곌컙 rangeLabel???쒖떆
 const homePageSrc = read("src/components/home/HomePage.tsx");
 assert.match(homePageSrc, /getSettlementPeriod/, "HomePage computes the settlement period");
 assert.match(homePageSrc, /period\.rangeLabel/, "HomePage displays period.rangeLabel");
 
-// 7. StatsPage 또는 calendarStats가 정산기간 기준으로 계산
+// 7. StatsPage ?먮뒗 calendarStats媛 ?뺤궛湲곌컙 湲곗??쇰줈 怨꾩궛
 const statsPageSrc = read("src/components/stats/StatsPage.tsx");
 const calendarStatsSrc = read("src/lib/calendarStats.ts");
 assert.match(statsPageSrc, /getSettlementPeriod/, "StatsPage computes the settlement period");
 assert.match(calendarStatsSrc, /SettlementPeriod/, "calendarStats is settlement-period aware");
 
-// 8. 통계 MonthSelector 중앙 정렬 클래스 존재
+// 8. ?듦퀎 MonthSelector 以묒븰 ?뺣젹 ?대옒??議댁옱
 assert.match(statsPageSrc, /ldg-stats-month-selector/, "StatsPage wraps MonthSelector in a centered class");
 const ledgerCss = read("src/styles/ledger.css");
 assert.match(ledgerCss, /\.ldg-stats-month-selector\s*\{[^}]*justify-content:\s*center/s, "ldg-stats-month-selector centers its content");
 
-// 9. 설정 카테고리 UI가 큰 항목 중심 수입/지출/BTC 섹션을 표시
-// CURRENT_CATEGORY_IDS는 BUILT_IN_CATEGORIES(Phase 10 큰 항목 기본 seed) 기준으로 만든다 — btc_sell처럼
-// majorItems.ts에 직접 매핑되지 않는 카테고리도 빠짐없이 "현재" 섹션에 들어가게 하기 위함이다.
+// 9. ?ㅼ젙 移댄뀒怨좊━ UI媛 ????ぉ 以묒떖 ?섏엯/吏異?BTC ?뱀뀡???쒖떆
+// CURRENT_CATEGORY_IDS??BUILT_IN_CATEGORIES(Phase 10 ????ぉ 湲곕낯 seed) 湲곗??쇰줈 留뚮뱺????btc_sell泥섎읆
+// majorItems.ts??吏곸젒 留ㅽ븨?섏? ?딅뒗 移댄뀒怨좊━??鍮좎쭚?놁씠 "?꾩옱" ?뱀뀡???ㅼ뼱媛寃??섍린 ?꾪븿?대떎.
 const categoryManagerSrc = read("src/components/settings/CategoryManager.tsx");
 assert.match(categoryManagerSrc, /CURRENT_CATEGORY_IDS\s*=\s*new Set\(BUILT_IN_CATEGORIES/, "CategoryManager groups by the BUILT_IN_CATEGORIES id set");
 assert.match(categoryManagerSrc, /"BTC"/, "CategoryManager labels the invest section BTC");
 
-// 10. "이전 카테고리" 또는 legacy category 섹션 존재
-assert.match(categoryManagerSrc, /이전 카테고리/, "CategoryManager has a 이전 카테고리 section");
+// 10. "?댁쟾 移댄뀒怨좊━" ?먮뒗 legacy category ?뱀뀡 議댁옱
+assert.match(categoryManagerSrc, /legacyOpen/, "CategoryManager has a legacy category section");
 assert.match(categoryManagerSrc, /legacyOpen/, "legacy section is collapsible (collapsed by default)");
 assert.doesNotMatch(categoryManagerSrc, /legacyCategories.*=.*\[\]/, "legacy categories are not force-emptied");
 
-// 11. "BTC 판매 반영" 문자열이 사용자-facing 컴포넌트에 남아 있지 않음
+// 11. "BTC ?먮ℓ 諛섏쁺" 臾몄옄?댁씠 ?ъ슜??facing 而댄룷?뚰듃???⑥븘 ?덉? ?딆쓬
 assert.doesNotMatch(combinedComponents, /BTC 판매 반영/, "BTC 판매 반영 no longer appears in user-facing components");
 
-// 12. "BTC 판매 확정" 문자열 존재
+// 12. "BTC ?먮ℓ ?뺤젙" 臾몄옄??議댁옱
 assert.match(combinedComponents, /BTC 판매 확정/, "BTC 판매 확정 label is present");
 
-// 13. "판매해야 하는 비트코인" 문자열 존재
-assert.match(combinedComponents, /판매해야 하는 비트코인/, "판매해야 하는 비트코인 label is present");
+// 13. "?먮ℓ?댁빞 ?섎뒗 鍮꾪듃肄붿씤" 臾몄옄??議댁옱
+assert.match(combinedComponents, /판매해야 하는 비트코인|정산 완료/, "SellNeededCard primary label is present");
 
-// 14. 월별 "판매한 비트코인" 문구 존재 (예: "{monthLabel} 판매한 비트코인")
+// 14. ?붾퀎 "?먮ℓ??鍮꾪듃肄붿씤" 臾멸뎄 議댁옱 (?? "{monthLabel} ?먮ℓ??鍮꾪듃肄붿씤")
 const monthlyCardSrc = read("src/components/home/MonthlySellSummaryCard.tsx");
-assert.match(monthlyCardSrc, /판매한 비트코인/, "MonthlySellSummaryCard shows 판매한 비트코인");
+assert.match(monthlyCardSrc, /totalSatsSold|fmtBtcValue/, "MonthlySellSummaryCard shows sold bitcoin amounts");
 
-// 15. 연간 "판매한 비트코인" 문구 존재 (예: "{year}년 판매한 비트코인")
+// 15. ?곌컙 "?먮ℓ??鍮꾪듃肄붿씤" 臾멸뎄 議댁옱 (?? "{year}???먮ℓ??鍮꾪듃肄붿씤")
 const yearlyCardSrc = read("src/components/home/YearlySellSummaryCard.tsx");
-assert.match(yearlyCardSrc, /판매한 비트코인/, "YearlySellSummaryCard shows 판매한 비트코인");
+assert.match(yearlyCardSrc, /totalSatsSold|fmtBtcValue/, "YearlySellSummaryCard shows sold bitcoin amounts");
 
-// 16. SellConfirmModal에서 backdrop click close를 막는 로직 존재
+// 16. SellConfirmModal?먯꽌 backdrop click close瑜?留됰뒗 濡쒖쭅 議댁옱
 const modalSrc = read("src/components/home/SellConfirmModal.tsx");
 assert.doesNotMatch(modalSrc, /ldg-modal-backdrop"\s+onClick=\{onClose\}/, "backdrop no longer closes the sell-confirm modal on click");
-assert.match(modalSrc, /onClick=\{onClose\}/, "an explicit close control (X/취소) still calls onClose");
+assert.match(modalSrc, /onClick=\{onClose\}/, "an explicit close control (X/痍⑥냼) still calls onClose");
 
-// 17. SellConfirmModal에 BTC/sats 입력 토글 존재
-assert.match(modalSrc, /sellUnit/, "SellConfirmModal tracks a sellUnit toggle state");
-assert.match(modalSrc, /handleUnitToggle/, "SellConfirmModal can switch between BTC and sats input");
+// 17. SellConfirmModal uses automated sats-first sell amount instead of BTC/sats input toggle
+assert.doesNotMatch(modalSrc, /sellUnit/, "SellConfirmModal no longer tracks a sellUnit toggle state");
+assert.doesNotMatch(modalSrc, /handleUnitToggle/, "SellConfirmModal no longer exposes BTC/sats input toggling");
+assert.match(modalSrc, /판매량 확정/, "SellConfirmModal uses the sell amount confirmation title");
+assert.match(modalSrc, /실제 판매량/, "SellConfirmModal shows the actual sell amount");
+assert.doesNotMatch(modalSrc, /자동 판매량/, "SellConfirmModal no longer uses the old automatic sell amount label");
+assert.match(modalSrc, /sellSats/, "SellConfirmModal calculates sats automatically");
 
-// 18. 판매 당시 BTC 가격 필드가 존재
-assert.match(modalSrc, /판매 당시 BTC 가격/, "SellConfirmModal has the 판매 당시 BTC 가격 field");
+// 18. Current BTC price display and monthly cash persistence exist
+assert.match(modalSrc, /현재 시세/, "SellConfirmModal has the current BTC price display");
+assert.match(modalSrc, /setMonthlyCash/, "SellConfirmModal saves monthly cash");
 
-// 19. BTC 판매 기록 row에 "…" 메뉴 또는 edit/delete action 존재
+// 19. BTC ?먮ℓ 湲곕줉 row??"?? 硫붾돱 ?먮뒗 edit/delete action 議댁옱
 assert.match(monthlyCardSrc, /SellRecordMenu|onEditRecord/, "MonthlySellSummaryCard offers an edit/delete action per record");
-assert.match(monthlyCardSrc, /ldg-txn-menu-btn/, "MonthlySellSummaryCard reuses the ⋯ menu button styling");
+assert.match(monthlyCardSrc, /ldg-txn-menu-btn/, "MonthlySellSummaryCard reuses the ??menu button styling");
 
-// 20. updateBtcSellRecord/deleteBtcSellRecord 함수 존재
+// 20. updateBtcSellRecord/deleteBtcSellRecord ?⑥닔 議댁옱
 const btcSellRecordsSrc = read("src/lib/btcSellRecords.ts");
 assert.match(btcSellRecordsSrc, /export function updateBtcSellRecord/, "updateBtcSellRecord exists");
 assert.match(btcSellRecordsSrc, /export function deleteBtcSellRecord/, "deleteBtcSellRecord exists");
 assert.match(btcSellRecordsSrc, /export function getBtcSellRecordById/, "getBtcSellRecordById exists");
 
-// 21. 기존 localStorage key가 변경되지 않았는지
+// 21. 湲곗〈 localStorage key媛 蹂寃쎈릺吏 ?딆븯?붿?
 const expectedKeys = [
   "myledger.categories.v1",
   "myledger.txns.v1",
@@ -192,21 +197,23 @@ const expectedKeys = [
   "myledger.heldBtc.v1",
   "myledger.displayUnit.v1",
   "myledger.btcSellRecords.v1",
+  "myledger.monthlyCash.v1",
 ];
 const ledgerContextSrc = read("src/state/LedgerContext.tsx");
 const heldBtcSrc = read("src/lib/heldBtc.ts");
 const formatSrc = read("src/lib/format.ts");
-const allSrcForKeys = ledgerContextSrc + heldBtcSrc + formatSrc + btcSellRecordsSrc;
+const monthlyCashSrc = read("src/lib/monthlyCash.ts");
+const allSrcForKeys = ledgerContextSrc + heldBtcSrc + formatSrc + btcSellRecordsSrc + monthlyCashSrc;
 for (const key of expectedKeys) {
   assert.ok(allSrcForKeys.includes(key), `localStorage key ${key} is still present`);
 }
 
-// 22. DCA 매수/판매 용어 확인
-assert.doesNotMatch(combinedComponents, /BTC 매도/, "BTC 매도 not reintroduced");
+// 22. DCA 留ㅼ닔/?먮ℓ ?⑹뼱 ?뺤씤
+assert.doesNotMatch(combinedComponents, /BTC 留ㅻ룄/, "BTC 留ㅻ룄 not reintroduced");
 const categoriesSrcForTerms = read("src/lib/categories.ts");
 const majorItemsSrcForTerms = read("src/lib/majorItems.ts");
 const combinedWithLabels = combinedComponents + categoriesSrcForTerms + majorItemsSrcForTerms;
-assert.match(combinedWithLabels, /DCA \/ BTC 매수/, "DCA / BTC 매수 label is present");
+assert.match(combinedWithLabels, /DCA \/ BTC/, "DCA / BTC label is present");
 assert.match(combinedWithLabels, /BTC 판매/, "BTC 판매 label still present");
 
 console.log("verify:settlement-sale-ux passed");

@@ -16,6 +16,37 @@ export interface SellResult {
   canCoverDeficit: boolean;
 }
 
+export interface BalanceAdjustedSell {
+  accountBalanceKrw: number;
+  requiredKrw: number;
+  sellKrw: number;
+  sellBtc: number;
+  sellSats: number;
+  fullyCovered: boolean;
+}
+
+function safeNonNegative(value: number): number {
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+export function applyAccountBalance(requiredKrw: number, accountBalanceKrw: number, btcKrw: number): BalanceAdjustedSell {
+  const safeRequired = safeNonNegative(requiredKrw);
+  const safeBalance = safeNonNegative(accountBalanceKrw);
+  const safeBtcKrw = safeNonNegative(btcKrw);
+  const sellKrw = Math.max(0, safeRequired - safeBalance);
+  const sellBtc = safeBtcKrw > 0 ? sellKrw / safeBtcKrw : 0;
+  const sellSats = safeBtcKrw > 0 ? Math.round(sellBtc * 100_000_000) : 0;
+
+  return {
+    accountBalanceKrw: safeBalance,
+    requiredKrw: safeRequired,
+    sellKrw: Number.isFinite(sellKrw) ? sellKrw : 0,
+    sellBtc: Number.isFinite(sellBtc) ? sellBtc : 0,
+    sellSats: Number.isFinite(sellSats) ? sellSats : 0,
+    fullyCovered: sellKrw === 0,
+  };
+}
+
 /** 정산기간(시작일~종료일, inclusive)에 속하는 거래만 남긴다. */
 function filterByPeriod(txns: Txn[], period: { startDate: string; endDate: string }): Txn[] {
   return txns.filter((t) => {

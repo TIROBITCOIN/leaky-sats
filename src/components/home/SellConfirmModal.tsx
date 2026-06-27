@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
-import type { SellResult } from "../../lib/sellCalculator";
-import { fmtKRW, fmtBtcValue, type BtcUnit } from "../../lib/format";
+import { applyAccountBalance, type SellResult } from "../../lib/sellCalculator";
+import { fmtBtcValue, fmtKRW, type BtcUnit } from "../../lib/format";
 import { addBtcSellRecord, updateBtcSellRecord, type BtcSellRecord } from "../../lib/btcSellRecords";
 import { getHeldBtc, setHeldBtc } from "../../lib/heldBtc";
+import { setMonthlyCash } from "../../lib/monthlyCash";
 import type { SettlementPeriod } from "../../lib/settlement";
 
-const MAX_BTC = 21_000_000; // 발행 한도 — 입력 실수로 비정상적으로 큰 값이 들어가는 것을 막는다
+const MAX_BTC = 21_000_000;
 
 interface Props {
   result: SellResult;
@@ -13,112 +14,110 @@ interface Props {
   unit: BtcUnit;
   selectedMonth: string;
   period: SettlementPeriod;
-  /** 있으면 새 기록 추가가 아니라 기존 판매 기록을 수정하는 모드로 동작한다. */
+  monthlyCash: number;
+  onMonthlyCashChanged: () => void;
   editRecord?: BtcSellRecord;
   onClose: () => void;
   onSaved: () => void;
 }
 
-export default function SellConfirmModal({ result, btcKrw, unit, selectedMonth, period, editRecord, onClose, onSaved }: Props) {
-  const isEdit = !!editRecord;
+function formatKrwWon(value: number): string {
+  return `${Math.round(value).toLocaleString("ko-KR")} 원`;
+}
 
-  const [btcKrwInput, setBtcKrwInput] = useState(String(editRecord?.btcKrwAtSell ?? btcKrw));
-  const [sellUnit, setSellUnit] = useState<BtcUnit>(unit);
-  const [sellInput, setSellInput] = useState(() => {
-    const initialBtc = editRecord?.btcSold ?? result.sellBtc;
-    const initialSats = editRecord?.satsSold ?? result.sellSats;
-    if (unit === "sats") return initialSats > 0 ? String(initialSats) : "";
-    return initialBtc > 0 ? initialBtc.toFixed(8).replace(/\.?0+$/, "") : "";
-  });
-  const [krwInput, setKrwInput] = useState(String(editRecord?.krwCovered ?? result.deficitKrw));
-  const [deduct, setDeduct] = useState(editRecord?.deductedFromHeldBtc ?? true);
+function safeNonNegative(value: number): number {
+  return Number.isFinite(value) && value >= 0 ? value : 0;
+}
+
+export default function SellConfirmModal({
+  result,
+  btcKrw,
+  unit,
+  selectedMonth,
+  monthlyCash,
+  onMonthlyCashChanged,
+  editRecord,
+  onClose,
+  onSaved,
+}: Props) {
+  const isEdit = !!editRecord;
+  const [cashInput, setCashInput] = useState(monthlyCash > 0 ? String(monthlyCash) : "");
   const [note, setNote] = useState(editRecord?.note ?? "");
   const [error, setError] = useState("");
 
-  const parsedBtcSold = useMemo(() => {
-    if (sellUnit === "sats") {
-      const sats = parseInt(sellInput.replace(/[^0-9]/g, ""), 10);
-      return Number.isFinite(sats) ? sats / 1e8 : NaN;
-    }
-    const btc = parseFloat(sellInput);
-    return Number.isFinite(btc) ? btc : NaN;
-  }, [sellInput, sellUnit]);
+  const currentBtcKrw = Number.isFinite(btcKrw) && btcKrw > 0 ? btcKrw : 0;
+  const parsedCash = parseFloat(cashInput);
+  const cashKrw = safeNonNegative(parsedCash);
+  const sellRecordCoverageKrw = Math.max(0, result.confirmedCoverageKrw - monthlyCash);
+  const requiredBeforeCashKrw = Math.max(0, result.totalDeficitKrw - sellRecordCoverageKrw);
 
-  const parsedBtcKrwPreview = parseFloat(btcKrwInput);
-  const saleAmountKrw =
-    Number.isFinite(parsedBtcKrwPreview) && Number.isFinite(parsedBtcSold) ? parsedBtcKrwPreview * parsedBtcSold : 0;
+  const balanceAdjustedSell = useMemo(
+    () => applyAccountBalance(requiredBeforeCashKrw, cashKrw, currentBtcKrw),
+    [cashKrw, currentBtcKrw, requiredBeforeCashKrw]
+  );
+  const sellKrw = balanceAdjustedSell.sellKrw;
+  const sellSats = balanceAdjustedSell.sellSats;
+  const sellBtc = sellSats / 100_000_000;
+  const fullyCovered = balanceAdjustedSell.fullyCovered;
 
   const currentHeldBtc = getHeldBtc();
   const previouslyDeductedBtc = editRecord?.deductedFromHeldBtc
     ? editRecord.deductedBtcAmount ?? editRecord.btcSold
     : 0;
   const availableHeldBtc = currentHeldBtc + previouslyDeductedBtc;
-  const overHeld = deduct && Number.isFinite(parsedBtcSold) && parsedBtcSold > availableHeldBtc;
+  const overHeld = Number.isFinite(sellBtc) && sellBtc > availableHeldBtc;
 
-  const handleUnitToggle = (nextUnit: BtcUnit) => {
-    if (nextUnit === sellUnit) return;
-    if (Number.isFinite(parsedBtcSold) && parsedBtcSold > 0) {
-      setSellInput(nextUnit === "sats" ? String(Math.round(parsedBtcSold * 1e8)) : parsedBtcSold.toFixed(8).replace(/\.?0+$/, ""));
-    } else {
-      setSellInput("");
-    }
-    setSellUnit(nextUnit);
-    setError("");
+  const saveMonthlyCash = () => {
+    setMonthlyCash(selectedMonth, cashKrw);
+    onMonthlyCashChanged();
+  };
+
+  const handleCashOnlySave = () => {
+    saveMonthlyCash();
+    onSaved();
+    onClose();
   };
 
   const handleSave = () => {
-    const parsedBtcKrw = parseFloat(btcKrwInput);
-    if (!Number.isFinite(parsedBtcKrw) || parsedBtcKrw <= 0) {
+    if (!Number.isFinite(currentBtcKrw) || currentBtcKrw <= 0) {
       setError("BTC 가격이 올바르지 않습니다.");
       return;
     }
-
-    const parsedKrw = parseFloat(krwInput);
-    if (!Number.isFinite(parsedKrw) || parsedKrw <= 0) {
-      setError("충당 원화가 올바르지 않습니다.");
+    if (fullyCovered || sellKrw <= 0) {
+      handleCashOnlySave();
       return;
     }
-
-    let btcSold: number;
-    if (sellUnit === "sats") {
-      const satsVal = parseInt(sellInput.replace(/[^0-9]/g, ""), 10);
-      if (!Number.isFinite(satsVal) || satsVal <= 0) {
-        setError("판매할 sats가 올바르지 않습니다.");
-        return;
-      }
-      btcSold = satsVal / 1e8;
-    } else {
-      btcSold = parseFloat(sellInput);
-      if (!Number.isFinite(btcSold) || btcSold <= 0) {
-        setError("판매할 BTC가 올바르지 않습니다.");
-        return;
-      }
+    if (!Number.isFinite(sellBtc) || sellBtc <= 0 || sellSats <= 0) {
+      setError("자동 계산된 판매량이 올바르지 않습니다.");
+      return;
     }
-    if (btcSold > MAX_BTC) {
+    if (sellBtc > MAX_BTC) {
       setError("값이 너무 큽니다.");
       return;
     }
+
     const heldBtcAtSave = getHeldBtc();
     const availableHeldBtcAtSave = heldBtcAtSave + previouslyDeductedBtc;
-    if (deduct && btcSold > availableHeldBtcAtSave) {
+    if (sellBtc > availableHeldBtcAtSave) {
       setError("보유 BTC보다 많이 판매할 수 없습니다.");
       return;
     }
 
-    const satsSold = Math.round(btcSold * 1e8);
+    saveMonthlyCash();
 
     if (editRecord) {
       const oldDeducted = previouslyDeductedBtc;
-      const newDeducted = deduct ? btcSold : 0;
+      const newDeducted = sellBtc;
       const delta = newDeducted - oldDeducted;
 
       updateBtcSellRecord(editRecord.id, {
-        btcSold,
-        satsSold,
-        btcKrwAtSell: parsedBtcKrw,
-        krwCovered: parsedKrw,
-        deductedFromHeldBtc: deduct,
-        deductedBtcAmount: deduct ? btcSold : undefined,
+        btcSold: sellBtc,
+        satsSold: sellSats,
+        btcKrwAtSell: currentBtcKrw,
+        krwCovered: sellKrw,
+        deficitKrwAtConfirm: requiredBeforeCashKrw,
+        deductedFromHeldBtc: true,
+        deductedBtcAmount: sellBtc,
         note: note.trim() || undefined,
       });
 
@@ -133,19 +132,18 @@ export default function SellConfirmModal({ result, btcKrw, unit, selectedMonth, 
       addBtcSellRecord({
         month: selectedMonth,
         date: dateStr,
-        btcSold,
-        satsSold,
-        btcKrwAtSell: parsedBtcKrw,
-        krwCovered: parsedKrw,
-        deficitKrwAtConfirm: result.deficitKrw,
-        deductedFromHeldBtc: deduct,
+        btcSold: sellBtc,
+        satsSold: sellSats,
+        btcKrwAtSell: currentBtcKrw,
+        krwCovered: sellKrw,
+        deficitKrwAtConfirm: requiredBeforeCashKrw,
+        deductedFromHeldBtc: true,
+        deductedBtcAmount: sellBtc,
         note: note.trim() || undefined,
       });
 
-      if (deduct) {
-        const current = getHeldBtc();
-        setHeldBtc(Math.max(0, current - btcSold));
-      }
+      const current = getHeldBtc();
+      setHeldBtc(Math.max(0, current - sellBtc));
     }
 
     onSaved();
@@ -153,109 +151,60 @@ export default function SellConfirmModal({ result, btcKrw, unit, selectedMonth, 
   };
 
   return (
-    // 입력 중 실수로 바깥을 눌러도 모달이 닫히지 않도록 backdrop에는 onClick을 달지 않는다 —
-    // 닫기는 우측 상단 X, 취소, 저장 버튼으로만 가능하다.
     <div className="ldg-modal-backdrop">
       <div className="ldg-modal-content" onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div className="ldg-sell-modal-head">
           <div className="ldg-modal-title" style={{ marginBottom: 0 }}>
-            BTC 판매 확정
+            판매량 확정
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="닫기"
-            style={{ background: "none", border: 0, color: "var(--ldg-fg-3)", fontSize: 20, lineHeight: 1, cursor: "pointer", padding: 4 }}
+            className="ldg-sell-modal-close"
           >
             ×
           </button>
         </div>
 
-        <div className="ldg-modal-field">
-          <label className="ldg-modal-label">정산기간</label>
-          <div className="ldg-modal-readonly">
-            {period.label}
-            <div className="ldg-tiny" style={{ marginTop: 2 }}>
-              {period.rangeLabel}
-            </div>
-          </div>
-        </div>
-
-        <div className="ldg-modal-field">
-          <label className="ldg-modal-label">판매 당시 BTC 가격</label>
-          <input
-            type="text"
-            inputMode="numeric"
-            className="ldg-input"
-            value={btcKrwInput}
-            onChange={(e) => { setBtcKrwInput(e.target.value); setError(""); }}
-          />
-          <div className="ldg-tiny" style={{ marginTop: 2 }}>이 가격으로 판매 금액을 BTC/sats로 환산합니다.</div>
-        </div>
-
-        <div className="ldg-modal-field">
-          <label className="ldg-modal-label" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span>판매할 비트코인</span>
-            <div className="ldg-radio-group">
-              <button type="button" className={sellUnit === "BTC" ? "on" : ""} onClick={() => handleUnitToggle("BTC")}>
-                BTC
-              </button>
-              <button type="button" className={sellUnit === "sats" ? "on" : ""} onClick={() => handleUnitToggle("sats")}>
-                sats
-              </button>
-            </div>
-          </label>
-          <input
-            type="text"
-            inputMode={sellUnit === "sats" ? "numeric" : "decimal"}
-            className="ldg-input"
-            value={sellInput}
-            onChange={(e) => {
-              const v = sellUnit === "sats" ? e.target.value.replace(/[^0-9]/g, "") : e.target.value;
-              setSellInput(v);
-              setError("");
-            }}
-            placeholder={sellUnit === "sats" ? "0" : "0.00000000"}
-          />
-          {Number.isFinite(parsedBtcSold) && parsedBtcSold > 0 && (
-            <div className="ldg-tiny" style={{ marginTop: 2 }}>
-              = {sellUnit === "sats"
-                ? `${parsedBtcSold.toFixed(8).replace(/\.?0+$/, "")} BTC`
-                : `${Math.round(parsedBtcSold * 1e8).toLocaleString("en-US")} sats`}
-            </div>
+        <div className="ldg-sell-highlight">
+          <div className="ldg-sell-highlight-label">실제 판매량</div>
+          {fullyCovered ? (
+            <div className="ldg-sell-covered">통장으로 충분 · 판매 불필요</div>
+          ) : (
+            <>
+              <div className="ldg-sell-sats-main">
+                <span>{sellSats.toLocaleString("en-US")}</span>
+                <span className="unit">sats</span>
+              </div>
+              <div className="ldg-sell-krw-main">{fmtKRW(sellKrw)}</div>
+            </>
           )}
         </div>
 
-        <div className="ldg-modal-field">
-          <label className="ldg-modal-label">판매 금액</label>
-          <div className="ldg-modal-readonly">{fmtKRW(Math.round(saleAmountKrw))}</div>
+        <div className="ldg-modal-rate-row">
+          <span>현재 시세</span>
+          <strong>{formatKrwWon(currentBtcKrw)}</strong>
         </div>
 
         <div className="ldg-modal-field">
-          <label className="ldg-modal-label">충당 원화</label>
+          <label className="ldg-modal-label">통장 보유액 (선택)</label>
           <input
             type="text"
             inputMode="numeric"
             className="ldg-input"
-            value={krwInput}
-            onChange={(e) => { setKrwInput(e.target.value); setError(""); }}
-          />
-        </div>
-
-        <label className="ldg-modal-checkbox">
-          <input
-            type="checkbox"
-            checked={deduct}
+            value={cashInput}
             onChange={(e) => {
-              setDeduct(e.target.checked);
+              setCashInput(e.target.value.replace(/[^0-9.]/g, ""));
               setError("");
             }}
           />
-          <span>보유 BTC에서 차감</span>
-        </label>
-        {overHeld && (
-          <div className="ldg-modal-error">보유 BTC({fmtBtcValue(availableHeldBtc, unit)})보다 많습니다.</div>
-        )}
+          <div className="ldg-sell-cash-help">
+            통장에 가용 가능한 원화가 있으면 입력해주세요. 부족분에서 차감됩니다.
+          </div>
+        </div>
+
+        {overHeld && <div className="ldg-modal-error">보유 BTC({fmtBtcValue(availableHeldBtc, unit)})보다 많습니다.</div>}
 
         <div className="ldg-modal-field">
           <label className="ldg-modal-label">메모 (선택)</label>
@@ -274,7 +223,12 @@ export default function SellConfirmModal({ result, btcKrw, unit, selectedMonth, 
           <button type="button" className="ldg-submit-btn secondary" onClick={onClose}>
             취소
           </button>
-          <button type="button" className="ldg-submit-btn" onClick={handleSave} disabled={overHeld}>
+          {fullyCovered && (
+            <button type="button" className="ldg-submit-btn secondary" onClick={handleCashOnlySave}>
+              통장 보유액만 저장
+            </button>
+          )}
+          <button type="button" className="ldg-submit-btn" onClick={handleSave} disabled={overHeld || fullyCovered}>
             {isEdit ? "수정 완료" : "저장"}
           </button>
         </div>

@@ -8,6 +8,7 @@ import { calculateMonthlyLivingCashflow, calculateSellNeeded } from "../../lib/s
 import { getYearFromMonthKey } from "../../lib/month";
 import { useSelectedMonth } from "../../lib/useSelectedMonth";
 import { getSettlementMonthKeyForDate, getSettlementPeriod, loadSettlementDay } from "../../lib/settlement";
+import { getMonthlyCash } from "../../lib/monthlyCash";
 import {
   summarizeBtcSellRecordsByMonth,
   summarizeBtcSellRecordsByYear,
@@ -36,6 +37,7 @@ export default function HomePage() {
   const [settlementDay, setSettlementDay] = useState(loadSettlementDay);
   const defaultSettlementMonthKey = getSettlementMonthKeyForDate(new Date().toISOString(), settlementDay);
   const [selectedMonth, setSelectedMonth] = useSelectedMonth(defaultSettlementMonthKey);
+  const [monthlyCash, setMonthlyCashState] = useState(() => getMonthlyCash(defaultSettlementMonthKey));
   const [sellModalState, setSellModalState] = useState<{ mode: "add" } | { mode: "edit"; record: BtcSellRecord } | null>(
     null
   );
@@ -52,6 +54,7 @@ export default function HomePage() {
       setHeldBtc(getHeldBtc());
       setBtcUnit(loadBtcUnit());
       setSettlementDay(loadSettlementDay());
+      setMonthlyCashState(getMonthlyCash(selectedMonth));
     };
     const onVisibility = () => {
       if (document.visibilityState === "visible") refresh();
@@ -62,7 +65,11 @@ export default function HomePage() {
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("focus", refresh);
     };
-  }, []);
+  }, [selectedMonth]);
+
+  useEffect(() => {
+    setMonthlyCashState(getMonthlyCash(selectedMonth));
+  }, [selectedMonth]);
 
   const yearKey = getYearFromMonthKey(selectedMonth);
   const period = getSettlementPeriod(selectedMonth, settlementDay);
@@ -82,14 +89,15 @@ export default function HomePage() {
     expenseKrw,
     btcKrw: data.btcKRW,
     heldBtc,
-    confirmedCoverageKrw: monthlySellSummary.totalKrwCovered,
+    confirmedCoverageKrw: monthlySellSummary.totalKrwCovered + monthlyCash,
   });
 
   // 판매 기록 저장/수정/삭제 후 보유 BTC와 화면을 다시 계산한다. 저장 시에는 토스트도 함께 띄운다.
   const refreshAfterSellChange = useCallback(() => {
     setHeldBtc(getHeldBtc());
+    setMonthlyCashState(getMonthlyCash(selectedMonth));
     setRefreshTick((k) => k + 1);
-  }, []);
+  }, [selectedMonth]);
 
   const handleSellSaved = useCallback(() => {
     refreshAfterSellChange();
@@ -126,6 +134,9 @@ export default function HomePage() {
             result={sellResult}
             unit={btcUnit}
             selectedMonth={selectedMonth}
+            monthlyCash={monthlyCash}
+            monthlySellSummary={monthlySellSummary}
+            btcKrw={data.btcKRW}
             onConfirmSell={sellResult.deficitKrw > 0 ? () => setSellModalState({ mode: "add" }) : undefined}
           />
           <MonthlySellSummaryCard
@@ -148,6 +159,8 @@ export default function HomePage() {
           unit={btcUnit}
           selectedMonth={selectedMonth}
           period={period}
+          monthlyCash={monthlyCash}
+          onMonthlyCashChanged={refreshAfterSellChange}
           editRecord={sellModalState.mode === "edit" ? sellModalState.record : undefined}
           onClose={() => setSellModalState(null)}
           onSaved={handleSellSaved}

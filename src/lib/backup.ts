@@ -10,6 +10,7 @@ import {
 } from "./preferences";
 import { RECURRING_MATERIALIZED_KEY, RECURRING_RULES_KEY } from "./recurringRules";
 import { normalizeSettlementDay } from "./settlement";
+import { MONTHLY_CASH_KEY } from "./monthlyCash";
 import type { CategoryDef, Txn } from "../types";
 
 const APP_ID = "my-ledger";
@@ -30,6 +31,7 @@ export const BACKUP_KEYS = {
   refreshInterval: REFRESH_INTERVAL_STORAGE_KEY,
   btcSellRecords: BTC_SELL_RECORDS_KEY,
   settlementDay: SETTLEMENT_DAY_KEY,
+  monthlyCash: MONTHLY_CASH_KEY,
   recurringRules: RECURRING_RULES_KEY,
   recurringMaterialized: RECURRING_MATERIALIZED_KEY,
 } as const;
@@ -47,6 +49,7 @@ export interface BackupPayload {
     [REFRESH_INTERVAL_STORAGE_KEY]?: unknown;
     [BTC_SELL_RECORDS_KEY]?: unknown;
     [SETTLEMENT_DAY_KEY]?: unknown;
+    [MONTHLY_CASH_KEY]?: unknown;
     [RECURRING_RULES_KEY]?: unknown;
     [RECURRING_MATERIALIZED_KEY]?: unknown;
   };
@@ -206,6 +209,21 @@ function optionalValue(data: BackupPayload["data"], key: string): unknown {
   return key in data ? data[key as keyof BackupPayload["data"]] : undefined;
 }
 
+function sanitizeMonthlyCash(value: unknown): { items: Record<string, number>; invalid: number } {
+  if (!isRecord(value)) return { items: {}, invalid: 1 };
+  const items: Record<string, number> = {};
+  let invalid = 0;
+  for (const [month, rawKrw] of Object.entries(value)) {
+    const krw = typeof rawKrw === "number" ? rawKrw : Number(rawKrw);
+    if (!/^\d{4}-\d{2}$/.test(month) || !Number.isFinite(krw) || krw < 0) {
+      invalid += 1;
+      continue;
+    }
+    items[month] = krw;
+  }
+  return { items, invalid };
+}
+
 export function createBackupPayload(): BackupPayload {
   return {
     app: APP_ID,
@@ -221,6 +239,7 @@ export function createBackupPayload(): BackupPayload {
         localStorage.getItem(REFRESH_INTERVAL_STORAGE_KEY) ?? String(DEFAULT_REFRESH_INTERVAL_MS),
       [BTC_SELL_RECORDS_KEY]: readParsedStorage(BTC_SELL_RECORDS_KEY, []),
       [SETTLEMENT_DAY_KEY]: localStorage.getItem(SETTLEMENT_DAY_KEY) ?? "1",
+      [MONTHLY_CASH_KEY]: readParsedStorage(MONTHLY_CASH_KEY, {}),
       [RECURRING_RULES_KEY]: readParsedStorage(RECURRING_RULES_KEY, []),
       [RECURRING_MATERIALIZED_KEY]: readParsedStorage(RECURRING_MATERIALIZED_KEY, []),
     },
@@ -317,6 +336,13 @@ export function prepareBackupRestore(payload: BackupPayload): PreparedBackupRest
   if (hasSettlementDay) data[SETTLEMENT_DAY_KEY] = String(normalizeSettlementDay(settlementDay));
   else if (rawSettlementDay !== undefined) invalidItemsRemoved += 1;
 
+  const rawMonthlyCash = optionalValue(payload.data, MONTHLY_CASH_KEY);
+  if (rawMonthlyCash !== undefined) {
+    const result = sanitizeMonthlyCash(rawMonthlyCash);
+    invalidItemsRemoved += result.invalid;
+    data[MONTHLY_CASH_KEY] = result.items;
+  }
+
   const rawRecurringRules = optionalValue(payload.data, RECURRING_RULES_KEY);
   let recurringRules: unknown[] = [];
   if (rawRecurringRules !== undefined) {
@@ -407,6 +433,9 @@ function writeBackupData(data: BackupPayload["data"]) {
     localStorage.setItem(BTC_SELL_RECORDS_KEY, JSON.stringify(data[BTC_SELL_RECORDS_KEY]));
   }
   if (SETTLEMENT_DAY_KEY in data) localStorage.setItem(SETTLEMENT_DAY_KEY, String(data[SETTLEMENT_DAY_KEY]));
+  if (MONTHLY_CASH_KEY in data) {
+    localStorage.setItem(MONTHLY_CASH_KEY, JSON.stringify(data[MONTHLY_CASH_KEY]));
+  }
   if (RECURRING_RULES_KEY in data) {
     localStorage.setItem(RECURRING_RULES_KEY, JSON.stringify(data[RECURRING_RULES_KEY]));
   }

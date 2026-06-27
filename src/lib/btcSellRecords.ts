@@ -88,7 +88,7 @@ function generateId(): string {
 }
 
 export function addBtcSellRecord(
-  record: Omit<BtcSellRecord, "id" | "createdAt" | "deductedBtcAmount">
+  record: Omit<BtcSellRecord, "id" | "createdAt">
 ): BtcSellRecord {
   const btcSold = safeNum(record.btcSold);
   const newRecord: BtcSellRecord = {
@@ -99,7 +99,7 @@ export function addBtcSellRecord(
     btcKrwAtSell: safeNum(record.btcKrwAtSell),
     krwCovered: safeNum(record.krwCovered),
     deficitKrwAtConfirm: safeNum(record.deficitKrwAtConfirm),
-    deductedBtcAmount: record.deductedFromHeldBtc ? btcSold : undefined,
+    deductedBtcAmount: record.deductedFromHeldBtc ? safeNum(record.deductedBtcAmount ?? btcSold) : undefined,
     createdAt: new Date().toISOString(),
   };
   const records = loadRecords();
