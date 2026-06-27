@@ -58,7 +58,12 @@ function DoneRow({ label, children }: { label: string; children: ReactNode }) {
 
 export default function SellNeededCard({ result, unit, selectedMonth, monthlyCash, monthlySellSummary, btcKrw, onConfirmSell }: Props) {
   const { deficitKrw, sellBtc, sellSats, totalDeficitKrw, confirmedCoverageKrw } = result;
-  const noSellNeeded = deficitKrw === 0;
+  const everHadDeficit = totalDeficitKrw > 0;
+  const settled = everHadDeficit && deficitKrw === 0;
+  const needSell = deficitKrw > 0;
+
+  if (!everHadDeficit) return null;
+
   const hasConfirmed = confirmedCoverageKrw > 0;
   const monthLabel = getMonthLabel(selectedMonth);
   const expectedTotalSats = satsFromKrw(totalDeficitKrw, btcKrw);
@@ -67,7 +72,7 @@ export default function SellNeededCard({ result, unit, selectedMonth, monthlyCas
 
   return (
     <div className="ldg-card">
-      {noSellNeeded ? (
+      {settled ? (
         <>
           <div className="ldg-settlement-done">정산 완료</div>
           <div className="ldg-done-list">
@@ -89,7 +94,7 @@ export default function SellNeededCard({ result, unit, selectedMonth, monthlyCas
             </DoneRow>
           </div>
         </>
-      ) : (
+      ) : needSell ? (
         <>
           <div className="ldg-label">판매해야 하는 비트코인</div>
           <div className="ldg-sell-deficit-label">{monthLabel} 부족분</div>
@@ -109,7 +114,7 @@ export default function SellNeededCard({ result, unit, selectedMonth, monthlyCas
             </button>
           )}
         </>
-      )}
+      ) : null}
     </div>
   );
 }
