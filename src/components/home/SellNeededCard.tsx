@@ -84,7 +84,7 @@ export default function SellNeededCard({ result, unit, selectedMonth, monthlyCas
             </DoneRow>
             <DoneRow label="판매 후 BTC">
               <span className="ldg-done-val">
-                <strong>{formatDoneBtc(actualSoldBtc)}</strong>
+                <strong>{formatDoneBtc(result.heldBtc)}</strong>
               </span>
             </DoneRow>
           </div>

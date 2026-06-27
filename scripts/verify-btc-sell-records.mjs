@@ -49,22 +49,24 @@ assert.match(modalSrc, /sellBtc/, "modal calculates BTC automatically");
 assert.match(modalSrc, /krwCovered:\s*sellKrw/, "modal saves auto-calculated krwCovered");
 assert.match(modalSrc, /현재 BTC 가격/, "modal shows current BTC price");
 assert.match(modalSrc, /btcKrwAtSell:\s*currentBtcKrw/, "modal snapshots current BTC price on save");
-assert.match(modalSrc, /보유 BTC에서 차감/, "modal has deduct checkbox");
+assert.doesNotMatch(modalSrc, /보유 BTC에서 차감/, "modal no longer has deduct checkbox");
 
 // 10. Saving deducts from heldBtc
 assert.match(modalSrc, /setHeldBtc/, "modal calls setHeldBtc for deduction");
 assert.match(modalSrc, /Math\.max\(0/, "deduction does not go below 0");
 assert.match(
   modalSrc,
-  /const heldBtcAtSave = getHeldBtc\(\);[\s\S]*if \(deduct && sellBtc > availableHeldBtcAtSave\) \{[\s\S]*setError\("보유 BTC보다 많이 판매할 수 없습니다\."\);[\s\S]*return;/,
-  "handleSave rechecks held BTC and returns before saving an overheld deducted sale"
+  /const heldBtcAtSave = getHeldBtc\(\);[\s\S]*if \(sellBtc > availableHeldBtcAtSave\) \{[\s\S]*setError\("보유 BTC보다 많이 판매할 수 없습니다\."\);[\s\S]*return;/,
+  "handleSave rechecks held BTC and returns before saving an overheld sale"
 );
 assert.match(modalSrc, /disabled=\{[^}]*overHeld[^}]*\}/, "save button is disabled while a deducted sale exceeds held BTC");
 assert.match(
   modalSrc,
-  /const overHeld = deduct && Number\.isFinite\(sellBtc\) && sellBtc > availableHeldBtc/,
-  "overheld blocking is gated by deduct so external non-deducted sales remain allowed"
+  /const overHeld = Number\.isFinite\(sellBtc\) && sellBtc > availableHeldBtc/,
+  "overheld blocking always applies to sales"
 );
+assert.match(modalSrc, /deductedFromHeldBtc:\s*true/, "saved records are always marked deducted from held BTC");
+assert.match(modalSrc, /deductedBtcAmount:\s*sellBtc/, "saved records snapshot the deducted BTC amount");
 
 // 11. backup.ts includes btcSellRecords
 const backupSrc = readFileSync("src/lib/backup.ts", "utf8");

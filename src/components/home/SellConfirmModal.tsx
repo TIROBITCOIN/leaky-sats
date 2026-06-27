@@ -47,7 +47,6 @@ export default function SellConfirmModal({
 }: Props) {
   const isEdit = !!editRecord;
   const [cashInput, setCashInput] = useState(monthlyCash > 0 ? String(monthlyCash) : "");
-  const [deduct, setDeduct] = useState(editRecord?.deductedFromHeldBtc ?? true);
   const [note, setNote] = useState(editRecord?.note ?? "");
   const [error, setError] = useState("");
 
@@ -72,7 +71,7 @@ export default function SellConfirmModal({
     ? editRecord.deductedBtcAmount ?? editRecord.btcSold
     : 0;
   const availableHeldBtc = currentHeldBtc + previouslyDeductedBtc;
-  const overHeld = deduct && Number.isFinite(sellBtc) && sellBtc > availableHeldBtc;
+  const overHeld = Number.isFinite(sellBtc) && sellBtc > availableHeldBtc;
 
   const saveMonthlyCash = () => {
     setMonthlyCash(selectedMonth, cashKrw);
@@ -105,7 +104,7 @@ export default function SellConfirmModal({
 
     const heldBtcAtSave = getHeldBtc();
     const availableHeldBtcAtSave = heldBtcAtSave + previouslyDeductedBtc;
-    if (deduct && sellBtc > availableHeldBtcAtSave) {
+    if (sellBtc > availableHeldBtcAtSave) {
       setError("보유 BTC보다 많이 판매할 수 없습니다.");
       return;
     }
@@ -114,7 +113,7 @@ export default function SellConfirmModal({
 
     if (editRecord) {
       const oldDeducted = previouslyDeductedBtc;
-      const newDeducted = deduct ? sellBtc : 0;
+      const newDeducted = sellBtc;
       const delta = newDeducted - oldDeducted;
 
       updateBtcSellRecord(editRecord.id, {
@@ -123,8 +122,8 @@ export default function SellConfirmModal({
         btcKrwAtSell: currentBtcKrw,
         krwCovered: sellKrw,
         deficitKrwAtConfirm: requiredBeforeCashKrw,
-        deductedFromHeldBtc: deduct,
-        deductedBtcAmount: deduct ? sellBtc : undefined,
+        deductedFromHeldBtc: true,
+        deductedBtcAmount: sellBtc,
         note: note.trim() || undefined,
       });
 
@@ -144,14 +143,13 @@ export default function SellConfirmModal({
         btcKrwAtSell: currentBtcKrw,
         krwCovered: sellKrw,
         deficitKrwAtConfirm: requiredBeforeCashKrw,
-        deductedFromHeldBtc: deduct,
+        deductedFromHeldBtc: true,
+        deductedBtcAmount: sellBtc,
         note: note.trim() || undefined,
       });
 
-      if (deduct) {
-        const current = getHeldBtc();
-        setHeldBtc(Math.max(0, current - sellBtc));
-      }
+      const current = getHeldBtc();
+      setHeldBtc(Math.max(0, current - sellBtc));
     }
 
     onSaved();
@@ -230,17 +228,6 @@ export default function SellConfirmModal({
           )}
         </div>
 
-        <label className="ldg-modal-checkbox">
-          <input
-            type="checkbox"
-            checked={deduct}
-            onChange={(e) => {
-              setDeduct(e.target.checked);
-              setError("");
-            }}
-          />
-          <span>보유 BTC에서 차감</span>
-        </label>
         {overHeld && <div className="ldg-modal-error">보유 BTC({fmtBtcValue(availableHeldBtc, unit)})보다 많습니다.</div>}
 
         <div className="ldg-modal-field">

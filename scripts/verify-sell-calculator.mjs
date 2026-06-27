@@ -188,6 +188,23 @@ assert.match(sellConfirmModal, /applyAccountBalance/, "SellConfirmModal imports 
 assert.match(sellConfirmModal, /통장 보유액/, "SellConfirmModal has monthly cash label");
 assert.match(sellConfirmModal, /setMonthlyCash/, "SellConfirmModal persists monthly cash on save");
 assert.match(sellConfirmModal, /통장 보유액만 저장/, "SellConfirmModal can save monthly cash without a sell record");
+assert.doesNotMatch(sellConfirmModal, /보유 BTC에서 차감/, "SellConfirmModal removes held-BTC deduction checkbox copy");
+assert.doesNotMatch(sellConfirmModal, /const \[deduct/, "SellConfirmModal no longer has user-controlled deduct state");
+assert.doesNotMatch(sellConfirmModal, /type="checkbox"[\s\S]{0,300}deduct/, "SellConfirmModal removes deduct checkbox input");
+assert.doesNotMatch(sellConfirmModal, /if\s*\(\s*deduct\b/, "SellConfirmModal does not guard held-BTC updates behind deduct");
+assert.match(
+  sellConfirmModal,
+  /overHeld\s*=\s*Number\.isFinite\(sellBtc\)\s*&&\s*sellBtc\s*>\s*availableHeldBtc/,
+  "SellConfirmModal always checks over-held sales"
+);
+assert.match(
+  sellConfirmModal,
+  /sellBtc\s*>\s*availableHeldBtcAtSave[\s\S]{0,140}보유 BTC보다 많이 판매할 수 없습니다/,
+  "SellConfirmModal blocks saving sales above held BTC"
+);
+assert.match(sellConfirmModal, /deductedFromHeldBtc:\s*true/, "SellConfirmModal records sales as deducted from held BTC");
+assert.match(sellConfirmModal, /deductedBtcAmount:\s*sellBtc/, "SellConfirmModal records the deducted BTC amount");
+assert.match(sellConfirmModal, /setHeldBtc\(Math\.max\(0,\s*current\s*-\s*sellBtc\)\)/, "new sales always deduct from held BTC");
 assert.match(
   sellConfirmModal,
   /disabled=\{[^}]*fullyCovered[^}]*\}/,
@@ -223,6 +240,16 @@ for (const label of ["예상 판매량", "통장 보유액", "실제 판매량",
   assert.match(completedBranch, new RegExp(label), `settlement-complete branch shows ${label}`);
 }
 assert.match(completedBranch, /formatDoneBtc/, "settlement-complete branch uses fixed 8-decimal BTC formatting");
+assert.match(
+  completedBranch,
+  /label="판매 후 BTC"[\s\S]{0,220}formatDoneBtc\(result\.heldBtc\)/,
+  "settlement-complete after-sale BTC uses current held BTC"
+);
+assert.doesNotMatch(
+  completedBranch,
+  /label="판매 후 BTC"[\s\S]{0,220}formatDoneBtc\(actualSoldBtc\)/,
+  "settlement-complete after-sale BTC does not repeat actual sale BTC"
+);
 
 const ledgerCss = readFileSync("src/styles/ledger.css", "utf8");
 assert.match(ledgerCss, /\.ldg-done-row/, "settlement-complete rows have scoped layout class");
