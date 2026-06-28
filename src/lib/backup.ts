@@ -1,4 +1,4 @@
-import { DISPLAY_UNIT_STORAGE_KEY } from "./format";
+﻿import { DISPLAY_UNIT_STORAGE_KEY } from "./format";
 import {
   ALLOWED_REFRESH_INTERVALS,
   CURRENCY_STORAGE_KEY,
@@ -15,6 +15,8 @@ import type { CategoryDef, Txn } from "../types";
 
 const APP_ID = "my-ledger";
 const BACKUP_VERSION = 1;
+const ENCRYPTION_VERSION = 1;
+const KDF_ITERATIONS = 200_000;
 const TXNS_KEY = "myledger.txns.v1";
 const CATEGORIES_KEY = "myledger.categories.v1";
 const HELD_BTC_KEY = "myledger.heldBtc.v1";
@@ -71,6 +73,24 @@ export interface PreparedBackupRestore {
   preview: BackupPreview;
 }
 
+export interface EncryptedBackupFile {
+  app: typeof APP_ID;
+  enc: "aes-gcm";
+  encVersion: number;
+  kdf: {
+    name: string;
+    hash: string;
+    iterations: number;
+    salt: string;
+  };
+  iv: string;
+  ciphertext: string;
+}
+
+export type ReadBackupFileResult =
+  | { kind: "plain"; payload: BackupPayload }
+  | { kind: "encrypted"; encrypted: EncryptedBackupFile };
+
 function readParsedStorage(key: string, fallback: unknown) {
   try {
     const raw = localStorage.getItem(key);
@@ -83,6 +103,43 @@ function readParsedStorage(key: string, fallback: unknown) {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+function base64ToBytes(value: string): Uint8Array {
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+function bytesToArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return copy.buffer;
+}
+
+function getCrypto(): Crypto {
+  if (!globalThis.crypto?.subtle) throw new Error("이 브라우저는 암호화 백업을 지원하지 않습니다.");
+  return globalThis.crypto;
+}
+
+async function deriveBackupKey(password: string, salt: Uint8Array): Promise<CryptoKey> {
+  const crypto = getCrypto();
+  const encodedPassword = new TextEncoder().encode(password);
+  const material = await crypto.subtle.importKey("raw", encodedPassword, "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey(
+    { name: "PBKDF2", hash: "SHA-256", salt: bytesToArrayBuffer(salt), iterations: KDF_ITERATIONS },
+    material,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]
+  );
 }
 
 function validateTxnsData(value: unknown): boolean {
@@ -261,6 +318,70 @@ export function validateBackupPayload(value: unknown): value is BackupPayload {
   return validateTxnsData(value.data[TXNS_KEY]) && validateCategoriesData(value.data[CATEGORIES_KEY]);
 }
 
+export function isEncryptedBackupFile(value: unknown): value is EncryptedBackupFile {
+  if (!isRecord(value) || !isRecord(value.kdf)) return false;
+  return (
+    value.app === APP_ID &&
+    value.enc === "aes-gcm" &&
+    value.encVersion === ENCRYPTION_VERSION &&
+    value.kdf.name === "PBKDF2" &&
+    value.kdf.hash === "SHA-256" &&
+    value.kdf.iterations === KDF_ITERATIONS &&
+    typeof value.kdf.salt === "string" &&
+    value.kdf.salt.length > 0 &&
+    typeof value.iv === "string" &&
+    value.iv.length > 0 &&
+    typeof value.ciphertext === "string" &&
+    value.ciphertext.length > 0
+  );
+}
+
+export async function encryptBackupPayload(payload: BackupPayload, password: string): Promise<EncryptedBackupFile> {
+  if (!password) throw new Error("백업 비밀번호를 입력해주세요.");
+  const crypto = getCrypto();
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveBackupKey(password, salt);
+  const plaintext = new TextEncoder().encode(JSON.stringify(payload));
+  const ciphertext = new Uint8Array(
+    await crypto.subtle.encrypt({ name: "AES-GCM", iv: bytesToArrayBuffer(iv) }, key, bytesToArrayBuffer(plaintext))
+  );
+
+  return {
+    app: APP_ID,
+    enc: "aes-gcm",
+    encVersion: ENCRYPTION_VERSION,
+    kdf: {
+      name: "PBKDF2",
+      hash: "SHA-256",
+      iterations: KDF_ITERATIONS,
+      salt: bytesToBase64(salt),
+    },
+    iv: bytesToBase64(iv),
+    ciphertext: bytesToBase64(ciphertext),
+  };
+}
+
+export async function decryptBackupFile(file: EncryptedBackupFile, password: string): Promise<BackupPayload> {
+  try {
+    if (!isEncryptedBackupFile(file) || !password) throw new Error("invalid encrypted backup");
+    const salt = base64ToBytes(file.kdf.salt);
+    const iv = base64ToBytes(file.iv);
+    const ciphertext = base64ToBytes(file.ciphertext);
+    const key = await deriveBackupKey(password, salt);
+    const plaintext = await getCrypto().subtle.decrypt(
+      { name: "AES-GCM", iv: bytesToArrayBuffer(iv) },
+      key,
+      bytesToArrayBuffer(ciphertext)
+    );
+    const parsed: unknown = JSON.parse(new TextDecoder().decode(plaintext));
+    if (!validateBackupPayload(parsed)) throw new Error("invalid backup payload");
+    return parsed;
+  } catch {
+    throw new Error("비밀번호가 올바르지 않거나 손상된 백업입니다.");
+  }
+}
+
 export function prepareBackupRestore(payload: BackupPayload): PreparedBackupRestore {
   if (!validateBackupPayload(payload)) {
     throw new Error("복원할 수 없는 백업 데이터입니다.");
@@ -403,7 +524,20 @@ export function downloadBackup() {
   URL.revokeObjectURL(url);
 }
 
-export async function parseBackupFile(file: File): Promise<BackupPayload> {
+export async function downloadEncryptedBackup(password: string): Promise<void> {
+  const payload = createBackupPayload();
+  const day = payload.createdAt.slice(0, 10);
+  const encrypted = await encryptBackupPayload(payload, password);
+  const blob = new Blob([JSON.stringify(encrypted, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `my-ledger-backup-${day}-encrypted.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export async function readBackupFile(file: File): Promise<ReadBackupFileResult> {
   let parsed: unknown;
   try {
     parsed = JSON.parse(await file.text());
@@ -411,11 +545,15 @@ export async function parseBackupFile(file: File): Promise<BackupPayload> {
     throw new Error("백업 파일의 JSON 형식이 올바르지 않습니다.");
   }
 
-  if (!validateBackupPayload(parsed)) {
-    throw new Error("My Ledger 백업 파일이 아니거나 지원하지 않는 백업 버전입니다.");
-  }
+  if (isEncryptedBackupFile(parsed)) return { kind: "encrypted", encrypted: parsed };
+  if (validateBackupPayload(parsed)) return { kind: "plain", payload: parsed };
+  throw new Error("My Ledger 백업 파일이 아닙니다.");
+}
 
-  return parsed;
+export async function parseBackupFile(file: File): Promise<BackupPayload> {
+  const result = await readBackupFile(file);
+  if (result.kind === "plain") return result.payload;
+  throw new Error("My Ledger 백업 파일이 아니거나 지원하지 않는 백업 버전입니다.");
 }
 
 function writeBackupData(data: BackupPayload["data"]) {

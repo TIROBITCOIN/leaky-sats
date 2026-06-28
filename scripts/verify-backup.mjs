@@ -17,6 +17,19 @@ assert.match(backup, /parseBackupFile/, "parseBackupFile exists");
 assert.match(backup, /validateBackupPayload/, "validateBackupPayload exists");
 assert.match(backup, /prepareBackupRestore/, "restore payload is sanitized before writing");
 assert.match(backup, /restoreBackupPayload/, "restoreBackupPayload exists");
+assert.match(backup, /export interface EncryptedBackupFile/, "encrypted backup file type exists");
+assert.match(backup, /export async function encryptBackupPayload/, "encryptBackupPayload exists");
+assert.match(backup, /export async function decryptBackupFile/, "decryptBackupFile exists");
+assert.match(backup, /export function isEncryptedBackupFile/, "isEncryptedBackupFile exists");
+assert.match(backup, /export async function downloadEncryptedBackup/, "downloadEncryptedBackup exists");
+assert.match(backup, /export async function readBackupFile/, "readBackupFile exists");
+assert.match(backup, /PBKDF2/, "PBKDF2 key derivation is used");
+assert.match(backup, /SHA-256/, "SHA-256 KDF hash is used");
+assert.match(backup, /KDF_ITERATIONS = 200_000/, "PBKDF2 uses 200000 iterations");
+assert.match(backup, /AES-GCM/, "AES-GCM encryption is used");
+assert.match(backup, /new Uint8Array\(16\)/, "encrypted backups use a 16-byte salt");
+assert.match(backup, /new Uint8Array\(12\)/, "encrypted backups use a 12-byte IV");
+assert.match(backup, /비밀번호가 올바르지 않거나 손상된 백업입니다/, "decrypt failures use the requested error message");
 assert.match(backup, /myledger\.preRestoreBackup\.v1/, "pre-restore safety backup key exists");
 const backupKeysBlock = backup.match(/export const BACKUP_KEYS = \{[\s\S]*?\} as const;/)?.[0] ?? "";
 assert.doesNotMatch(
@@ -43,6 +56,12 @@ assert.match(backup, /writeBackupData\(prepared\.payload\.data\)/, "restore writ
 
 assert.equal(existsSync(cardPath), true, "BackupRestoreCard exists");
 const card = readFileSync(cardPath, "utf8");
+assert.match(card, /encryptExport/, "encrypted backup toggle state exists");
+assert.match(card, /type="password"/, "backup password fields exist");
+assert.match(card, /비밀번호를 잊으면 이 백업은 복구할 수 없습니다/, "irrecoverable-password warning is shown");
+assert.match(card, /downloadEncryptedBackup/, "encrypted export is wired");
+assert.match(card, /readBackupFile/, "backup import auto-detection is wired");
+assert.match(card, /decryptBackupFile/, "encrypted import decrypt is wired");
 assert.match(card, /window\.confirm/, "restore requires confirmation");
 assert.match(card, /백업 파일 다운로드/, "download UI exists");
 assert.match(card, /백업 파일에서 복원/, "restore UI exists");
@@ -82,6 +101,12 @@ const runnableBackup = readFileSync(backupPath, "utf8")
   .replace('"./settlement"', `"${settlementUrl}"`)
   .replace('"./monthlyCash"', `"${monthlyCashUrl}"`);
 const backupApi = await import(moduleUrl(runnableBackup));
+
+const makeJsonFile = (value) => {
+  const text = typeof value === "string" ? value : JSON.stringify(value);
+  if (typeof File === "function") return new File([text], "backup.json", { type: "application/json" });
+  return { text: async () => text };
+};
 
 class MemoryStorage {
   #items = new Map();
@@ -222,5 +247,35 @@ const minimalPayload = {
   },
 };
 assert.doesNotThrow(() => backupApi.prepareBackupRestore(minimalPayload), "optional backup fields may be absent");
+
+const sampleEncryptedFile = {
+  app: "my-ledger",
+  enc: "aes-gcm",
+  encVersion: 1,
+  kdf: { name: "PBKDF2", hash: "SHA-256", iterations: 200000, salt: "YWJjZGVmZ2hpamtsbW5vcA==" },
+  iv: "YWJjZGVmZ2hpamts",
+  ciphertext: "Y2lwaGVydGV4dA==",
+};
+assert.equal(backupApi.isEncryptedBackupFile(sampleEncryptedFile), true, "encrypted wrapper is detected");
+assert.equal(backupApi.isEncryptedBackupFile(minimalPayload), false, "plain payload is not treated as encrypted");
+
+const plainRead = await backupApi.readBackupFile(makeJsonFile(minimalPayload));
+assert.equal(plainRead.kind, "plain", "plain JSON backup is auto-detected");
+const encryptedRead = await backupApi.readBackupFile(makeJsonFile(sampleEncryptedFile));
+assert.equal(encryptedRead.kind, "encrypted", "encrypted JSON backup is auto-detected");
+
+if (globalThis.crypto?.subtle) {
+  const encrypted = await backupApi.encryptBackupPayload(minimalPayload, "pw1234");
+  assert.equal(backupApi.isEncryptedBackupFile(encrypted), true, "real encrypted output is detected");
+  const decrypted = await backupApi.decryptBackupFile(encrypted, "pw1234");
+  assert.deepEqual(decrypted, minimalPayload, "encrypted backup round-trips with the right password");
+  await assert.rejects(
+    backupApi.decryptBackupFile(encrypted, "wrong"),
+    /비밀번호가 올바르지 않거나 손상된 백업입니다/,
+    "wrong password fails decrypt"
+  );
+} else {
+  console.log("verify:backup encrypted round-trip skipped: Web Crypto unavailable");
+}
 
 console.log("verify:backup passed");

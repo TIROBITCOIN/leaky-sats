@@ -1,15 +1,19 @@
 import { useRef, useState, type ChangeEvent } from "react";
 import {
+  decryptBackupFile,
   downloadBackup,
-  parseBackupFile,
+  downloadEncryptedBackup,
   prepareBackupRestore,
+  readBackupFile,
   restoreBackupPayload,
+  type EncryptedBackupFile,
   type BackupPayload,
   type BackupPreview,
 } from "../../lib/backup";
 
 type Status = { tone: "ok" | "error" | "idle"; text: string };
 type PendingRestore = { fileName: string; payload: BackupPayload; preview: BackupPreview };
+type PendingEncryptedRestore = { fileName: string; encrypted: EncryptedBackupFile };
 
 export default function BackupRestoreCard() {
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -18,6 +22,42 @@ export default function BackupRestoreCard() {
     text: "백업 파일은 개인 기기에 안전하게 보관하세요.",
   });
   const [pendingRestore, setPendingRestore] = useState<PendingRestore | null>(null);
+  const [pendingEncryptedRestore, setPendingEncryptedRestore] = useState<PendingEncryptedRestore | null>(null);
+  const [encryptExport, setEncryptExport] = useState(false);
+  const [backupPassword, setBackupPassword] = useState("");
+  const [backupPasswordConfirm, setBackupPasswordConfirm] = useState("");
+  const [restorePassword, setRestorePassword] = useState("");
+
+  const preparePlainRestore = (fileName: string, payload: BackupPayload) => {
+    const prepared = prepareBackupRestore(payload);
+    setPendingRestore({ fileName, payload, preview: prepared.preview });
+    setPendingEncryptedRestore(null);
+    setRestorePassword("");
+    setStatus({ tone: "idle", text: "복원할 내용을 확인한 뒤 복원 버튼을 눌러주세요." });
+  };
+
+  const handleDownload = async () => {
+    if (!encryptExport) {
+      downloadBackup();
+      return;
+    }
+    if (!backupPassword) {
+      setStatus({ tone: "error", text: "백업 비밀번호를 입력해주세요." });
+      return;
+    }
+    if (backupPassword !== backupPasswordConfirm) {
+      setStatus({ tone: "error", text: "백업 비밀번호가 서로 일치하지 않습니다." });
+      return;
+    }
+    try {
+      await downloadEncryptedBackup(backupPassword);
+      setBackupPassword("");
+      setBackupPasswordConfirm("");
+      setStatus({ tone: "ok", text: "암호화 백업 파일을 다운로드했습니다." });
+    } catch (error) {
+      setStatus({ tone: "error", text: error instanceof Error ? error.message : "암호화 백업에 실패했습니다." });
+    }
+  };
 
   const handleFileSelect = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -25,13 +65,33 @@ export default function BackupRestoreCard() {
     if (!file) return;
 
     try {
-      const payload = await parseBackupFile(file);
-      const prepared = prepareBackupRestore(payload);
-      setPendingRestore({ fileName: file.name, payload, preview: prepared.preview });
-      setStatus({ tone: "idle", text: "복원할 내용을 확인한 뒤 복원 버튼을 눌러주세요." });
+      const result = await readBackupFile(file);
+      if (result.kind === "encrypted") {
+        setPendingRestore(null);
+        setPendingEncryptedRestore({ fileName: file.name, encrypted: result.encrypted });
+        setRestorePassword("");
+        setStatus({ tone: "idle", text: "암호화 백업입니다. 백업 비밀번호를 입력해주세요." });
+        return;
+      }
+      preparePlainRestore(file.name, result.payload);
     } catch (error) {
       setPendingRestore(null);
+      setPendingEncryptedRestore(null);
       setStatus({ tone: "error", text: error instanceof Error ? error.message : "백업 복원에 실패했습니다." });
+    }
+  };
+
+  const handleDecryptRestore = async () => {
+    if (!pendingEncryptedRestore) return;
+    if (!restorePassword) {
+      setStatus({ tone: "error", text: "백업 비밀번호를 입력해주세요." });
+      return;
+    }
+    try {
+      const payload = await decryptBackupFile(pendingEncryptedRestore.encrypted, restorePassword);
+      preparePlainRestore(pendingEncryptedRestore.fileName, payload);
+    } catch (error) {
+      setStatus({ tone: "error", text: error instanceof Error ? error.message : "암호화 백업 복호화에 실패했습니다." });
     }
   };
 
@@ -45,6 +105,8 @@ export default function BackupRestoreCard() {
     try {
       restoreBackupPayload(pendingRestore.payload);
       setPendingRestore(null);
+      setPendingEncryptedRestore(null);
+      setRestorePassword("");
       setStatus({ tone: "ok", text: "복원 완료. 앱을 새로고침하면 적용됩니다." });
     } catch (error) {
       setStatus({ tone: "error", text: error instanceof Error ? error.message : "백업 복원에 실패했습니다." });
@@ -60,12 +122,43 @@ export default function BackupRestoreCard() {
         localStorage 전용 앱이라 브라우저 데이터 삭제나 기기 변경 전에 백업이 필요합니다. 시드, 개인키, API 키는 저장하지 않습니다.
       </div>
       <div className="ldg-backup-actions">
-        <button className="ldg-submit-btn" type="button" onClick={downloadBackup}>
+        <button className="ldg-submit-btn" type="button" onClick={handleDownload}>
           백업 파일 다운로드
         </button>
         <button className="ldg-submit-btn secondary" type="button" onClick={() => inputRef.current?.click()}>
           백업 파일에서 복원
         </button>
+      </div>
+      <div className="ldg-setting-desc" style={{ marginTop: 12 }}>
+        <label>
+          <input
+            type="checkbox"
+            checked={encryptExport}
+            onChange={(event) => setEncryptExport(event.target.checked)}
+          />{" "}
+          암호화 백업
+        </label>
+        {encryptExport && (
+          <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
+            <input
+              className="ldg-input"
+              type="password"
+              value={backupPassword}
+              onChange={(event) => setBackupPassword(event.target.value)}
+              placeholder="백업 비밀번호"
+              autoComplete="new-password"
+            />
+            <input
+              className="ldg-input"
+              type="password"
+              value={backupPasswordConfirm}
+              onChange={(event) => setBackupPasswordConfirm(event.target.value)}
+              placeholder="백업 비밀번호 확인"
+              autoComplete="new-password"
+            />
+            <div className="ldg-backup-status error">비밀번호를 잊으면 이 백업은 복구할 수 없습니다.</div>
+          </div>
+        )}
       </div>
       <input
         ref={inputRef}
@@ -74,6 +167,25 @@ export default function BackupRestoreCard() {
         onChange={handleFileSelect}
         style={{ display: "none" }}
       />
+      {pendingEncryptedRestore && (
+        <div className="ldg-setting-desc" style={{ marginTop: 12 }}>
+          <div className="ldg-setting-label">암호화 백업</div>
+          <div>{pendingEncryptedRestore.fileName}</div>
+          <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
+            <input
+              className="ldg-input"
+              type="password"
+              value={restorePassword}
+              onChange={(event) => setRestorePassword(event.target.value)}
+              placeholder="백업 비밀번호"
+              autoComplete="current-password"
+            />
+            <button className="ldg-submit-btn" type="button" onClick={handleDecryptRestore}>
+              비밀번호 확인
+            </button>
+          </div>
+        </div>
+      )}
       {pendingRestore && (
         <div className="ldg-setting-desc" style={{ marginTop: 12 }}>
           <div className="ldg-setting-label">복원할 데이터</div>
