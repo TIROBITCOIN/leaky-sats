@@ -211,12 +211,13 @@ function normalizeCategories(value: unknown): CategoryDef[] | null {
     const group = category.group as CategoryDef["group"];
     const flow = category.flow as CategoryDef["flow"];
     const builtIn = builtInsById.get(category.id);
+    const icon = builtIn && category.id === "card_bill" ? builtIn.icon : category.icon;
     if (builtIn && PROTECTED_IDS.has(category.id)) {
       byId.set(category.id, {
         ...builtIn,
         label: formatCategoryLabel(category.label.trim() || builtIn.label),
         fg: category.fg,
-        icon: category.icon,
+        icon,
         protected: true,
       });
       continue;
@@ -227,7 +228,7 @@ function normalizeCategories(value: unknown): CategoryDef[] | null {
       label: category.label.trim() || category.id,
       group,
       flow,
-      icon: category.icon,
+      icon,
       fg: category.fg,
       protected: category.protected === true || PROTECTED_IDS.has(category.id),
     });
