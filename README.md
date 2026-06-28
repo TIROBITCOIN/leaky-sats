@@ -125,3 +125,17 @@ npm run verify:branding
 - Phase 7 후보: localStorage 암호화, 클라우드 동기화 검토, 접근성 개선
 
 자세한 범위는 [ROADMAP.md](docs/ROADMAP.md), 제품 정의는 [PRODUCT_SPEC.md](docs/PRODUCT_SPEC.md), 기술 결정은 [TECH_DECISIONS.md](docs/TECH_DECISIONS.md)를 기준으로 합니다.
+
+## Copyright / Ownership
+
+Leaky Sats is created and maintained by TIROBITCOIN.
+
+Original repository:
+https://github.com/TIROBITCOIN/leaky-sats
+
+Official deployment:
+https://leaky-sats.vercel.app
+
+© 2026 TIROBITCOIN. All rights reserved.
+
+This repository is public for visibility, but no license is granted for copying, redistribution, sublicensing, or commercial use unless explicitly permitted by the copyright holder.
