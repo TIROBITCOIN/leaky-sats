@@ -353,6 +353,16 @@
   margin-top: 14px;
 }
 
+.ldg-help-footer {
+  margin-top: 24px;
+  padding: 14px 0 0;
+  border-top: 1px solid var(--ldg-border, #e5e5e0);
+  font-size: 0.78rem;
+  color: var(--ldg-muted, #888);
+  line-height: 1.7;
+  text-align: center;
+}
+
 /* ---- Balance ---- */
 .ldg-balance-main {
   font-size: 34px;

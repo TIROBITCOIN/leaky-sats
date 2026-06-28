@@ -3,6 +3,15 @@
   "private": true,
   "version": "0.1.0",
   "description": "Mobile-first PWA ledger for Korean Bitcoiners",
+  "author": "TIROBITCOIN",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TIROBITCOIN/leaky-sats.git"
+  },
+  "homepage": "https://leaky-sats.vercel.app",
+  "bugs": {
+    "url": "https://github.com/TIROBITCOIN/leaky-sats/issues"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -37,7 +46,8 @@
     "verify:category-unify": "node scripts/verify-category-unify.mjs",
     "verify:date-input": "node scripts/verify-date-only-input.mjs",
     "verify:help-page": "node scripts/verify-help-page.mjs",
-    "verify:release": "npm run build && npm run verify:backup && npm run verify:recurring && npm run verify:price-source-ui && npm run verify:help-page"
+    "verify:ownership": "node scripts/verify-ownership.mjs",
+    "verify:release": "npm run build && npm run verify:backup && npm run verify:recurring && npm run verify:price-source-ui && npm run verify:help-page && npm run verify:ownership"
   },
   "dependencies": {
     "react": "^18.3.1",

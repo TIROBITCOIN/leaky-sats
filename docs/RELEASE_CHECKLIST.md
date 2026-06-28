@@ -21,7 +21,7 @@ Use this checklist after a PR is merged into `master`.
 1. Open the user-facing stable URL:
 
    ```text
-   https://ledger-for-bitcoiners.vercel.app
+   https://leaky-sats.vercel.app
    ```
 
 2. Confirm the page loads without a blank screen.
@@ -92,7 +92,7 @@ Use this checklist after a PR is merged into `master`.
 1. Share only the stable production URL:
 
    ```text
-   https://ledger-for-bitcoiners.vercel.app
+   https://leaky-sats.vercel.app
    ```
 
 2. Do not share random Vercel deployment URLs.

@@ -6,17 +6,17 @@ My Ledger는 서버 없는 Vite 정적 웹앱/PWA입니다. 배포 대상은 `di
 
 사용자에게 공유하거나 QR 코드로 만들 URL은 고정 production domain을 사용합니다.
 
-- 사용자 공유용 고정 URL: `https://ledger-for-bitcoiners.vercel.app`
+- 사용자 공유용 고정 URL: `https://leaky-sats.vercel.app`
 
 Vercel은 배포마다 랜덤한 개별 deployment URL도 만듭니다. 예를 들면
-`https://ledger-for-bitcoiners-lql334i1e-willbegoodnurse-archs-projects.vercel.app`
+`https://leaky-sats-xxxxx-tirobitcoins-projects.vercel.app` (예시)
 같은 주소입니다. 이 URL은 특정 배포를 테스트하거나 확인할 때는 유용하지만, 새 배포마다
 바뀔 수 있으므로 사용자 공유 링크나 QR 코드에는 쓰지 않습니다.
 
 QR 코드를 만들 때는 항상 아래 고정 URL을 넣습니다.
 
 ```text
-https://ledger-for-bitcoiners.vercel.app
+https://leaky-sats.vercel.app
 ```
 
 릴리즈 후에는 개별 deployment URL이 아니라 위 고정 URL에 접속해서 최신 production 배포가
@@ -34,7 +34,7 @@ https://ledger-for-bitcoiners.vercel.app
 1. Netlify에 접속합니다.
 2. Add new site를 선택합니다.
 3. Import from GitHub를 선택합니다.
-4. `willbegoodnurse-arch/ledger-for-bitcoiners`를 선택합니다.
+4. `TIROBITCOIN/leaky-sats`를 선택합니다.
 5. Build command에 `npm run build`를 입력합니다.
 6. Publish directory에 `dist`를 입력합니다.
 7. Deploy를 실행합니다.
@@ -100,3 +100,10 @@ PWA는 service worker와 캐시를 origin 기준으로 관리합니다. 배포 U
 - 백업 JSON에는 거래/카테고리 데이터가 들어갈 수 있으므로 개인 기기에 안전하게 보관하세요.
 - My Ledger는 비트코인 시드, 개인키, 거래소 API 키, 은행 인증 정보를 저장하거나 백업하지 않습니다.
 - 복원은 현재 브라우저의 거래/카테고리 데이터를 덮어쓰므로 복원 전 확인이 필요합니다.
+
+## GitHub/Vercel URL 현황
+
+- GitHub repository: `https://github.com/TIROBITCOIN/leaky-sats`
+- Vercel production URL: `https://leaky-sats.vercel.app`
+- 이전 배포 URL(`https://ledger-for-bitcoiners.vercel.app`)은 더 이상 사용하지 않습니다.
+- Vercel project/domain을 나중에 바꾸면 이 문서와 앱 메타데이터를 다시 업데이트해야 합니다.

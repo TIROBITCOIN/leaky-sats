@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import "../../styles/ledger.css";
+import { APP_META } from "../../constants/appMeta";
 
 const HELP_SECTIONS = [
   {
@@ -117,6 +118,15 @@ export default function HelpPage() {
         <Link className="ldg-submit-btn secondary ldg-help-back" to="/settings">
           설정으로 돌아가기
         </Link>
+
+        <div className="ldg-help-footer">
+          이 앱은 {APP_META.ownerName}이 만든 Bitcoin-first 개인 가계부입니다.<br />
+          Original source:{" "}
+          <a href={APP_META.repositoryUrl} target="_blank" rel="noopener noreferrer" className="ldg-link">
+            {APP_META.repositoryUrl}
+          </a><br />
+          {APP_META.copyright}
+        </div>
       </div>
     </div>
   );

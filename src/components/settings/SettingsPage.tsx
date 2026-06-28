@@ -19,6 +19,7 @@ import AppLockSettings from "../security/AppLockSettings";
 import CategoryManager from "./CategoryManager";
 import BackupRestoreCard from "./BackupRestoreCard";
 import RecurringRulesSettings from "./RecurringRulesSettings";
+import { APP_META } from "../../constants/appMeta";
 
 const UNITS = ["BTC", "sats"] as const;
 const SETTLEMENT_DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
@@ -339,6 +340,23 @@ export default function SettingsPage() {
         <CategoryManager />
         <BackupRestoreCard />
         <AppLockSettings />
+
+        <div className="ldg-card">
+          <div className="ldg-setting-label">앱 정보</div>
+          <div className="ldg-setting-desc" style={{ marginTop: 6, lineHeight: 1.7 }}>
+            {APP_META.name}<br />
+            제작자: {APP_META.ownerName}<br />
+            원본 저장소:{" "}
+            <a href={APP_META.repositoryUrl} target="_blank" rel="noopener noreferrer" className="ldg-link">
+              {APP_META.repositoryUrl}
+            </a><br />
+            공식 배포:{" "}
+            <a href={APP_META.productionUrl} target="_blank" rel="noopener noreferrer" className="ldg-link">
+              {APP_META.productionUrl}
+            </a><br />
+            {APP_META.copyright}
+          </div>
+        </div>
       </div>
     </div>
   );
