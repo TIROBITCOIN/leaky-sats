@@ -15,6 +15,13 @@ assert.doesNotMatch(ledgerSource, /state\.priceMeta\.liveFields\.[a-zA-Z]+\s*\|\
 assert.match(ledgerSource, /priceStaleSources/, "context exposes stale source names");
 assert.match(ledgerSource, /priceSourceUpdatedAt/, "context exposes per-source success timestamps");
 assert.match(widgetSource, /priceStaleSources/, "price card consumes stale source names");
+assert.match(widgetSource, /formatPriceSourceDelayDetail/, "price card shows source-specific delay detail");
+assert.match(settingsSource, /formatPriceSourceDelayDetail/, "settings shows source-specific delay detail");
+assert.match(statusSource, /formatPriceSourceDelayDetail/, "shared price delay detail formatter exists");
+assert.match(statusSource, /BTC\/KRW 지연 중/, "Upbit delay copy names BTC/KRW");
+assert.match(statusSource, /BTC\/USD 지연 중/, "BTC/USD delay copy names BTC/USD");
+assert.match(statusSource, /USD\/KRW 지연 중/, "FX delay copy names USD/KRW");
+assert.match(statusSource, /마지막 정상 갱신/, "delay copy includes last successful update time");
 assert.match(widgetSource, /MAX_REASONABLE_KIMCHI_PREMIUM_ABS/, "price card guards unrealistic kimchi premium values");
 assert.match(widgetSource, /Math\.abs\(kimchi\)\s*>\s*MAX_REASONABLE_KIMCHI_PREMIUM_ABS/, "kimchi premium outliers are blocked");
 assert.match(widgetSource, /new Set\(priceSourceTimes\)\.size === 1/, "kimchi premium requires prices from the same successful fetch");

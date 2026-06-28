@@ -35,3 +35,21 @@ export function formatStalePriceStatus(
   });
   return `일부 시세 지연 · ${details.join(", ")}`;
 }
+
+export function formatPriceSourceDelayDetail(
+  staleSources: PriceSource[],
+  sourceUpdatedAt: PriceSourceUpdatedAt
+): string {
+  if (staleSources.length === 0) return "";
+  const labels: Record<PriceSource, string> = {
+    Upbit: "BTC/KRW 지연 중",
+    Binance: "BTC/USD 지연 중",
+    FX: "USD/KRW 지연 중",
+  };
+  const details = staleSources.map((source) => {
+    const updatedAt = sourceUpdatedAt[PRICE_SOURCE_FIELD[source]];
+    const time = formatUpdatedAt(updatedAt);
+    return time ? `${labels[source]} · 마지막 정상 갱신: ${time}` : `${labels[source]} · 아직 정상 갱신 없음`;
+  });
+  return details.join(" / ");
+}
