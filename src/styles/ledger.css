@@ -320,6 +320,38 @@
   text-decoration: none;
   display: inline-block;
 }
+.ldg-help-important {
+  border-color: rgba(247, 147, 26, 0.34);
+  background: rgba(247, 147, 26, 0.08);
+}
+.ldg-help-section {
+  margin-top: 12px;
+}
+.ldg-help-copy {
+  margin-top: 10px;
+  color: var(--ldg-fg-2);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.ldg-help-copy p {
+  margin: 0;
+}
+.ldg-help-copy p + p {
+  margin-top: 8px;
+}
+.ldg-help-list {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  color: var(--ldg-fg-2);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.ldg-help-list li + li {
+  margin-top: 4px;
+}
+.ldg-help-back {
+  margin-top: 14px;
+}
 
 /* ---- Balance ---- */
 .ldg-balance-main {

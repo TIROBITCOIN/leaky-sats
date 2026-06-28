@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import "../../styles/ledger.css";
 import "../../styles/forms.css";
 import { useLedger } from "../../state/LedgerContext";
@@ -89,6 +90,18 @@ export default function SettingsPage() {
       <div className="ldg-content">
         <div className="ldg-page-title">설정</div>
         <div className="ldg-page-sub">표시 방식, 시세, 카테고리, 백업, 로컬 잠금을 관리합니다.</div>
+
+        <div className="ldg-card">
+          <div className="ldg-setting-row">
+            <div>
+              <div className="ldg-setting-label">도움말 / 사용법</div>
+              <div className="ldg-setting-desc">거래 입력, 정산달, 백업, 시세 지연을 처음 쓰는 사람 기준으로 설명합니다.</div>
+            </div>
+            <Link className="ldg-link" to="/help">
+              열기
+            </Link>
+          </div>
+        </div>
 
         <div className="ldg-card">
           <div className="ldg-setting-row">

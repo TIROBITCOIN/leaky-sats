@@ -32,8 +32,9 @@ Use this checklist after a PR is merged into `master`.
 
 1. Open the stable URL on Android Chrome or iOS Safari.
 2. Confirm the bottom navigation is reachable.
-3. Confirm text and buttons do not overlap on the main screens.
-4. If the old version still appears, fully close and reopen the browser/PWA, then refresh.
+3. Open Settings -> Help / Usage and confirm the in-app help page loads.
+4. Confirm text and buttons do not overlap on the main screens.
+5. If the old version still appears, fully close and reopen the browser/PWA, then refresh.
 
 ## 5. Transactions
 
