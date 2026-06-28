@@ -14,6 +14,7 @@ const applePngPath = join(root, "public", "icons", "apple-touch-icon-180.png");
 const categoryIconsPath = join(root, "src", "lib", "categoryIcons.ts");
 const categoriesPath = join(root, "src", "lib", "categories.ts");
 const categoryIconComponentPath = join(root, "src", "components", "home", "CategoryIcon.tsx");
+const ledgerContextPath = join(root, "src", "state", "LedgerContext.tsx");
 
 assert.equal(existsSync(manifestPath), true, "manifest exists");
 assert.equal(existsSync(indexPath), true, "index.html exists");
@@ -51,6 +52,7 @@ assert.match(index, /font-display|display=swap/, "external font uses display swa
 const categoryIcons = readFileSync(categoryIconsPath, "utf8");
 const categories = readFileSync(categoriesPath, "utf8");
 const categoryIconComponent = readFileSync(categoryIconComponentPath, "utf8");
+const ledgerContext = readFileSync(ledgerContextPath, "utf8");
 assert.match(categoryIcons, /id:\s*"card"/, "card category icon exists");
 assert.match(
   categoryIcons,
@@ -63,6 +65,11 @@ assert.match(
   "bitcoin icon uses the minimal symbol path"
 );
 assert.match(categories, /id:\s*"card_bill"[\s\S]*?icon:\s*"card"/, "card bill uses the card icon");
+assert.match(
+  ledgerContext,
+  /category\.id\s*===\s*"card_bill"\s*\?\s*builtIn\.icon\s*:\s*category\.icon/,
+  "persisted card_bill categories are refreshed to the built-in card icon"
+);
 assert.match(categoryIconComponent, /hexToRgba\(c\.fg,\s*0\.1\)/, "category icon background opacity is minimal");
 assert.match(categoryIconComponent, /strokeWidth="1\.6"/, "category icon stroke is lighter");
 
