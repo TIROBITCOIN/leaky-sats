@@ -90,14 +90,17 @@ export const nowDatetimeLocal = (): string => {
 };
 
 // "오늘 HH:MM" / "어제 HH:MM" / "M월 D일" 형태의 거래 시각 라벨 생성
+// 00:00은 시간 없는 거래로 간주하여 시간 부분을 생략합니다.
 export const formatTxnTime = (iso: string): string => {
   const d = new Date(iso);
   const now = new Date();
   const startOfDay = (dt: Date) => new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()).getTime();
   const diffDays = Math.round((startOfDay(now) - startOfDay(d)) / 86_400_000);
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  if (diffDays === 0) return `오늘 ${hh}:${mm}`;
-  if (diffDays === 1) return `어제 ${hh}:${mm}`;
-  return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+  const hh = d.getHours();
+  const mm = d.getMinutes();
+  const hasTime = hh !== 0 || mm !== 0;
+  const timeSuffix = hasTime ? ` ${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}` : "";
+  if (diffDays === 0) return `오늘${timeSuffix}`;
+  if (diffDays === 1) return `어제${timeSuffix}`;
+  return `${d.getMonth() + 1}월 ${d.getDate()}일${timeSuffix}`;
 };
