@@ -4,14 +4,14 @@ import { readFileSync } from "node:fs";
 const txnRow = readFileSync("src/components/home/TxnRow.tsx", "utf8");
 const format = readFileSync("src/lib/format.ts", "utf8");
 
-// TxnRow imports formatTxnTime
-assert.match(txnRow, /import.*formatTxnTime.*from/, "TxnRow imports formatTxnTime");
+// TxnRow imports formatTxnDateLabel (date-only, no time)
+assert.match(txnRow, /import.*formatTxnDateLabel.*from/, "TxnRow imports formatTxnDateLabel");
 
 // TxnRow uses getTxnDisplayTime helper instead of raw t.time
 assert.match(txnRow, /getTxnDisplayTime/, "TxnRow uses getTxnDisplayTime helper");
 
-// getTxnDisplayTime calls formatTxnTime(txn.date)
-assert.match(txnRow, /formatTxnTime\(txn\.date\)/, "getTxnDisplayTime computes label from txn.date");
+// getTxnDisplayTime calls formatTxnDateLabel(txn.date)
+assert.match(txnRow, /formatTxnDateLabel\(txn\.date\)/, "getTxnDisplayTime uses formatTxnDateLabel");
 
 // getTxnDisplayTime has fallback to txn.time for old data
 assert.match(txnRow, /return txn\.time/, "getTxnDisplayTime falls back to txn.time");
@@ -20,16 +20,22 @@ assert.match(txnRow, /return txn\.time/, "getTxnDisplayTime falls back to txn.ti
 const jsxSection = txnRow.slice(txnRow.indexOf("return ("));
 assert.doesNotMatch(jsxSection, /\bt\.time\b/, "JSX does not directly render t.time");
 
-// formatTxnTime still exists and computes relative labels
-assert.match(format, /formatTxnTime/, "formatTxnTime exists in format.ts");
-assert.match(format, /오늘/, "formatTxnTime produces 오늘 label");
-assert.match(format, /어제/, "formatTxnTime produces 어제 label");
+// formatTxnDateLabel exists and returns date-only labels
+assert.match(format, /formatTxnDateLabel/, "formatTxnDateLabel exists in format.ts");
+assert.match(format, /export const formatTxnDateLabel/, "formatTxnDateLabel is exported");
 
-// formatTxnTime hides 00:00 time
-assert.match(format, /hasTime/, "formatTxnTime checks for 00:00");
-assert.match(format, /hh !== 0 \|\| mm !== 0/, "formatTxnTime treats 00:00 as no-time");
-// Past dates also get time suffix when non-zero
-assert.match(format, /월.*일.*timeSuffix/, "past dates include timeSuffix");
+// formatTxnDateLabel does NOT include time suffix
+const fnMatch = format.match(/export const formatTxnDateLabel[\s\S]*?^};/m);
+assert.ok(fnMatch, "formatTxnDateLabel function body found");
+const fnBody = fnMatch[0];
+assert.doesNotMatch(fnBody, /timeSuffix/, "formatTxnDateLabel has no timeSuffix");
+assert.doesNotMatch(fnBody, /getHours|getMinutes/, "formatTxnDateLabel does not use hours/minutes");
+assert.match(fnBody, /오늘/, "formatTxnDateLabel produces 오늘");
+assert.match(fnBody, /어제/, "formatTxnDateLabel produces 어제");
+assert.match(fnBody, /월.*일/, "formatTxnDateLabel produces M월 D일");
+
+// formatTxnTime still exists (used for storage in LedgerContext)
+assert.match(format, /export const formatTxnTime/, "formatTxnTime still exists");
 
 // Txn type still has time field (not removed for compatibility)
 const types = readFileSync("src/types.ts", "utf8");
