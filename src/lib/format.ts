@@ -104,3 +104,14 @@ export const formatTxnTime = (iso: string): string => {
   if (diffDays === 1) return `어제${timeSuffix}`;
   return `${d.getMonth() + 1}월 ${d.getDate()}일${timeSuffix}`;
 };
+
+// 거래 목록/홈 거래 카드용 날짜 전용 라벨 (시간 표시 없음)
+export const formatTxnDateLabel = (iso: string): string => {
+  const d = new Date(iso);
+  const now = new Date();
+  const startOfDay = (dt: Date) => new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()).getTime();
+  const diffDays = Math.round((startOfDay(now) - startOfDay(d)) / 86_400_000);
+  if (diffDays === 0) return "오늘";
+  if (diffDays === 1) return "어제";
+  return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+};

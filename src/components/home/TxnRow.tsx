@@ -1,10 +1,10 @@
 import type { Currency, Txn } from "../../types";
-import { fmtKRW, krwToBtc, krwToSats, formatCategoryLabel, formatTxnTime } from "../../lib/format";
+import { fmtKRW, krwToBtc, krwToSats, formatCategoryLabel, formatTxnDateLabel } from "../../lib/format";
 import CategoryIcon from "./CategoryIcon";
 
 function getTxnDisplayTime(txn: Txn): string {
   const parsed = new Date(txn.date);
-  if (!Number.isNaN(parsed.getTime())) return formatTxnTime(txn.date);
+  if (!Number.isNaN(parsed.getTime())) return formatTxnDateLabel(txn.date);
   return txn.time;
 }
 
