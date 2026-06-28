@@ -25,6 +25,12 @@ assert.match(format, /formatTxnTime/, "formatTxnTime exists in format.ts");
 assert.match(format, /오늘/, "formatTxnTime produces 오늘 label");
 assert.match(format, /어제/, "formatTxnTime produces 어제 label");
 
+// formatTxnTime hides 00:00 time
+assert.match(format, /hasTime/, "formatTxnTime checks for 00:00");
+assert.match(format, /hh !== 0 \|\| mm !== 0/, "formatTxnTime treats 00:00 as no-time");
+// Past dates also get time suffix when non-zero
+assert.match(format, /월.*일.*timeSuffix/, "past dates include timeSuffix");
+
 // Txn type still has time field (not removed for compatibility)
 const types = readFileSync("src/types.ts", "utf8");
 assert.match(types, /time:\s*string/, "Txn type retains time field for compatibility");
