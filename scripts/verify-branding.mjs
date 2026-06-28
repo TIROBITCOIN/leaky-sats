@@ -56,8 +56,8 @@ const ledgerContext = readFileSync(ledgerContextPath, "utf8");
 assert.match(categoryIcons, /id:\s*"card"/, "card category icon exists");
 assert.match(
   categoryIcons,
-  /M18 6L6 18 M8 8a2 2 0 1 0 0\.01 0 M16 16a2 2 0 1 0 0\.01 0/,
-  "percent icon uses the symmetric path"
+  /M19 5L5 19 M7\.5 7\.5a2 2 0 1 0 0\.01 0 M16\.5 16\.5a2 2 0 1 0 0\.01 0/,
+  "percent icon uses the balanced long-slash path"
 );
 assert.match(
   categoryIcons,
