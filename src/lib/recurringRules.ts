@@ -139,6 +139,11 @@ export function findRecurringRule(match: RecurringRuleMatch): RecurringRule | nu
   );
 }
 
+export function getRecurringRuleById(id: string | undefined): RecurringRule | null {
+  if (!id) return null;
+  return listRecurringRules().find((rule) => rule.id === id) ?? null;
+}
+
 export function upsertRecurringRule(
   previous: RecurringRuleMatch,
   input: NewRecurringRule

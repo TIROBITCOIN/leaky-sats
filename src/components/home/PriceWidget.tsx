@@ -1,5 +1,5 @@
 import type { LedgerData } from "../../types";
-import { kimchiPremium } from "../../lib/format";
+import { kimchiPremium, MAX_REASONABLE_KIMCHI_PREMIUM_ABS } from "../../lib/format";
 import { useLedger } from "../../state/LedgerContext";
 import { formatStalePriceStatus, formatUpdatedAt, getPriceTone, PRICE_TONE_COLOR } from "../../lib/priceStatus";
 
@@ -21,7 +21,24 @@ export default function PriceWidget({ d }: { d: LedgerData }) {
     priceSourceMeta,
   } = useLedger();
   const kimchi = kimchiPremium(d.btcKRW, d.btcUSD, d.usdKRW);
-  const kimchiClass = kimchi > 3 ? "danger" : kimchi >= 0 ? "warn" : "good";
+  const priceSourceTimes = [priceSourceUpdatedAt.btcKRW, priceSourceUpdatedAt.btcUSD, priceSourceUpdatedAt.usdKRW];
+  const primaryPriceSources = priceSourceMeta.btcUsd === "Binance" && priceSourceMeta.usdKrw === "Frankfurter";
+  const sourcesFresh =
+    !isPriceFallback &&
+    !isPriceStale &&
+    primaryPriceSources &&
+    priceStaleSources.length === 0 &&
+    priceSourceTimes.every((value): value is number => value !== null) &&
+    new Set(priceSourceTimes).size === 1;
+  const kimchiOutlier =
+    !Number.isFinite(kimchi) || Math.abs(kimchi) > MAX_REASONABLE_KIMCHI_PREMIUM_ABS;
+  const canShowKimchi = sourcesFresh && !kimchiOutlier;
+  const kimchiClass = !canShowKimchi ? "pending" : kimchi > 3 ? "danger" : kimchi >= 0 ? "warn" : "good";
+  const kimchiLabel = canShowKimchi
+    ? `김프 ${kimchi >= 0 ? "+" : ""}${kimchi.toFixed(2)}%`
+    : sourcesFresh
+    ? "김프 계산 보류"
+    : "시세 일부 지연";
 
   const tone = getPriceTone(priceStatus, isPriceFallback, isPriceStale);
   const statusLabel =
@@ -33,10 +50,7 @@ export default function PriceWidget({ d }: { d: LedgerData }) {
     <div className="ldg-card ldg-price">
       <div className="ldg-card-head">
         <div className="ldg-label">Bitcoin Price</div>
-        <div className={`ldg-kimchi ${kimchiClass}`}>
-          김프 근사 {kimchi >= 0 ? "+" : ""}
-          {kimchi.toFixed(2)}%
-        </div>
+        <div className={`ldg-kimchi ${kimchiClass}`}>{kimchiLabel}</div>
       </div>
       <div className="ldg-price-grid">
         <div className="ldg-price-col">

@@ -25,6 +25,7 @@ export interface Txn {
   amount: number; // KRW, negative = expense, positive = income
   btcAt: number; // KRW/BTC rate at the time of entry, used for sat conversion (immutable after creation)
   memo?: string;
+  recurringRuleId?: string;
 }
 
 export interface LedgerData {
@@ -46,4 +47,5 @@ export interface NewTxnInput {
   isIncome: boolean;
   date: string; // ISO datetime-local value
   memo?: string;
+  recurringRuleId?: string;
 }

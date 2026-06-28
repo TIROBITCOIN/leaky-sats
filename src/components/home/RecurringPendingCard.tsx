@@ -54,6 +54,7 @@ export default function RecurringPendingCard({ selectedMonth, period, addTxn }: 
       isIncome: rule.isIncome,
       date: `${dateKey}T00:00`,
       memo: "반복 항목에서 추가",
+      recurringRuleId: rule.id,
     });
     updateRecurringRule(rule.id, { lastAmount: amount });
     refreshPending();

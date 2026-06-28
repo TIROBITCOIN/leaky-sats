@@ -166,7 +166,8 @@ function isValidTxn(value: unknown): value is Txn {
     typeof value.btcAt === "number" &&
     Number.isFinite(value.btcAt) &&
     value.btcAt > 0 &&
-    (value.memo === undefined || typeof value.memo === "string")
+    (value.memo === undefined || typeof value.memo === "string") &&
+    (value.recurringRuleId === undefined || typeof value.recurringRuleId === "string")
   );
 }
 

@@ -72,8 +72,11 @@ export function fmtBtcValue(btc: number, unit: BtcUnit): string {
 }
 
 // 김프 = (업비트KRW − 바이낸스USD × USDKRW) / (바이낸스USD × USDKRW) × 100
+export const MAX_REASONABLE_KIMCHI_PREMIUM_ABS = 20;
+
 export const kimchiPremium = (btcKRW: number, btcUSD: number, usdKRW: number): number => {
   const fair = btcUSD * usdKRW;
+  if (!Number.isFinite(btcKRW) || !Number.isFinite(fair) || fair <= 0) return Number.NaN;
   return ((btcKRW - fair) / fair) * 100;
 };
 
