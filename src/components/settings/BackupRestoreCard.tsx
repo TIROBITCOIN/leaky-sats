@@ -27,12 +27,14 @@ export default function BackupRestoreCard() {
   const [backupPassword, setBackupPassword] = useState("");
   const [backupPasswordConfirm, setBackupPasswordConfirm] = useState("");
   const [restorePassword, setRestorePassword] = useState("");
+  const [restoreCompleted, setRestoreCompleted] = useState(false);
 
   const preparePlainRestore = (fileName: string, payload: BackupPayload) => {
     const prepared = prepareBackupRestore(payload);
     setPendingRestore({ fileName, payload, preview: prepared.preview });
     setPendingEncryptedRestore(null);
     setRestorePassword("");
+    setRestoreCompleted(false);
     setStatus({ tone: "idle", text: "복원할 내용을 확인한 뒤 복원 버튼을 눌러주세요." });
   };
 
@@ -70,6 +72,7 @@ export default function BackupRestoreCard() {
         setPendingRestore(null);
         setPendingEncryptedRestore({ fileName: file.name, encrypted: result.encrypted });
         setRestorePassword("");
+        setRestoreCompleted(false);
         setStatus({ tone: "idle", text: "암호화 백업입니다. 백업 비밀번호를 입력해주세요." });
         return;
       }
@@ -77,6 +80,7 @@ export default function BackupRestoreCard() {
     } catch (error) {
       setPendingRestore(null);
       setPendingEncryptedRestore(null);
+      setRestoreCompleted(false);
       setStatus({ tone: "error", text: error instanceof Error ? error.message : "백업 복원에 실패했습니다." });
     }
   };
@@ -107,6 +111,7 @@ export default function BackupRestoreCard() {
       setPendingRestore(null);
       setPendingEncryptedRestore(null);
       setRestorePassword("");
+      setRestoreCompleted(true);
       setStatus({ tone: "ok", text: "복원 완료. 앱을 새로고침하면 적용됩니다." });
     } catch (error) {
       setStatus({ tone: "error", text: error instanceof Error ? error.message : "백업 복원에 실패했습니다." });
@@ -209,6 +214,16 @@ export default function BackupRestoreCard() {
         </div>
       )}
       <div className={`ldg-backup-status ${status.tone}`}>{status.text}</div>
+      {restoreCompleted && (
+        <button
+          className="ldg-submit-btn secondary"
+          type="button"
+          style={{ marginTop: 10 }}
+          onClick={() => window.location.reload()}
+        >
+          지금 새로고침
+        </button>
+      )}
     </div>
   );
 }

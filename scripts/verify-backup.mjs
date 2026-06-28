@@ -46,6 +46,7 @@ assert.match(backup, /CURRENCY_STORAGE_KEY/, "currency preference included");
 assert.match(backup, /REFRESH_INTERVAL_STORAGE_KEY/, "refresh interval preference included");
 assert.match(backup, /RECURRING_RULES_KEY/, "recurring rules are included");
 assert.match(backup, /RECURRING_MATERIALIZED_KEY/, "recurring materialized state is included");
+assert.match(backup, /recurringRuleId/, "transaction recurringRuleId is accepted by backup validation");
 assert.match(backup, /myledger\.settlementDay\.v1/, "settlement day is included");
 assert.match(backup, /MONTHLY_CASH_KEY/, "monthly cash key is wired through backup");
 assert.doesNotMatch(backup, /pendingUndo.*createBackupPayload/s, "pendingUndo is not backed up");
@@ -68,6 +69,8 @@ assert.match(card, /백업 파일에서 복원/, "restore UI exists");
 assert.match(card, /복원할 데이터/, "restore preview is shown");
 assert.match(card, /자동으로 안전백업/, "pre-restore safety backup guidance is shown");
 assert.match(card, /invalidItemsRemoved/, "invalid item removal is reported");
+assert.match(card, /지금 새로고침/, "restore completion offers an explicit reload button");
+assert.match(card, /window\.location\.reload/, "reload button refreshes stale in-memory app state");
 
 assert.equal(existsSync(deploymentPath), true, "deployment docs exist");
 const docs = readFileSync(deploymentPath, "utf8");
@@ -130,6 +133,7 @@ const validTxn = {
   date: "2026-06-20T09:00",
   amount: 1000,
   btcAt: 100_000_000,
+  recurringRuleId: "rec_1",
 };
 const validCategory = {
   id: "salary",
@@ -215,6 +219,21 @@ assert.deepEqual(
   { "2026-06": 500_000 },
   "only valid monthly cash entries are restored"
 );
+assert.equal(
+  prepared.payload.data["myledger.txns.v1"].txns[0].recurringRuleId,
+  "rec_1",
+  "transaction recurringRuleId survives backup restore preparation"
+);
+assert.equal(
+  prepared.payload.data["myledger.recurringRules.v1"][0].id,
+  "rec_1",
+  "recurring rules survive backup restore preparation"
+);
+assert.deepEqual(
+  prepared.payload.data["myledger.recurringMaterialized.v1"],
+  ["rec_1:2026-06"],
+  "recurring materialized keys survive backup restore preparation"
+);
 
 const oldTxns = { txns: [{ ...validTxn, id: 99, title: "Before restore" }], nextTxnId: 100 };
 storage.setItem("myledger.txns.v1", JSON.stringify(oldTxns));
@@ -235,6 +254,21 @@ assert.deepEqual(
   JSON.parse(storage.getItem("myledger.monthlyCash.v1")),
   { "2026-06": 500_000 },
   "monthly cash is written during restore"
+);
+assert.equal(
+  JSON.parse(storage.getItem("myledger.txns.v1")).txns[0].recurringRuleId,
+  "rec_1",
+  "transaction recurringRuleId is written during restore"
+);
+assert.equal(
+  JSON.parse(storage.getItem("myledger.recurringRules.v1"))[0].id,
+  "rec_1",
+  "recurring rules are written during restore"
+);
+assert.deepEqual(
+  JSON.parse(storage.getItem("myledger.recurringMaterialized.v1")),
+  ["rec_1:2026-06"],
+  "recurring materialized keys are written during restore"
 );
 
 const minimalPayload = {

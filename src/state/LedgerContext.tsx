@@ -167,7 +167,8 @@ function isValidTxn(value: unknown): value is Txn {
     Number.isFinite(txn.amount) &&
     typeof txn.btcAt === "number" &&
     Number.isFinite(txn.btcAt) &&
-    txn.btcAt > 0
+    txn.btcAt > 0 &&
+    (txn.recurringRuleId === undefined || typeof txn.recurringRuleId === "string")
   );
 }
 
@@ -447,6 +448,7 @@ function applyAddTxn(state: State, input: NewTxnInput): State {
     amount: signedAmount,
     btcAt: state.data.btcKRW,
     memo: input.memo,
+    recurringRuleId: input.recurringRuleId,
   };
   return {
     ...state,
@@ -471,6 +473,7 @@ function applyUpdateTxn(state: State, id: number, input: NewTxnInput): State {
     date: input.date,
     amount: signedAmount,
     memo: input.memo,
+    recurringRuleId: input.recurringRuleId,
   };
   const nextTxns = state.data.txns.slice();
   nextTxns[idx] = updatedTxn;

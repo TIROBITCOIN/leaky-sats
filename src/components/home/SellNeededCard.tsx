@@ -24,12 +24,12 @@ function btcFromSats(sats: number): number {
 
 function BtcAndSats({ btc, sats, unit }: { btc: number; sats: number; unit: BtcUnit }) {
   return (
-    <>
+    <span className="ldg-sell-value">
       <strong>{fmtBtcValue(btc, unit)}</strong>
-      <span className="ldg-balance-sub" style={{ display: "block", marginTop: 2 }}>
+      <span className="ldg-balance-sub ldg-sell-sub">
         {sats.toLocaleString("en-US")} sats / {btc.toFixed(8)} BTC
       </span>
-    </>
+    </span>
   );
 }
 
@@ -40,7 +40,7 @@ function formatDoneBtc(btc: number): string {
 
 function DoneAmount({ btc, sats }: { btc: number; sats: number }) {
   return (
-    <span className="ldg-done-val">
+    <span className="ldg-done-val ldg-btc-val">
       <strong>{sats.toLocaleString("en-US")} sats</strong>
       <span className="sub">{formatDoneBtc(btc)}</span>
     </span>
@@ -80,7 +80,7 @@ export default function SellNeededCard({ result, unit, selectedMonth, monthlyCas
               <DoneAmount btc={expectedTotalBtc} sats={expectedTotalSats} />
             </DoneRow>
             <DoneRow label="통장 보유액">
-              <span className="ldg-done-val">
+              <span className="ldg-done-val ldg-money-val">
                 <strong>{fmtKRW(monthlyCash)}</strong>
               </span>
             </DoneRow>
@@ -88,7 +88,7 @@ export default function SellNeededCard({ result, unit, selectedMonth, monthlyCas
               <DoneAmount btc={actualSoldBtc} sats={monthlySellSummary.totalSatsSold} />
             </DoneRow>
             <DoneRow label="판매 후 BTC">
-              <span className="ldg-done-val">
+              <span className="ldg-done-val ldg-btc-val">
                 <strong>{formatDoneBtc(result.heldBtc)}</strong>
               </span>
             </DoneRow>
@@ -98,7 +98,7 @@ export default function SellNeededCard({ result, unit, selectedMonth, monthlyCas
         <>
           <div className="ldg-label">판매해야 하는 비트코인</div>
           <div className="ldg-sell-deficit-label">{monthLabel} 부족분</div>
-          <div className="ldg-sell-deficit-value">{fmtKRW(deficitKrw)}</div>
+          <div className="ldg-sell-deficit-value ldg-money-val">{fmtKRW(deficitKrw)}</div>
           <div className="ldg-sell-needed-row">
             <span>현재 BTC 가격 기준 예상 판매량</span>
             <BtcAndSats btc={sellBtc} sats={sellSats} unit={unit} />

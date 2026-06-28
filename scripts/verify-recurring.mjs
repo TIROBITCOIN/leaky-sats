@@ -14,9 +14,12 @@ assert.match(source, /catch\s*\{/, "invalid storage falls back safely");
 assert.match(entry, /markRecurringMaterialized/, "the transaction that creates a rule marks its settlement month");
 assert.match(
   entry,
-  /const matchingRecurringRule = useMemo\([\s\S]*findRecurringRule\([\s\S]*normalizeRecurringDay/,
-  "transaction edit finds a recurring rule from the stored transaction fields"
+  /getRecurringRuleById\(editingTxn\.recurringRuleId\)[\s\S]*findRecurringRule\([\s\S]*normalizeRecurringDay/,
+  "transaction edit finds a recurring rule by stored id before falling back to stored transaction fields"
 );
+assert.match(entry, /recurringRuleId:\s*rule\.id|recurringRuleId\s*=\s*rule\.id/, "created recurring transactions keep the rule id");
+assert.match(pendingCard, /recurringRuleId:\s*rule\.id/, "pending recurring confirmations store the rule id on the created transaction");
+assert.match(source, /export function getRecurringRuleById/, "recurring rules can be looked up by id");
 assert.match(
   entry,
   /useState\(\(\) => matchingRecurringRule !== null\)/,

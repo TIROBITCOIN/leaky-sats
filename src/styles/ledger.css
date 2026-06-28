@@ -390,10 +390,13 @@
 .ldg-sell-deficit-value {
   margin-top: 2px;
   color: var(--ldg-neg);
+  font-family: var(--ldg-mono);
   font-size: clamp(25px, 7vw, 32px);
   font-weight: 800;
   letter-spacing: 0;
   font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  overflow-wrap: anywhere;
 }
 .ldg-settlement-done {
   color: var(--ldg-pos);
@@ -410,9 +413,9 @@
   margin-top: 12px;
 }
 .ldg-done-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(88px, max-content) minmax(0, 1fr);
+  align-items: start;
   gap: 16px;
 }
 .ldg-done-label {
@@ -428,6 +431,10 @@
   font-size: 14px;
   line-height: 1.35;
   text-align: right;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
 }
 .ldg-done-val strong {
   display: block;
@@ -440,18 +447,45 @@
   font-size: 0.8em;
 }
 .ldg-sell-needed-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(120px, max-content) minmax(0, 1fr);
+  align-items: start;
   gap: 12px;
   margin-top: 10px;
   color: var(--ldg-fg-4);
   font-size: 12px;
 }
-.ldg-sell-needed-row strong {
+.ldg-sell-value {
+  min-width: 0;
+  color: var(--ldg-fg-2);
+  font-family: var(--ldg-mono);
+  line-height: 1.35;
+  text-align: right;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+.ldg-sell-needed-row strong,
+.ldg-sell-value strong {
+  display: block;
   color: var(--ldg-fg-2);
   font-family: var(--ldg-mono);
   font-size: 14px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+.ldg-sell-sub {
+  display: block;
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+.ldg-money-val,
+.ldg-btc-val {
+  font-family: var(--ldg-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
 }
 .ldg-sell-modal-head {
   display: flex;
@@ -611,6 +645,11 @@
   background: rgba(213, 107, 99, 0.12);
   color: var(--ldg-neg);
   border-color: rgba(213, 107, 99, 0.3);
+}
+.ldg-kimchi.pending {
+  background: rgba(138, 138, 138, 0.12);
+  color: var(--ldg-fg-3);
+  border-color: rgba(138, 138, 138, 0.26);
 }
 .ldg-price-grid {
   display: grid;
@@ -976,4 +1015,21 @@
   font-size: 10px;
   color: var(--ldg-fg-4);
   margin-top: 2px;
+}
+
+@media (max-width: 380px) {
+  .ldg-done-row,
+  .ldg-sell-needed-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .ldg-done-label {
+    white-space: normal;
+  }
+
+  .ldg-done-val,
+  .ldg-sell-value {
+    text-align: left;
+  }
 }

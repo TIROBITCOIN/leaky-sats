@@ -17,6 +17,7 @@ import { MAJOR_ITEM_GROUPS, type MajorItem } from "../../lib/majorItems";
 import {
   addRecurringRule,
   findRecurringRule,
+  getRecurringRuleById,
   markRecurringMaterialized,
   normalizeRecurringDay,
   updateRecurringRule,
@@ -107,15 +108,18 @@ export default function TransactionEntryPage() {
   const editingTxn = editId ? data.txns.find((t) => t.id === Number(editId)) ?? null : null;
   const monthParam = searchParams.get("month");
   const matchingRecurringRule = useMemo(
-    () =>
-      editingTxn
-        ? findRecurringRule({
-            title: editingTxn.title,
-            cat: editingTxn.cat,
-            isIncome: editingTxn.amount > 0,
-            dayOfMonth: normalizeRecurringDay(Number(editingTxn.date.slice(8, 10))),
-          })
-        : null,
+    () => {
+      if (!editingTxn) return null;
+      return (
+        getRecurringRuleById(editingTxn.recurringRuleId) ??
+        findRecurringRule({
+          title: editingTxn.title,
+          cat: editingTxn.cat,
+          isIncome: editingTxn.amount > 0,
+          dayOfMonth: normalizeRecurringDay(Number(editingTxn.date.slice(8, 10))),
+        })
+      );
+    },
     [editingTxn]
   );
 
@@ -151,34 +155,26 @@ export default function TransactionEntryPage() {
     e.preventDefault();
     if (amountNum <= 0 || !date) return;
     const storedDate = `${date}T00:00`;
+    let recurringRuleId: string | undefined;
+    if (createRecurring) {
+      const ruleInput = {
+        title: title.trim() || selectedCategory.label,
+        cat,
+        isIncome,
+        dayOfMonth: recurringDay,
+        lastAmount: amountNum,
+      };
+      const rule = matchingRecurringRule
+        ? updateRecurringRule(matchingRecurringRule.id, ruleInput) ?? addRecurringRule(ruleInput)
+        : addRecurringRule(ruleInput);
+      recurringRuleId = rule.id;
+      markRecurringMaterialized(rule.id, getSettlementMonthKeyForDate(storedDate, loadSettlementDay()));
+    }
     if (editingTxn) {
-      updateTxn(editingTxn.id, { title, cat, amount: amountNum, isIncome, date: storedDate, memo });
-      if (createRecurring) {
-        const ruleInput = {
-          title: title.trim() || selectedCategory.label,
-          cat,
-          isIncome,
-          dayOfMonth: recurringDay,
-          lastAmount: amountNum,
-        };
-        const rule = matchingRecurringRule
-          ? updateRecurringRule(matchingRecurringRule.id, ruleInput) ?? addRecurringRule(ruleInput)
-          : addRecurringRule(ruleInput);
-        markRecurringMaterialized(rule.id, getSettlementMonthKeyForDate(storedDate, loadSettlementDay()));
-      }
+      updateTxn(editingTxn.id, { title, cat, amount: amountNum, isIncome, date: storedDate, memo, recurringRuleId });
       navigate(-1);
     } else {
-      addTxn({ title, cat, amount: amountNum, isIncome, date: storedDate, memo });
-      if (createRecurring) {
-        const rule = addRecurringRule({
-          title: title.trim() || selectedCategory.label,
-          cat,
-          isIncome,
-          dayOfMonth: recurringDay,
-          lastAmount: amountNum,
-        });
-        markRecurringMaterialized(rule.id, getSettlementMonthKeyForDate(storedDate, loadSettlementDay()));
-      }
+      addTxn({ title, cat, amount: amountNum, isIncome, date: storedDate, memo, recurringRuleId });
       navigate("/");
     }
   };

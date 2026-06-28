@@ -132,6 +132,12 @@ assert.match(calendarStatsSrc, /SettlementPeriod/, "calendarStats is settlement-
 assert.match(statsPageSrc, /ldg-stats-month-selector/, "StatsPage wraps MonthSelector in a centered class");
 const ledgerCss = read("src/styles/ledger.css");
 assert.match(ledgerCss, /\.ldg-stats-month-selector\s*\{[^}]*justify-content:\s*center/s, "ldg-stats-month-selector centers its content");
+assert.match(ledgerCss, /\.ldg-done-row\s*\{[^}]*display:\s*grid/s, "settled rows use grid alignment");
+assert.match(ledgerCss, /\.ldg-sell-needed-row\s*\{[^}]*display:\s*grid/s, "sell-needed row uses grid alignment");
+assert.match(ledgerCss, /\.ldg-done-val\s*\{[^}]*font-family:\s*var\(--ldg-mono\)/s, "settled values use mono font");
+assert.match(ledgerCss, /\.ldg-sell-value\s*\{[^}]*font-family:\s*var\(--ldg-mono\)/s, "sell-needed values use mono font");
+assert.match(ledgerCss, /\.ldg-money-val,\s*\n\.ldg-btc-val\s*\{[^}]*font-variant-numeric:\s*tabular-nums/s, "money and BTC values use tabular numbers");
+assert.match(ledgerCss, /@media \(max-width:\s*380px\)[\s\S]*\.ldg-sell-needed-row/, "mobile width has sell row wrapping rules");
 
 // 9. ?ㅼ젙 移댄뀒怨좊━ UI媛 ????ぉ 以묒떖 ?섏엯/吏異?BTC ?뱀뀡???쒖떆
 // CURRENT_CATEGORY_IDS??BUILT_IN_CATEGORIES(Phase 10 ????ぉ 湲곕낯 seed) 湲곗??쇰줈 留뚮뱺????btc_sell泥섎읆
