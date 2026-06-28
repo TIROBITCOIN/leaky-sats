@@ -35,7 +35,8 @@
     "verify:recurring": "node scripts/verify-recurring.mjs",
     "verify:repo-layout": "node scripts/verify-repo-layout.mjs",
     "verify:category-unify": "node scripts/verify-category-unify.mjs",
-    "verify:date-input": "node scripts/verify-date-only-input.mjs"
+    "verify:date-input": "node scripts/verify-date-only-input.mjs",
+    "verify:release": "npm run build && npm run verify:backup && npm run verify:recurring && npm run verify:price-source-ui"
   },
   "dependencies": {
     "react": "^18.3.1",

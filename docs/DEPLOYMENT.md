@@ -2,6 +2,26 @@
 
 My Ledger는 서버 없는 Vite 정적 웹앱/PWA입니다. 배포 대상은 `dist` 디렉터리이며, SPA 라우팅을 위해 모든 경로를 `index.html`로 fallback해야 합니다.
 
+## 고정 URL과 개별 배포 URL
+
+사용자에게 공유하거나 QR 코드로 만들 URL은 고정 production domain을 사용합니다.
+
+- 사용자 공유용 고정 URL: `https://ledger-for-bitcoiners.vercel.app`
+
+Vercel은 배포마다 랜덤한 개별 deployment URL도 만듭니다. 예를 들면
+`https://ledger-for-bitcoiners-lql334i1e-willbegoodnurse-archs-projects.vercel.app`
+같은 주소입니다. 이 URL은 특정 배포를 테스트하거나 확인할 때는 유용하지만, 새 배포마다
+바뀔 수 있으므로 사용자 공유 링크나 QR 코드에는 쓰지 않습니다.
+
+QR 코드를 만들 때는 항상 아래 고정 URL을 넣습니다.
+
+```text
+https://ledger-for-bitcoiners.vercel.app
+```
+
+릴리즈 후에는 개별 deployment URL이 아니라 위 고정 URL에 접속해서 최신 production 배포가
+보이는지 확인합니다.
+
 ## 공통 설정
 
 - Build command: `npm run build`
