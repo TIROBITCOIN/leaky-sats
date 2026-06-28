@@ -1,7 +1,13 @@
 import type { LedgerData } from "../../types";
 import { kimchiPremium, MAX_REASONABLE_KIMCHI_PREMIUM_ABS } from "../../lib/format";
 import { useLedger } from "../../state/LedgerContext";
-import { formatStalePriceStatus, formatUpdatedAt, getPriceTone, PRICE_TONE_COLOR } from "../../lib/priceStatus";
+import {
+  formatPriceSourceDelayDetail,
+  formatStalePriceStatus,
+  formatUpdatedAt,
+  getPriceTone,
+  PRICE_TONE_COLOR,
+} from "../../lib/priceStatus";
 
 const TONE_LABEL: Record<ReturnType<typeof getPriceTone>, (time: string) => string> = {
   live: (time) => `LIVE${time ? ` · ${time} 갱신` : ""}`,
@@ -34,6 +40,16 @@ export default function PriceWidget({ d }: { d: LedgerData }) {
     !Number.isFinite(kimchi) || Math.abs(kimchi) > MAX_REASONABLE_KIMCHI_PREMIUM_ABS;
   const canShowKimchi = sourcesFresh && !kimchiOutlier;
   const kimchiClass = !canShowKimchi ? "pending" : kimchi > 3 ? "danger" : kimchi >= 0 ? "warn" : "good";
+  const kimchiDelayDetail =
+    priceStaleSources.length > 0
+      ? formatPriceSourceDelayDetail(priceStaleSources, priceSourceUpdatedAt)
+      : !primaryPriceSources && !isPriceFallback
+      ? "일부 가격이 보조 API 기준이라 김프 계산을 잠시 보류합니다."
+      : isPriceFallback
+      ? "아직 모든 시세가 한 번 이상 정상 갱신되지 않았습니다."
+      : kimchiOutlier
+      ? "계산값이 비정상 범위를 벗어나 확인을 기다리는 중입니다."
+      : "";
   const kimchiLabel = canShowKimchi
     ? `김프 ${kimchi >= 0 ? "+" : ""}${kimchi.toFixed(2)}%`
     : sourcesFresh
@@ -73,6 +89,11 @@ export default function PriceWidget({ d }: { d: LedgerData }) {
           ? "Coinbase 환율 기준 김프(근사)"
           : "환율 기준 김프(근사)"}
       </div>
+      {!canShowKimchi && kimchiDelayDetail && (
+        <div className="ldg-tiny" style={{ marginTop: 8 }}>
+          {kimchiDelayDetail}
+        </div>
+      )}
       <div className="ldg-tiny" style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 6 }}>
         <span
           style={{

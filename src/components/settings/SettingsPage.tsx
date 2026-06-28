@@ -2,7 +2,12 @@ import { useState, useMemo } from "react";
 import "../../styles/ledger.css";
 import "../../styles/forms.css";
 import { useLedger } from "../../state/LedgerContext";
-import { formatStalePriceStatus, formatUpdatedAt, getPriceTone } from "../../lib/priceStatus";
+import {
+  formatPriceSourceDelayDetail,
+  formatStalePriceStatus,
+  formatUpdatedAt,
+  getPriceTone,
+} from "../../lib/priceStatus";
 import { loadWalletName, saveWalletName, DEFAULT_NAME, MAX_LENGTH } from "../../lib/walletName";
 import { loadBtcUnit, saveBtcUnit, type BtcUnit } from "../../lib/format";
 import { getHeldBtc, setHeldBtc, normalizeHeldBtcInput } from "../../lib/heldBtc";
@@ -69,6 +74,7 @@ export default function SettingsPage() {
   const priceTone = getPriceTone(priceStatus, isPriceFallback, isPriceStale);
   const updatedAtText = formatUpdatedAt(priceUpdatedAt);
   const staleStatusText = formatStalePriceStatus(priceStaleSources, priceSourceUpdatedAt);
+  const delayDetailText = formatPriceSourceDelayDetail(priceStaleSources, priceSourceUpdatedAt);
   const statusText =
     priceTone === "loading"
       ? "시세를 불러오는 중..."
@@ -144,6 +150,12 @@ export default function SettingsPage() {
                   : priceSourceMeta.usdKrw
                   ? ` · 환율 ${priceSourceMeta.usdKrw}`
                   : ""}
+                {delayDetailText ? (
+                  <>
+                    <br />
+                    {delayDetailText}
+                  </>
+                ) : null}
               </div>
             </div>
             <button type="button" className="ldg-link" onClick={refreshPrices}>
