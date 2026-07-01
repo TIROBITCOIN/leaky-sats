@@ -30,6 +30,9 @@ const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 const verifyCommands = Object.entries(pkg.scripts).filter(([name]) => name.startsWith("verify:"));
 assert.ok(verifyCommands.length > 0, "package.json exposes verification commands");
 for (const [name, command] of verifyCommands) {
+  const isAggregator = /(^|\s)npm run /.test(command) || command.includes("&&");
+  if (isAggregator) continue;
+
   assert.match(command, /^node scripts\/verify-.*\.mjs$/, `${name} points to scripts/`);
 }
 
