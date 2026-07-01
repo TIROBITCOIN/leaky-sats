@@ -102,7 +102,7 @@
   border-radius: 99px;
   padding: 8px 14px;
   cursor: pointer;
-  transition: background 0.18s, border-color 0.18s, color 0.18s;
+  transition: transform 0.12s ease, background 0.15s ease, opacity 0.12s ease, border-color 0.15s ease, color 0.15s ease;
 }
 .ldg-chip.active {
   background: var(--chip-bg, rgba(230, 154, 51, 0.18));
@@ -202,9 +202,12 @@
   cursor: pointer;
   width: 100%;
   display: block;
+  transition: transform 0.12s ease, background 0.15s ease, opacity 0.12s ease, filter 0.12s ease;
 }
 .ldg-submit-btn:active {
-  opacity: 0.85;
+  filter: brightness(0.95);
+  opacity: 0.92;
+  transform: scale(0.97);
 }
 
 .ldg-secondary-btn {
@@ -218,6 +221,7 @@
   padding: 12px 14px;
   cursor: pointer;
   width: 100%;
+  transition: transform 0.12s ease, background 0.15s ease, opacity 0.12s ease, border-color 0.15s ease;
 }
 .ldg-recurring-check {
   display: flex;
@@ -295,6 +299,7 @@
   padding: 6px 12px;
   border-radius: 99px;
   cursor: pointer;
+  transition: transform 0.12s ease, background 0.15s ease, opacity 0.12s ease, color 0.15s ease;
 }
 .ldg-radio-group button.on {
   background: var(--ldg-orange);
@@ -333,6 +338,7 @@
   border-radius: 9px;
   color: var(--ldg-fg-2);
   cursor: pointer;
+  transition: transform 0.12s ease, background 0.15s ease, opacity 0.12s ease, border-color 0.15s ease;
 }
 .ldg-icon-action.danger {
   color: var(--ldg-neg);
@@ -390,6 +396,7 @@
   border: 1px solid transparent;
   border-radius: 9px;
   cursor: pointer;
+  transition: transform 0.12s ease, background 0.15s ease, opacity 0.12s ease, border-color 0.15s ease;
 }
 .ldg-icon-picker-btn.selected {
   border-color: currentColor;
@@ -437,4 +444,17 @@
   color: var(--ldg-orange);
   font-size: 12px;
   font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ldg-submit-btn:active,
+  .ldg-secondary-btn:active,
+  .ldg-chip:active,
+  .ldg-cat-group-header:active,
+  .ldg-recurring-check:active,
+  .ldg-radio-group button:active,
+  .ldg-icon-action:active,
+  .ldg-icon-picker-btn:active {
+    transform: scale(0.99);
+  }
 }

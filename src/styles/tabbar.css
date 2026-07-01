@@ -25,10 +25,22 @@
   letter-spacing: 0.01em;
   cursor: pointer;
   border-radius: 12px;
-  transition: color 0.18s, background 0.18s;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s ease, background 0.15s ease, opacity 0.12s ease, color 0.15s ease;
+}
+
+.ldg-tab:active {
+  opacity: 0.92;
+  transform: scale(0.97);
 }
 
 .ldg-tab.active {
   color: var(--ldg-orange);
   background: rgba(230, 154, 51, 0.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ldg-tab:active {
+    transform: scale(0.99);
+  }
 }

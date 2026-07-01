@@ -70,6 +70,7 @@
   font-weight: 700;
   font-size: 13px;
   cursor: pointer;
+  transition: transform 0.12s ease, background 0.15s ease, opacity 0.12s ease;
 }
 
 .ldg-offline-badge {
@@ -136,6 +137,7 @@
   font: inherit;
   font-weight: 700;
   cursor: pointer;
+  transition: transform 0.12s ease, background 0.15s ease, opacity 0.12s ease;
 }
 
 .ldg-install-actions button:first-child {
@@ -431,4 +433,11 @@
   font-size: 10px;
   color: var(--ldg-fg-4);
   margin-top: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ldg-toast button:active,
+  .ldg-install-actions button:active {
+    transform: scale(0.99);
+  }
 }

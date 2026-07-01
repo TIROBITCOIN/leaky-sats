@@ -145,10 +145,12 @@
   place-items: center;
   border-radius: 50%;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: transform 0.12s ease, background 0.15s ease, opacity 0.12s ease, border-color 0.15s ease;
 }
 .ldg-month-nav-btn:active {
   background: rgba(17, 17, 20, 0.1);
+  opacity: 0.92;
+  transform: scale(0.97);
 }
 .ldg-month-selector-label {
   font: inherit;
@@ -163,10 +165,12 @@
   min-height: 44px;
   border-radius: 12px;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: transform 0.12s ease, background 0.15s ease, opacity 0.12s ease, color 0.15s ease;
 }
 .ldg-month-selector-label:active {
   background: rgba(17, 17, 20, 0.07);
+  opacity: 0.92;
+  transform: scale(0.97);
 }
 .ldg-month-selector-label.ldg-month-selector-label-past {
   color: var(--ldg-orange);
@@ -201,7 +205,7 @@
   padding: 12px 0;
   border-radius: 12px;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition: transform 0.12s ease, background 0.15s ease, opacity 0.12s ease, border-color 0.15s ease, color 0.15s ease;
 }
 .ldg-month-picker-cell.today {
   border-color: rgba(230, 154, 51, 0.45);
@@ -1073,5 +1077,123 @@
   .ldg-done-val,
   .ldg-sell-value {
     text-align: left;
+  }
+}
+
+@keyframes ldg-view-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ldg-modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.ldg-view-enter {
+  height: 100%;
+  animation: ldg-view-in 0.22s ease-out;
+}
+
+.ldg-modal-content {
+  animation: ldg-modal-in 0.18s ease-out;
+}
+
+.ldg-month-nav-btn,
+.ldg-month-selector-label,
+.ldg-month-picker-cell,
+.ldg-toggle-btn,
+.ldg-link,
+.ldg-calendar-cell,
+.ldg-segment-btn,
+.ldg-txn-menu-btn,
+.ldg-sell-modal-close,
+.ldg-action-sheet-actions button,
+.ldg-submit-btn,
+.ldg-secondary-btn,
+.ldg-chip,
+.ldg-cat-group-header,
+.ldg-recurring-check,
+.ldg-radio-group button,
+.ldg-icon-action,
+.ldg-icon-picker-btn,
+.ldg-tab,
+.ldg-toast button,
+.ldg-install-actions button {
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s ease, background 0.15s ease, opacity 0.12s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.ldg-month-nav-btn:active,
+.ldg-month-selector-label:active,
+.ldg-month-picker-cell:active,
+.ldg-toggle-btn:active,
+.ldg-link:active,
+.ldg-calendar-cell:not(:disabled):active,
+.ldg-segment-btn:active,
+.ldg-txn-menu-btn:active,
+.ldg-sell-modal-close:active,
+.ldg-action-sheet-actions button:active,
+.ldg-submit-btn:active,
+.ldg-secondary-btn:active,
+.ldg-chip:active,
+.ldg-cat-group-header:active,
+.ldg-recurring-check:active,
+.ldg-radio-group button:active,
+.ldg-icon-action:active,
+.ldg-icon-picker-btn:active,
+.ldg-tab:active,
+.ldg-toast button:active,
+.ldg-install-actions button:active {
+  opacity: 0.92;
+  transform: scale(0.97);
+}
+
+.ldg-submit-btn:active,
+.ldg-install-actions button:first-child:active {
+  filter: brightness(0.95);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ldg-view-enter,
+  [class*="modal-in"],
+  .ldg-modal-content {
+    animation: none;
+  }
+
+  .ldg-month-nav-btn:active,
+  .ldg-month-selector-label:active,
+  .ldg-month-picker-cell:active,
+  .ldg-toggle-btn:active,
+  .ldg-link:active,
+  .ldg-calendar-cell:not(:disabled):active,
+  .ldg-segment-btn:active,
+  .ldg-txn-menu-btn:active,
+  .ldg-sell-modal-close:active,
+  .ldg-action-sheet-actions button:active,
+  .ldg-submit-btn:active,
+  .ldg-secondary-btn:active,
+  .ldg-chip:active,
+  .ldg-cat-group-header:active,
+  .ldg-recurring-check:active,
+  .ldg-radio-group button:active,
+  .ldg-icon-action:active,
+  .ldg-icon-picker-btn:active,
+  .ldg-tab:active,
+  .ldg-toast button:active,
+  .ldg-install-actions button:active {
+    transform: scale(0.99);
   }
 }

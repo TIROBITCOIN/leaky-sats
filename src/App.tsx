@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { LedgerProvider } from "./state/LedgerContext";
 import PageContainer from "./components/layout/PageContainer";
 import TabBar from "./components/layout/TabBar";
@@ -15,6 +15,26 @@ import InstallPrompt from "./components/pwa/InstallPrompt";
 import AppLockGate from "./components/security/AppLockGate";
 import OnboardingPrompt, { isOnboardingVisible } from "./components/onboarding/OnboardingPrompt";
 
+function AppRoutes() {
+  const location = useLocation();
+  const activeTab = location.pathname === "/" ? "home" : location.pathname.split("/")[1] || "home";
+
+  return (
+    <div className="ldg-view-enter" key={activeTab}>
+      <Routes location={location}>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/add" element={<TransactionEntryPage />} />
+        <Route path="/transactions" element={<TxnListPage />} />
+        <Route path="/stats" element={<StatsPage />} />
+        {/* Phase 13.1: 자산 탭 제거 — 옛 북마크/링크로 들어오면 빈 화면 대신 홈으로 보낸다. */}
+        <Route path="/assets" element={<Navigate to="/" replace />} />
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/help" element={<HelpPage />} />
+      </Routes>
+    </div>
+  );
+}
+
 export default function App() {
   const [showOnboarding, setShowOnboarding] = useState(isOnboardingVisible);
 
@@ -24,16 +44,7 @@ export default function App() {
         <AppLockGate>
           <PageContainer>
             <div className="app-main">
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/add" element={<TransactionEntryPage />} />
-                <Route path="/transactions" element={<TxnListPage />} />
-                <Route path="/stats" element={<StatsPage />} />
-                {/* Phase 13.1: 자산 탭 제거 — 옛 북마크/링크로 들어오면 빈 화면 대신 홈으로 보낸다. */}
-                <Route path="/assets" element={<Navigate to="/" replace />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="/help" element={<HelpPage />} />
-              </Routes>
+              <AppRoutes />
             </div>
             <TabBar />
             <OfflineBadge />
