@@ -138,6 +138,7 @@ export interface PriceFetchResult {
   btcKRW?: number;
   btcUSD?: number;
   usdKRW?: number;
+  btcKrwIsFallback?: boolean;
   blockHeight?: number;
   sourceMeta: PriceSourceMeta;
   errors: PriceSource[];
@@ -161,6 +162,19 @@ export async function fetchLivePrices(): Promise<PriceFetchResult> {
   if (upbit.status === "fulfilled") result.btcKRW = upbit.value;
   else {
     console.error("Upbit price fetch failed:", upbit.reason);
+    const btcUsdVal = btcUsd.status === "fulfilled" ? btcUsd.value.value : undefined;
+    const usdKrw = fx.status === "fulfilled" ? fx.value.value : undefined;
+    if (
+      Number.isFinite(btcUsdVal) &&
+      Number.isFinite(usdKrw) &&
+      btcUsdVal !== undefined &&
+      usdKrw !== undefined &&
+      btcUsdVal > 0 &&
+      usdKrw > 0
+    ) {
+      result.btcKRW = btcUsdVal * usdKrw;
+      result.btcKrwIsFallback = true;
+    }
     result.errors.push("Upbit");
   }
 

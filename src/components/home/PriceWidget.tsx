@@ -21,6 +21,7 @@ export default function PriceWidget({ d }: { d: LedgerData }) {
     priceStatus,
     isPriceFallback,
     isPriceStale,
+    btcKrwIsFallback,
     priceUpdatedAt,
     priceStaleSources,
     priceSourceUpdatedAt,
@@ -32,6 +33,7 @@ export default function PriceWidget({ d }: { d: LedgerData }) {
   const sourcesFresh =
     !isPriceFallback &&
     !isPriceStale &&
+    !btcKrwIsFallback &&
     primaryPriceSources &&
     priceStaleSources.length === 0 &&
     priceSourceTimes.every((value): value is number => value !== null) &&
@@ -41,7 +43,9 @@ export default function PriceWidget({ d }: { d: LedgerData }) {
   const canShowKimchi = sourcesFresh && !kimchiOutlier;
   const kimchiClass = !canShowKimchi ? "pending" : kimchi > 3 ? "danger" : kimchi >= 0 ? "warn" : "good";
   const kimchiDelayDetail =
-    priceStaleSources.length > 0
+    btcKrwIsFallback
+      ? "김프 보류(해외 환산 표시 중)"
+      : priceStaleSources.length > 0
       ? formatPriceSourceDelayDetail(priceStaleSources, priceSourceUpdatedAt)
       : !primaryPriceSources && !isPriceFallback
       ? "일부 가격이 보조 API 기준이라 김프 계산을 잠시 보류합니다."

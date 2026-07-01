@@ -31,7 +31,7 @@ export function applyPriceFetchResult(
 ): PriceFreshness {
   return {
     lastOkAt: {
-      btcKRW: result.btcKRW !== undefined ? settledAt : previous.lastOkAt.btcKRW,
+      btcKRW: result.btcKRW !== undefined && !result.btcKrwIsFallback ? settledAt : previous.lastOkAt.btcKRW,
       btcUSD: result.btcUSD !== undefined ? settledAt : previous.lastOkAt.btcUSD,
       usdKRW: result.usdKRW !== undefined ? settledAt : previous.lastOkAt.usdKRW,
     },

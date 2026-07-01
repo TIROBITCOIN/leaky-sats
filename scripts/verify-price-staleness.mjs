@@ -58,4 +58,14 @@ assert.deepEqual(state.staleSources, [], "FX recovery clears stale state");
 assert.equal(state.lastOkAt.usdKRW, 3_000, "FX recovery advances its timestamp");
 assert.equal(freshness.isPriceStale(state), false, "recovered sources are fresh again");
 
+state = freshness.applyPriceFetchResult(
+  state,
+  { btcKRW: 103, btcUSD: 83, usdKRW: 1.31, btcKrwIsFallback: true, errors: ["Upbit"] },
+  4_000
+);
+assert.equal(state.lastOkAt.btcKRW, 3_000, "derived BTC/KRW does not advance the Upbit timestamp");
+assert.equal(state.lastOkAt.btcUSD, 4_000, "BTC/USD still advances when fallback BTC/KRW is derived");
+assert.equal(state.lastOkAt.usdKRW, 4_000, "USD/KRW still advances when fallback BTC/KRW is derived");
+assert.deepEqual(state.staleSources, ["Upbit"], "Upbit remains stale while derived BTC/KRW is displayed");
+
 console.log("verify:price-staleness passed");

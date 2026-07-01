@@ -41,6 +41,7 @@ export type PriceStatus = "idle" | "loading" | "ok" | "error";
 interface PriceMeta {
   status: PriceStatus;
   error: string | null;
+  btcKrwIsFallback: boolean;
   freshness: PriceFreshness;
   sourceMeta: PriceSourceMeta;
 }
@@ -119,6 +120,7 @@ interface LedgerContextValue {
   priceUpdatedAt: number | null;
   isPriceFallback: boolean;
   isPriceStale: boolean;
+  btcKrwIsFallback: boolean;
   priceStaleSources: PriceSource[];
   priceSourceUpdatedAt: PriceSourceUpdatedAt;
   priceSourceMeta: PriceSourceMeta;
@@ -361,6 +363,7 @@ function reducer(state: State, action: Action): State {
         priceMeta: {
           status: errors.length > 0 ? "error" : "ok",
           error: errors.length > 0 ? errors.join(" / ") : null,
+          btcKrwIsFallback: action.btcKrwIsFallback === true,
           freshness,
           sourceMeta: {
             btcUsd: sourceMeta.btcUsd ?? state.priceMeta.sourceMeta.btcUsd,
@@ -512,6 +515,7 @@ function buildInitialState(): State {
     priceMeta: {
       status: "idle",
       error: null,
+      btcKrwIsFallback: false,
       freshness: createInitialPriceFreshness(),
       sourceMeta: { btcUsd: null, usdKrw: null },
     },
@@ -601,6 +605,7 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
       priceUpdatedAt: getLatestPriceUpdateAt(freshness),
       isPriceFallback: hasPriceFallback(freshness),
       isPriceStale: isPriceFreshnessStale(freshness),
+      btcKrwIsFallback: state.priceMeta.btcKrwIsFallback,
       priceStaleSources: freshness.staleSources,
       priceSourceUpdatedAt: freshness.lastOkAt,
       priceSourceMeta: state.priceMeta.sourceMeta,
