@@ -1,4 +1,4 @@
-const CACHE_NAME = "myledger-shell-v3";
+const CACHE_NAME = "myledger-shell-v4";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -57,6 +57,7 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
   if (API_HOSTS.has(url.hostname)) return;
+  if (url.origin === self.location.origin && url.pathname.startsWith("/api/")) return;
 
   if (request.mode === "navigate") {
     event.respondWith(networkFirstNavigation(request));

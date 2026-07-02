@@ -26,8 +26,9 @@ for (const icon of manifest.icons) {
 
 assert.equal(existsSync(swPath), true, "service worker exists");
 const sw = readFileSync(swPath, "utf8");
-assert.match(sw, /myledger-shell-v3/, "service worker cache name");
+assert.match(sw, /myledger-shell-v4/, "service worker cache name");
 assert.match(sw, /mode === "navigate"/, "service worker navigation handling");
+assert.match(sw, /url\.pathname\.startsWith\("\/api\/"\)/, "service worker does not cache same-origin API routes");
 
 const index = readFileSync(indexPath, "utf8");
 assert.match(index, /<link rel="manifest" href="\/manifest\.webmanifest"/, "index manifest link");
