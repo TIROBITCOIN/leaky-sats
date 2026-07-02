@@ -29,12 +29,10 @@ export default function PriceWidget({ d }: { d: LedgerData }) {
   } = useLedger();
   const kimchi = kimchiPremium(d.btcKRW, d.btcUSD, d.usdKRW);
   const priceSourceTimes = [priceSourceUpdatedAt.btcKRW, priceSourceUpdatedAt.btcUSD, priceSourceUpdatedAt.usdKRW];
-  const primaryPriceSources = priceSourceMeta.btcUsd === "Binance" && priceSourceMeta.usdKrw === "Frankfurter";
   const sourcesFresh =
     !isPriceFallback &&
     !isPriceStale &&
     !btcKrwIsFallback &&
-    primaryPriceSources &&
     priceStaleSources.length === 0 &&
     priceSourceTimes.every((value): value is number => value !== null) &&
     new Set(priceSourceTimes).size === 1;
@@ -47,8 +45,6 @@ export default function PriceWidget({ d }: { d: LedgerData }) {
       ? "김프 보류(해외 환산 표시 중)"
       : priceStaleSources.length > 0
       ? formatPriceSourceDelayDetail(priceStaleSources, priceSourceUpdatedAt)
-      : !primaryPriceSources && !isPriceFallback
-      ? "일부 가격이 보조 API 기준이라 김프 계산을 잠시 보류합니다."
       : isPriceFallback
       ? "아직 모든 시세가 한 번 이상 정상 갱신되지 않았습니다."
       : kimchiOutlier

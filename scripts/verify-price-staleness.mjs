@@ -25,7 +25,9 @@ assert.match(statusSource, /마지막 정상 갱신/, "delay copy includes last 
 assert.match(widgetSource, /MAX_REASONABLE_KIMCHI_PREMIUM_ABS/, "price card guards unrealistic kimchi premium values");
 assert.match(widgetSource, /Math\.abs\(kimchi\)\s*>\s*MAX_REASONABLE_KIMCHI_PREMIUM_ABS/, "kimchi premium outliers are blocked");
 assert.match(widgetSource, /new Set\(priceSourceTimes\)\.size === 1/, "kimchi premium requires prices from the same successful fetch");
-assert.match(widgetSource, /priceSourceMeta\.btcUsd === "Binance"[\s\S]*priceSourceMeta\.usdKrw === "Frankfurter"/, "kimchi premium is withheld when price APIs fall back");
+assert.doesNotMatch(widgetSource, /primaryPriceSources/, "kimchi premium is not mislabeled stale just because a helper API source changed");
+assert.doesNotMatch(widgetSource, /보조 API 기준이라 김프 계산을 잠시 보류/, "helper API source changes are not shown as price delays");
+assert.match(widgetSource, /!btcKrwIsFallback/, "kimchi premium is still withheld for derived BTC/KRW");
 assert.match(widgetSource, /김프 계산 보류|시세 일부 지연/, "price card shows a pending state instead of stale kimchi numbers");
 assert.match(widgetSource, /canShowKimchi/, "kimchi premium is only displayed when all sources are fresh");
 assert.match(widgetSource, /kimchiLabel/, "kimchi badge renders a guarded label");
