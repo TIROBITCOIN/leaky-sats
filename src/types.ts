@@ -24,6 +24,7 @@ export interface Txn {
   date: string; // ISO datetime, used for sorting/period filtering
   amount: number; // KRW, negative = expense, positive = income
   btcAt: number; // KRW/BTC rate at the time of entry, used for sat conversion (immutable after creation)
+  settled?: boolean;
   memo?: string;
   recurringRuleId?: string;
 }
@@ -46,6 +47,7 @@ export interface NewTxnInput {
   amount: number; // positive magnitude
   isIncome: boolean;
   date: string; // ISO datetime-local value
+  settled?: boolean;
   memo?: string;
   recurringRuleId?: string;
 }

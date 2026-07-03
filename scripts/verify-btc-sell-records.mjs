@@ -23,12 +23,16 @@ assert.match(sellRecordsSrc, /totalKrwCovered/, "monthly summary has totalKrwCov
 // 5. Yearly summarize calculates totals
 assert.match(sellRecordsSrc, /totalSatsSold/, "yearly summary has totalSatsSold");
 
-// 6. Remaining deficit calculation (confirmedCoverageKrw in sellCalculator)
+// 6. Remaining deficit calculation (period start balance in sellCalculator)
 const sellCalcSrc = readFileSync("src/lib/sellCalculator.ts", "utf8");
-assert.match(sellCalcSrc, /confirmedCoverageKrw/, "sellCalculator accepts confirmedCoverageKrw");
+assert.match(sellCalcSrc, /theoreticalBalanceKrw/, "sellCalculator accepts theoreticalBalanceKrw");
 assert.match(sellCalcSrc, /totalDeficitKrw/, "sellCalculator calculates totalDeficitKrw");
-// Arithmetic: deficit = max(0, totalDeficit - coverage)
-assert.match(sellCalcSrc, /Math\.max\(0, totalDeficitKrw - safeCoverage\)/, "remaining deficit = max(0, total - coverage)");
+// Arithmetic: deficit = max(0, totalDeficit - theoretical balance)
+assert.match(
+  sellCalcSrc,
+  /Math\.max\(0, totalDeficitKrw - safeTheoreticalBalance\)/,
+  "remaining deficit = max(0, total - theoretical balance)"
+);
 
 // 7. BTC/sats display unit formatter reused (fmtBtcValue)
 const sellCardSrc = readFileSync("src/components/home/SellNeededCard.tsx", "utf8");
@@ -44,7 +48,7 @@ assert.match(sellCardSrc, /BTC 판매 확정/, "SellNeededCard has BTC 판매 �
 // 9. Modal has required automated sell fields
 const modalSrc = readFileSync("src/components/home/SellConfirmModal.tsx", "utf8");
 assert.match(modalSrc, /판매량 확정/, "modal uses the sell amount confirmation title");
-assert.match(modalSrc, /실제 판매량/, "modal shows actual sell amount");
+assert.match(modalSrc, /실제 판매 금액/, "modal shows actual sell amount");
 assert.doesNotMatch(modalSrc, /자동 판매량/, "modal no longer uses old automatic sell amount label");
 assert.match(modalSrc, /sellSats/, "modal calculates sats automatically");
 assert.match(modalSrc, /sellBtc/, "modal calculates BTC automatically");

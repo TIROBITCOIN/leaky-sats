@@ -18,7 +18,7 @@ export default function TxnsCard({
   selectedMonth: string;
   period: SettlementPeriod;
 }) {
-  const { deleteTxn } = useLedger();
+  const { deleteTxn, setTxnSettled } = useLedger();
   const navigate = useNavigate();
   const visible = d.txns.filter((t) => isIsoWithinPeriod(t.date, period)).slice(0, HOME_TXN_LIMIT);
 
@@ -38,7 +38,7 @@ export default function TxnsCard({
             onEdit={() => navigate(`/add?edit=${t.id}&month=${selectedMonth}`)}
             onDelete={() => deleteTxn(t.id)}
           >
-            <TxnRow t={t} currency={currency} btcKRW={d.btcKRW} />
+            <TxnRow t={t} currency={currency} btcKRW={d.btcKRW} onSettledChange={(settled) => setTxnSettled(t.id, settled)} />
           </SwipeableRow>
         ))}
         {visible.length === 0 && <div className="ldg-page-sub">이번 정산기간 거래 내역이 없어요.</div>}

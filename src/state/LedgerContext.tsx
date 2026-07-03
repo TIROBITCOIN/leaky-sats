@@ -35,6 +35,11 @@ import {
   type PriceFreshness,
   type PriceSourceUpdatedAt,
 } from "../lib/priceFreshness";
+import {
+  loadPeriodStartBalances,
+  savePeriodStartBalances,
+  type PeriodStartBalanceRecords,
+} from "../lib/periodStartBalance";
 
 export type PriceStatus = "idle" | "loading" | "ok" | "error";
 
@@ -75,6 +80,7 @@ interface State {
   refreshIntervalMs: number;
   priceMeta: PriceMeta;
   categories: CategoryDef[];
+  periodStartBalances: PeriodStartBalanceRecords;
 }
 
 export interface NewCategoryInput {
@@ -94,6 +100,7 @@ type Action =
   | { type: "SET_CURRENCY"; currency: Currency }
   | { type: "ADD_TXN"; input: NewTxnInput }
   | { type: "UPDATE_TXN"; id: number; input: NewTxnInput }
+  | { type: "SET_TXN_SETTLED"; id: number; settled: boolean }
   | { type: "DELETE_TXN"; id: number }
   | { type: "RESTORE_TXN"; txn: Txn; index: number }
   | { type: "SET_REFRESH_INTERVAL"; ms: number }
@@ -102,6 +109,8 @@ type Action =
   | { type: "ADD_CATEGORY"; category: CategoryDef }
   | { type: "UPDATE_CATEGORY"; id: string; patch: Partial<Pick<CategoryDef, "label" | "fg" | "icon">> }
   | { type: "DELETE_CATEGORY"; id: string }
+  | { type: "SET_PERIOD_START_BALANCE"; month: string; balanceKrw: number; skipped?: boolean }
+  | { type: "SET_PERIOD_ACTUAL_BALANCE"; month: string; actualBalanceKrw: number | null }
   | { type: "MIGRATE_LEGACY_CATEGORIES" };
 
 interface LedgerContextValue {
@@ -110,6 +119,7 @@ interface LedgerContextValue {
   data: LedgerData;
   addTxn: (input: NewTxnInput) => void;
   updateTxn: (id: number, input: NewTxnInput) => void;
+  setTxnSettled: (id: number, settled: boolean) => void;
   deleteTxn: (id: number) => void;
   pendingUndo: PendingUndo | null;
   undoLastDelete: () => void;
@@ -131,6 +141,9 @@ interface LedgerContextValue {
   updateCategory: (id: string, patch: Partial<Pick<CategoryDef, "label" | "fg" | "icon">>) => void;
   deleteCategory: (id: string) => void;
   migrateLegacyCategories: () => void;
+  periodStartBalances: PeriodStartBalanceRecords;
+  setPeriodStartBalance: (month: string, balanceKrw: number, skipped?: boolean) => void;
+  setPeriodActualBalance: (month: string, actualBalanceKrw: number | null) => void;
 }
 
 const LedgerContext = createContext<LedgerContextValue | null>(null);
@@ -170,6 +183,7 @@ function isValidTxn(value: unknown): value is Txn {
     typeof txn.btcAt === "number" &&
     Number.isFinite(txn.btcAt) &&
     txn.btcAt > 0 &&
+    (txn.settled === undefined || typeof txn.settled === "boolean") &&
     (txn.recurringRuleId === undefined || typeof txn.recurringRuleId === "string")
   );
 }
@@ -340,6 +354,8 @@ function reducer(state: State, action: Action): State {
       return applyAddTxn(state, action.input);
     case "UPDATE_TXN":
       return applyUpdateTxn(state, action.id, action.input);
+    case "SET_TXN_SETTLED":
+      return applySetTxnSettled(state, action.id, action.settled);
     case "DELETE_TXN":
       return applyDeleteTxn(state, action.id);
     case "RESTORE_TXN":
@@ -408,6 +424,39 @@ function reducer(state: State, action: Action): State {
         data: withTxnSummary(state.data, nextTxns),
       };
     }
+    case "SET_PERIOD_START_BALANCE": {
+      if (!/^\d{4}-\d{2}$/.test(action.month) || !Number.isFinite(action.balanceKrw) || action.balanceKrw < 0) {
+        return state;
+      }
+      return {
+        ...state,
+        periodStartBalances: {
+          ...state.periodStartBalances,
+          [action.month]: {
+            ...state.periodStartBalances[action.month],
+            startBalanceKrw: action.balanceKrw,
+            skipped: action.skipped === true,
+          },
+        },
+      };
+    }
+    case "SET_PERIOD_ACTUAL_BALANCE": {
+      if (!/^\d{4}-\d{2}$/.test(action.month)) return state;
+      const current = state.periodStartBalances[action.month] ?? { startBalanceKrw: 0, skipped: true };
+      const nextRecord =
+        action.actualBalanceKrw === null
+          ? { ...current, actualBalanceKrw: undefined }
+          : Number.isFinite(action.actualBalanceKrw) && action.actualBalanceKrw >= 0
+            ? { ...current, actualBalanceKrw: action.actualBalanceKrw }
+            : current;
+      return {
+        ...state,
+        periodStartBalances: {
+          ...state.periodStartBalances,
+          [action.month]: nextRecord,
+        },
+      };
+    }
     case "MIGRATE_LEGACY_CATEGORIES": {
       // 레거시(정본 집합에 없는 비보호) 카테고리에 묶인 거래를 그룹의 기타 카테고리로 재배정하고,
       // 더 이상 쓰이지 않는 레거시 카테고리를 제거한다. 금액/btcAt 불변, cat/catLabel만 갱신.
@@ -450,6 +499,7 @@ function applyAddTxn(state: State, input: NewTxnInput): State {
     date: input.date,
     amount: signedAmount,
     btcAt: state.data.btcKRW,
+    settled: input.settled,
     memo: input.memo,
     recurringRuleId: input.recurringRuleId,
   };
@@ -475,11 +525,17 @@ function applyUpdateTxn(state: State, id: number, input: NewTxnInput): State {
     time: formatTxnTime(input.date),
     date: input.date,
     amount: signedAmount,
+    settled: input.settled ?? oldTxn.settled,
     memo: input.memo,
     recurringRuleId: input.recurringRuleId,
   };
   const nextTxns = state.data.txns.slice();
   nextTxns[idx] = updatedTxn;
+  return { ...state, data: withTxnSummary(state.data, nextTxns) };
+}
+
+function applySetTxnSettled(state: State, id: number, settled: boolean): State {
+  const nextTxns = state.data.txns.map((txn) => (txn.id === id ? { ...txn, settled } : txn));
   return { ...state, data: withTxnSummary(state.data, nextTxns) };
 }
 
@@ -520,6 +576,7 @@ function buildInitialState(): State {
       sourceMeta: { btcUsd: null, usdKrw: null },
     },
     categories: loadCategories(),
+    periodStartBalances: loadPeriodStartBalances(),
   };
 }
 
@@ -555,6 +612,10 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     saveTxnsState({ txns: state.data.txns, nextTxnId: state.nextTxnId });
   }, [state.data.txns, state.nextTxnId]);
+
+  useEffect(() => {
+    savePeriodStartBalances(state.periodStartBalances);
+  }, [state.periodStartBalances]);
 
   useEffect(() => {
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
@@ -595,6 +656,7 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
       data: state.data,
       addTxn: (input) => dispatch({ type: "ADD_TXN", input }),
       updateTxn: (id, input) => dispatch({ type: "UPDATE_TXN", id, input }),
+      setTxnSettled: (id, settled) => dispatch({ type: "SET_TXN_SETTLED", id, settled }),
       deleteTxn,
       pendingUndo,
       undoLastDelete,
@@ -627,6 +689,11 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
       updateCategory: (id, patch) => dispatch({ type: "UPDATE_CATEGORY", id, patch }),
       deleteCategory: (id) => dispatch({ type: "DELETE_CATEGORY", id }),
       migrateLegacyCategories: () => dispatch({ type: "MIGRATE_LEGACY_CATEGORIES" }),
+      periodStartBalances: state.periodStartBalances,
+      setPeriodStartBalance: (month, balanceKrw, skipped = false) =>
+        dispatch({ type: "SET_PERIOD_START_BALANCE", month, balanceKrw, skipped }),
+      setPeriodActualBalance: (month, actualBalanceKrw) =>
+        dispatch({ type: "SET_PERIOD_ACTUAL_BALANCE", month, actualBalanceKrw }),
     };
   }, [state, pendingUndo, fetchAndApplyPrices]);
 
