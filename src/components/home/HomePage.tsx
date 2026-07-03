@@ -4,11 +4,14 @@ import { useLedger } from "../../state/LedgerContext";
 import { loadWalletName } from "../../lib/walletName";
 import { getHeldBtc } from "../../lib/heldBtc";
 import { loadBtcUnit, type BtcUnit } from "../../lib/format";
-import { calculateMonthlyLivingCashflow, calculateRemainingLivingCashflow, calculateSellNeeded } from "../../lib/sellCalculator";
+import {
+  calculateSellNeeded,
+  calculateTheoreticalBalance,
+  calculateUnsettledLivingCashflow,
+} from "../../lib/sellCalculator";
 import { getYearFromMonthKey } from "../../lib/month";
 import { useSelectedMonth } from "../../lib/useSelectedMonth";
 import { getSettlementMonthKeyForDate, getSettlementPeriod, loadSettlementDay } from "../../lib/settlement";
-import { getMonthlyCash } from "../../lib/monthlyCash";
 import {
   summarizeBtcSellRecordsByMonth,
   summarizeBtcSellRecordsByYear,
@@ -20,7 +23,6 @@ import Slogan from "./Slogan";
 import LedgerHeader from "./LedgerHeader";
 import CurrencyToggle from "./CurrencyToggle";
 import BalanceCard from "./BalanceCard";
-import InOutCards from "./InOutCards";
 import SellNeededCard from "./SellNeededCard";
 import SellConfirmModal from "./SellConfirmModal";
 import MonthlySellSummaryCard from "./MonthlySellSummaryCard";
@@ -28,20 +30,21 @@ import YearlySellSummaryCard from "./YearlySellSummaryCard";
 import PriceWidget from "./PriceWidget";
 import TxnsCard from "./TxnsCard";
 import RecurringPendingCard from "./RecurringPendingCard";
+import OnboardingPrompt from "../onboarding/OnboardingPrompt";
 
 export default function HomePage() {
-  const { currency, setCurrency, data, categoriesById, addTxn } = useLedger();
+  const { currency, setCurrency, data, categoriesById, addTxn, periodStartBalances, setPeriodActualBalance } = useLedger();
   const [walletName, setWalletName] = useState(loadWalletName);
   const [heldBtc, setHeldBtc] = useState(getHeldBtc);
   const [btcUnit, setBtcUnit] = useState<BtcUnit>(loadBtcUnit);
   const [settlementDay, setSettlementDay] = useState(loadSettlementDay);
   const defaultSettlementMonthKey = getSettlementMonthKeyForDate(new Date().toISOString(), settlementDay);
   const [selectedMonth, setSelectedMonth] = useSelectedMonth(defaultSettlementMonthKey);
-  const [monthlyCash, setMonthlyCashState] = useState(() => getMonthlyCash(defaultSettlementMonthKey));
   const [sellModalState, setSellModalState] = useState<{ mode: "add" } | { mode: "edit"; record: BtcSellRecord } | null>(
     null
   );
   const [sellSavedMessage, setSellSavedMessage] = useState<string | null>(null);
+  const [balancePromptKey, setBalancePromptKey] = useState(0);
   const [, setRefreshTick] = useState(0);
 
   useEffect(() => {
@@ -54,7 +57,6 @@ export default function HomePage() {
       setHeldBtc(getHeldBtc());
       setBtcUnit(loadBtcUnit());
       setSettlementDay(loadSettlementDay());
-      setMonthlyCashState(getMonthlyCash(selectedMonth));
     };
     const onVisibility = () => {
       if (document.visibilityState === "visible") refresh();
@@ -67,42 +69,40 @@ export default function HomePage() {
     };
   }, [selectedMonth]);
 
-  useEffect(() => {
-    setMonthlyCashState(getMonthlyCash(selectedMonth));
-  }, [selectedMonth]);
-
   const yearKey = getYearFromMonthKey(selectedMonth);
   const period = getSettlementPeriod(selectedMonth, settlementDay);
+  const periodBalance = periodStartBalances[selectedMonth];
+  const hasPeriodStartBalance = !!periodBalance;
+  const periodStartBalanceKrw = periodBalance?.startBalanceKrw ?? 0;
 
   const monthlySellSummary = summarizeBtcSellRecordsByMonth(selectedMonth);
   const yearlySellSummary = summarizeBtcSellRecordsByYear(yearKey);
   const monthRecords = listBtcSellRecordsByMonth(selectedMonth);
 
-  const { incomeKrw, expenseKrw } = calculateMonthlyLivingCashflow(
+  const { incomeKrw: unsettledIncomeKrw, expenseKrw: unsettledExpenseKrw } = calculateUnsettledLivingCashflow(
     data.txns,
     categoriesById,
     period,
   );
-  const { incomeKrw: remainingIncomeKrw, expenseKrw: remainingExpenseKrw } = calculateRemainingLivingCashflow(
-    data.txns,
+  const theoreticalBalanceKrw = calculateTheoreticalBalance({
+    periodStartBalanceKrw,
+    txns: data.txns,
     categoriesById,
     period,
-  );
-  const netKrw = incomeKrw - expenseKrw;
+  });
   const sellResult = calculateSellNeeded({
-    incomeKrw: remainingIncomeKrw,
-    expenseKrw: remainingExpenseKrw,
+    incomeKrw: unsettledIncomeKrw,
+    expenseKrw: unsettledExpenseKrw,
+    theoreticalBalanceKrw,
     btcKrw: data.btcKRW,
     heldBtc,
-    confirmedCoverageKrw: monthlyCash,
   });
 
   // 판매 기록 저장/수정/삭제 후 보유 BTC와 화면을 다시 계산한다. 저장 시에는 토스트도 함께 띄운다.
   const refreshAfterSellChange = useCallback(() => {
     setHeldBtc(getHeldBtc());
-    setMonthlyCashState(getMonthlyCash(selectedMonth));
     setRefreshTick((k) => k + 1);
-  }, [selectedMonth]);
+  }, []);
 
   const handleSellSaved = useCallback(() => {
     refreshAfterSellChange();
@@ -127,21 +127,18 @@ export default function HomePage() {
             <MonthSelector selectedMonth={selectedMonth} onChangeMonth={setSelectedMonth} label={period.label} />
             <div className="ldg-settlement-range-label">{period.rangeLabel}</div>
           </div>
-          <InOutCards
-            incomeKrw={incomeKrw}
-            expenseKrw={expenseKrw}
-            netKrw={netKrw}
-            btcKRW={data.btcKRW}
-            currency={currency}
-          />
           <RecurringPendingCard selectedMonth={selectedMonth} period={period} addTxn={addTxn} />
           <SellNeededCard
             result={sellResult}
             unit={btcUnit}
             selectedMonth={selectedMonth}
-            monthlyCash={monthlyCash}
-            monthlySellSummary={monthlySellSummary}
             btcKrw={data.btcKRW}
+            unsettledIncomeKrw={unsettledIncomeKrw}
+            unsettledExpenseKrw={unsettledExpenseKrw}
+            theoreticalBalanceKrw={theoreticalBalanceKrw}
+            balanceMissing={!hasPeriodStartBalance || periodBalance?.skipped === true}
+            actualBalanceKrw={periodBalance?.actualBalanceKrw}
+            onActualBalanceChange={(value) => setPeriodActualBalance(selectedMonth, value)}
             onConfirmSell={sellResult.deficitKrw > 0 ? () => setSellModalState({ mode: "add" }) : undefined}
           />
           <MonthlySellSummaryCard
@@ -164,12 +161,13 @@ export default function HomePage() {
           unit={btcUnit}
           selectedMonth={selectedMonth}
           period={period}
-          monthlyCash={monthlyCash}
-          onMonthlyCashChanged={refreshAfterSellChange}
           editRecord={sellModalState.mode === "edit" ? sellModalState.record : undefined}
           onClose={() => setSellModalState(null)}
           onSaved={handleSellSaved}
         />
+      )}
+      {!hasPeriodStartBalance && (
+        <OnboardingPrompt key={`${selectedMonth}-${balancePromptKey}`} month={selectedMonth} onDone={() => setBalancePromptKey((k) => k + 1)} />
       )}
       {sellSavedMessage && (
         <div className="ldg-toast">

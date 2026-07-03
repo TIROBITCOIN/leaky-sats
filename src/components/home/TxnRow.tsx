@@ -1,5 +1,6 @@
 import type { Currency, Txn } from "../../types";
 import { fmtKRW, krwToBtc, krwToSats, formatCategoryLabel, formatTxnDateLabel } from "../../lib/format";
+import { isTxnSettled } from "../../lib/sellCalculator";
 import CategoryIcon from "./CategoryIcon";
 
 function getTxnDisplayTime(txn: Txn): string {
@@ -8,8 +9,20 @@ function getTxnDisplayTime(txn: Txn): string {
   return txn.time;
 }
 
-export default function TxnRow({ t, currency, btcKRW }: { t: Txn; currency: Currency; btcKRW: number }) {
+export default function TxnRow({
+  t,
+  currency,
+  btcKRW,
+  onSettledChange,
+}: {
+  t: Txn;
+  currency: Currency;
+  btcKRW: number;
+  onSettledChange?: (settled: boolean) => void;
+}) {
   const isPos = t.amount >= 0;
+  const settled = isTxnSettled(t);
+  const settledLabel = isPos ? "입금완료" : "출금완료";
   // 사토시/BTC 환산은 거래 당시 시세(t.btcAt)가 아니라 항상 현재 시세(btcKRW) 기준
   const main =
     currency === "KRW"
@@ -42,6 +55,19 @@ export default function TxnRow({ t, currency, btcKRW }: { t: Txn; currency: Curr
       <div className="ldg-txn-amt">
         <div className={`ldg-txn-main ${isPos ? "pos" : "neg"}`}>{main}</div>
         <div className="ldg-txn-sub">{sub}</div>
+        {onSettledChange && (
+          <button
+            type="button"
+            className={`ldg-txn-settle-chip${settled ? " done" : ""}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              onSettledChange(!settled);
+            }}
+            aria-pressed={settled}
+          >
+            {settled ? settledLabel : "예정"}
+          </button>
+        )}
       </div>
     </>
   );

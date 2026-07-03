@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { LedgerProvider } from "./state/LedgerContext";
 import PageContainer from "./components/layout/PageContainer";
@@ -13,7 +12,6 @@ import UndoToast from "./components/common/UndoToast";
 import OfflineBadge from "./components/pwa/OfflineBadge";
 import InstallPrompt from "./components/pwa/InstallPrompt";
 import AppLockGate from "./components/security/AppLockGate";
-import OnboardingPrompt, { isOnboardingVisible } from "./components/onboarding/OnboardingPrompt";
 
 function AppRoutes() {
   const location = useLocation();
@@ -36,8 +34,6 @@ function AppRoutes() {
 }
 
 export default function App() {
-  const [showOnboarding, setShowOnboarding] = useState(isOnboardingVisible);
-
   return (
     <LedgerProvider>
       <BrowserRouter>
@@ -48,11 +44,7 @@ export default function App() {
             </div>
             <TabBar />
             <OfflineBadge />
-            {showOnboarding ? (
-              <OnboardingPrompt onDone={() => setShowOnboarding(false)} />
-            ) : (
-              <InstallPrompt />
-            )}
+            <InstallPrompt />
             <UndoToast />
           </PageContainer>
         </AppLockGate>

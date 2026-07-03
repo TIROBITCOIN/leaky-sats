@@ -44,7 +44,7 @@ export default function SwipeableRow({
   };
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if ((event.target as HTMLElement).closest("button")) return;
+    if ((event.target as HTMLElement).closest("button, input, label")) return;
     startXRef.current = event.clientX;
     startOffsetRef.current = offsetRef.current;
     triggeredRef.current = false;

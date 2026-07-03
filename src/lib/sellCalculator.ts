@@ -6,7 +6,7 @@ export interface SellResult {
   expenseKrw: number;
   netKrw: number;
   totalDeficitKrw: number;
-  confirmedCoverageKrw: number;
+  theoreticalBalanceKrw: number;
   deficitKrw: number;
   sellBtc: number;
   sellSats: number;
@@ -27,6 +27,10 @@ export interface BalanceAdjustedSell {
 
 function safeNonNegative(value: number): number {
   return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+function safeFinite(value: number): number {
+  return Number.isFinite(value) ? value : 0;
 }
 
 export function applyAccountBalance(requiredKrw: number, accountBalanceKrw: number, btcKrw: number): BalanceAdjustedSell {
@@ -81,8 +85,43 @@ export function calculateRemainingLivingCashflow(
   period: { startDate: string; endDate: string },
   todayDateKey = getTodayDateKey()
 ): { incomeKrw: number; expenseKrw: number } {
-  const remainingTxns = filterByPeriod(txns, period).filter((t) => dateKeyFromIso(t.date) >= todayDateKey);
-  return calculateLivingCashflow(remainingTxns, categoriesById);
+  return calculateUnsettledLivingCashflow(txns, categoriesById, period, todayDateKey);
+}
+
+export function isTxnSettled(txn: Txn, todayDateKey = getTodayDateKey()): boolean {
+  if (typeof txn.settled === "boolean") return txn.settled;
+  return dateKeyFromIso(txn.date) < todayDateKey;
+}
+
+export function calculateUnsettledLivingCashflow(
+  txns: Txn[],
+  categoriesById: Record<string, CategoryDef>,
+  period: { startDate: string; endDate: string },
+  todayDateKey = getTodayDateKey()
+): { incomeKrw: number; expenseKrw: number } {
+  const unsettledTxns = filterByPeriod(txns, period).filter((txn) => !isTxnSettled(txn, todayDateKey));
+  return calculateLivingCashflow(unsettledTxns, categoriesById);
+}
+
+export function calculateTheoreticalBalance({
+  periodStartBalanceKrw,
+  txns,
+  categoriesById,
+  period,
+  todayDateKey = getTodayDateKey(),
+}: {
+  periodStartBalanceKrw: number;
+  txns: Txn[];
+  categoriesById: Record<string, CategoryDef>;
+  period: { startDate: string; endDate: string };
+  todayDateKey?: string;
+}): number {
+  const safeStartBalance = safeNonNegative(periodStartBalanceKrw);
+  const settledCashflow = calculateLivingCashflow(
+    filterByPeriod(txns, period).filter((txn) => isTxnSettled(txn, todayDateKey)),
+    categoriesById
+  );
+  return safeStartBalance + settledCashflow.incomeKrw - settledCashflow.expenseKrw;
 }
 
 function calculateLivingCashflow(
@@ -107,20 +146,20 @@ function calculateLivingCashflow(
 export function calculateSellNeeded({
   incomeKrw,
   expenseKrw,
+  theoreticalBalanceKrw = 0,
   btcKrw,
   heldBtc,
-  confirmedCoverageKrw = 0,
 }: {
   incomeKrw: number;
   expenseKrw: number;
+  theoreticalBalanceKrw?: number;
   btcKrw: number;
   heldBtc: number;
-  confirmedCoverageKrw?: number;
 }): SellResult {
   const netKrw = incomeKrw - expenseKrw;
   const totalDeficitKrw = netKrw < 0 ? Math.abs(netKrw) : 0;
-  const safeCoverage = Number.isFinite(confirmedCoverageKrw) && confirmedCoverageKrw > 0 ? confirmedCoverageKrw : 0;
-  const deficitKrw = Math.max(0, totalDeficitKrw - safeCoverage);
+  const safeTheoreticalBalance = safeFinite(theoreticalBalanceKrw);
+  const deficitKrw = Math.max(0, totalDeficitKrw - safeTheoreticalBalance);
 
   const safeBtcKrw = Number.isFinite(btcKrw) && btcKrw > 0 ? btcKrw : 0;
   const safeHeld = Number.isFinite(heldBtc) && heldBtc >= 0 ? heldBtc : 0;
@@ -136,7 +175,7 @@ export function calculateSellNeeded({
     expenseKrw,
     netKrw,
     totalDeficitKrw,
-    confirmedCoverageKrw: safeCoverage,
+    theoreticalBalanceKrw: safeTheoreticalBalance,
     deficitKrw,
     sellBtc: Number.isFinite(sellBtc) ? sellBtc : 0,
     sellSats: Number.isFinite(sellSats) ? sellSats : 0,
