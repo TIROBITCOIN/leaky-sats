@@ -1,5 +1,4 @@
-import type { ReactNode } from "react";
-import type { MonthSellSummary } from "../../lib/btcSellRecords";
+import { useEffect, useState } from "react";
 import type { SellResult } from "../../lib/sellCalculator";
 import { fmtBtcValue, fmtKRW, type BtcUnit } from "../../lib/format";
 import { getMonthLabel } from "../../lib/month";
@@ -9,112 +8,103 @@ interface Props {
   unit: BtcUnit;
   selectedMonth: string;
   monthlyCash: number;
-  monthlySellSummary: MonthSellSummary;
   btcKrw: number;
+  onMonthlyCashChange: (value: number) => void;
   onConfirmSell?: () => void;
 }
 
-function satsFromKrw(krw: number, btcKrw: number): number {
-  return Number.isFinite(btcKrw) && btcKrw > 0 ? Math.round((krw / btcKrw) * 100_000_000) : 0;
+function parseCashInput(value: string): number {
+  const parsed = Number(value.replace(/[^0-9]/g, ""));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
-function btcFromSats(sats: number): number {
-  return sats / 100_000_000;
+function formatCashInput(value: number): string {
+  return value > 0 ? String(Math.round(value)) : "";
 }
 
-function BtcAndSats({ btc, sats, unit }: { btc: number; sats: number; unit: BtcUnit }) {
+function CalcRow({ label, value, muted = false }: { label: string; value: string; muted?: boolean }) {
   return (
-    <span className="ldg-sell-value">
-      <strong>{fmtBtcValue(btc, unit)}</strong>
-      <span className="ldg-balance-sub ldg-sell-sub">
-        {sats.toLocaleString("en-US")} sats / {btc.toFixed(8)} BTC
-      </span>
-    </span>
-  );
-}
-
-function formatDoneBtc(btc: number): string {
-  const safeBtc = Number.isFinite(btc) ? btc : 0;
-  return `${safeBtc.toFixed(8)} BTC`;
-}
-
-function DoneAmount({ btc, sats }: { btc: number; sats: number }) {
-  return (
-    <span className="ldg-done-val ldg-btc-val">
-      <strong>{sats.toLocaleString("en-US")} sats</strong>
-      <span className="sub">{formatDoneBtc(btc)}</span>
-    </span>
-  );
-}
-
-function DoneRow({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="ldg-done-row">
-      <span className="ldg-done-label">{label}</span>
-      {children}
+    <div className={`ldg-sell-calc-row${muted ? " muted" : ""}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
     </div>
   );
 }
 
-export default function SellNeededCard({ result, unit, selectedMonth, monthlyCash, monthlySellSummary, btcKrw, onConfirmSell }: Props) {
-  const { deficitKrw, sellBtc, sellSats, totalDeficitKrw, confirmedCoverageKrw } = result;
-  const everHadDeficit = totalDeficitKrw > 0;
-  const settled = everHadDeficit && deficitKrw === 0;
-  const needSell = deficitKrw > 0;
-
-  if (!everHadDeficit) return null;
-
-  const hasConfirmed = confirmedCoverageKrw > 0;
+export default function SellNeededCard({
+  result,
+  unit,
+  selectedMonth,
+  monthlyCash,
+  btcKrw,
+  onMonthlyCashChange,
+  onConfirmSell,
+}: Props) {
+  const [cashInput, setCashInput] = useState(formatCashInput(monthlyCash));
   const monthLabel = getMonthLabel(selectedMonth);
-  const expectedTotalSats = satsFromKrw(totalDeficitKrw, btcKrw);
-  const expectedTotalBtc = btcFromSats(expectedTotalSats);
-  const actualSoldBtc = monthlySellSummary.totalSatsSold / 100_000_000;
+  const unsettledExpenseKrw = result.expenseKrw;
+  const unsettledIncomeKrw = result.incomeKrw;
+  const sellKrw = result.deficitKrw;
+  const hasUnsettledIncome = unsettledIncomeKrw > 0;
+  const hasBtcRate = Number.isFinite(btcKrw) && btcKrw > 0;
+  const sellBtcText = hasBtcRate ? `${result.sellSats.toLocaleString("en-US")} sats / ${result.sellBtc.toFixed(8)} BTC` : "0 sats / 0 BTC";
+
+  useEffect(() => {
+    setCashInput(formatCashInput(monthlyCash));
+  }, [monthlyCash]);
 
   return (
-    <div className="ldg-card">
-      {settled ? (
-        <>
-          <div className="ldg-settlement-done">정산 완료</div>
-          <div className="ldg-done-list">
-            <DoneRow label="예상 판매량">
-              <DoneAmount btc={expectedTotalBtc} sats={expectedTotalSats} />
-            </DoneRow>
-            <DoneRow label="통장 보유액">
-              <span className="ldg-done-val ldg-money-val">
-                <strong>{fmtKRW(monthlyCash)}</strong>
-              </span>
-            </DoneRow>
-            <DoneRow label="실제 판매량">
-              <DoneAmount btc={actualSoldBtc} sats={monthlySellSummary.totalSatsSold} />
-            </DoneRow>
-            <DoneRow label="판매 후 BTC">
-              <span className="ldg-done-val ldg-btc-val">
-                <strong>{formatDoneBtc(result.heldBtc)}</strong>
-              </span>
-            </DoneRow>
-          </div>
-        </>
-      ) : needSell ? (
-        <>
+    <div className="ldg-card ldg-sell-calc-card">
+      <div className="ldg-card-head">
+        <div>
           <div className="ldg-label">판매해야 하는 비트코인</div>
-          <div className="ldg-sell-deficit-label">{monthLabel} 부족분</div>
-          <div className="ldg-sell-deficit-value ldg-money-val">{fmtKRW(deficitKrw)}</div>
-          <div className="ldg-sell-needed-row">
-            <span>현재 BTC 가격 기준 예상 판매량</span>
-            <BtcAndSats btc={sellBtc} sats={sellSats} unit={unit} />
-          </div>
-          {hasConfirmed && (
-            <div className="ldg-balance-sub" style={{ marginTop: 6 }}>
-              이미 반영 {fmtKRW(confirmedCoverageKrw)} / 총 부족분 {fmtKRW(totalDeficitKrw)}
-            </div>
-          )}
-          {onConfirmSell && (
-            <button type="button" className="ldg-submit-btn" style={{ marginTop: 12 }} onClick={onConfirmSell}>
-              BTC 판매 확정
-            </button>
-          )}
-        </>
-      ) : null}
+          <div className="ldg-tiny">{monthLabel} 미정산 기준</div>
+        </div>
+      </div>
+
+      <div className="ldg-modal-field ldg-home-cash-field">
+        <label className="ldg-modal-label" htmlFor="monthly-cash-input">
+          통장 잔고
+        </label>
+        <input
+          id="monthly-cash-input"
+          type="text"
+          inputMode="numeric"
+          className="ldg-input"
+          value={cashInput}
+          onChange={(event) => {
+            const next = event.target.value.replace(/[^0-9]/g, "");
+            setCashInput(next);
+            onMonthlyCashChange(parseCashInput(next));
+          }}
+          placeholder="0"
+        />
+      </div>
+
+      <div className="ldg-sell-calc-list">
+        <CalcRow label="아직 정산 안 된 지출" value={fmtKRW(unsettledExpenseKrw)} />
+        {hasUnsettledIncome && <CalcRow label="아직 정산 안 된 수입" value={`-${fmtKRW(unsettledIncomeKrw)}`} muted />}
+        <CalcRow label="통장 잔고" value={`-${fmtKRW(monthlyCash)}`} muted />
+      </div>
+
+      <div className="ldg-sell-calc-divider" />
+
+      <div className="ldg-sell-result-row">
+        <div>
+          <div className="ldg-label">팔아야 할 돈</div>
+          <div className="ldg-sell-result-sub">{sellBtcText}</div>
+        </div>
+        <div className="ldg-sell-result-value">
+          <strong>{fmtKRW(sellKrw)}</strong>
+          <span>{fmtBtcValue(result.sellBtc, unit)}</span>
+        </div>
+      </div>
+
+      {onConfirmSell && sellKrw > 0 && (
+        <button type="button" className="ldg-submit-btn" style={{ marginTop: 12 }} onClick={onConfirmSell}>
+          BTC 판매 확정
+        </button>
+      )}
     </div>
   );
 }

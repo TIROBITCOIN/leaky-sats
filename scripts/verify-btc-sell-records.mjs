@@ -23,12 +23,12 @@ assert.match(sellRecordsSrc, /totalKrwCovered/, "monthly summary has totalKrwCov
 // 5. Yearly summarize calculates totals
 assert.match(sellRecordsSrc, /totalSatsSold/, "yearly summary has totalSatsSold");
 
-// 6. Remaining deficit calculation (confirmedCoverageKrw in sellCalculator)
+// 6. Remaining deficit calculation (monthlyCashKrw in sellCalculator)
 const sellCalcSrc = readFileSync("src/lib/sellCalculator.ts", "utf8");
-assert.match(sellCalcSrc, /confirmedCoverageKrw/, "sellCalculator accepts confirmedCoverageKrw");
+assert.match(sellCalcSrc, /monthlyCashKrw/, "sellCalculator accepts monthlyCashKrw");
 assert.match(sellCalcSrc, /totalDeficitKrw/, "sellCalculator calculates totalDeficitKrw");
-// Arithmetic: deficit = max(0, totalDeficit - coverage)
-assert.match(sellCalcSrc, /Math\.max\(0, totalDeficitKrw - safeCoverage\)/, "remaining deficit = max(0, total - coverage)");
+// Arithmetic: deficit = max(0, totalDeficit - monthly cash)
+assert.match(sellCalcSrc, /Math\.max\(0, totalDeficitKrw - safeMonthlyCash\)/, "remaining deficit = max(0, total - monthly cash)");
 
 // 7. BTC/sats display unit formatter reused (fmtBtcValue)
 const sellCardSrc = readFileSync("src/components/home/SellNeededCard.tsx", "utf8");

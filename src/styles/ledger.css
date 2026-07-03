@@ -1062,10 +1062,92 @@
   color: var(--ldg-fg-4);
   margin-top: 2px;
 }
+.ldg-txn-settled-toggle {
+  margin-top: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  font-size: 10px;
+  color: var(--ldg-fg-3);
+  user-select: none;
+}
+.ldg-txn-settled-toggle input {
+  width: 13px;
+  height: 13px;
+  accent-color: var(--ldg-accent);
+}
+.ldg-sell-calc-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ldg-home-cash-field {
+  margin: 0;
+}
+.ldg-sell-calc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ldg-sell-calc-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: baseline;
+  font-size: 13px;
+}
+.ldg-sell-calc-row span {
+  color: var(--ldg-fg-3);
+}
+.ldg-sell-calc-row strong {
+  font-family: var(--ldg-mono);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ldg-fg);
+}
+.ldg-sell-calc-row.muted strong {
+  color: var(--ldg-fg-2);
+}
+.ldg-sell-calc-divider {
+  height: 1px;
+  background: var(--ldg-line);
+}
+.ldg-sell-result-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+.ldg-sell-result-sub {
+  margin-top: 4px;
+  font-family: var(--ldg-mono);
+  font-size: 11px;
+  color: var(--ldg-fg-3);
+  font-variant-numeric: tabular-nums;
+}
+.ldg-sell-result-value {
+  text-align: right;
+  font-family: var(--ldg-mono);
+  font-variant-numeric: tabular-nums;
+}
+.ldg-sell-result-value strong {
+  display: block;
+  font-size: 20px;
+  color: var(--ldg-accent);
+}
+.ldg-sell-result-value span {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--ldg-fg-3);
+}
 
 @media (max-width: 380px) {
   .ldg-done-row,
-  .ldg-sell-needed-row {
+  .ldg-sell-needed-row,
+  .ldg-sell-calc-row,
+  .ldg-sell-result-row {
     grid-template-columns: minmax(0, 1fr);
     gap: 4px;
   }
@@ -1075,7 +1157,8 @@
   }
 
   .ldg-done-val,
-  .ldg-sell-value {
+  .ldg-sell-value,
+  .ldg-sell-result-value {
     text-align: left;
   }
 }

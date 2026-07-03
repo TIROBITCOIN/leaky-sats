@@ -62,15 +62,14 @@ assert.match(
 // (src/lib/settlement.ts getSettlementPeriod), since income/expense now follow the settlement
 // day instead of the plain calendar month.
 assert.match(homePage, /period\s*=\s*getSettlementPeriod\(selectedMonth, settlementDay\)/, "period derived from selectedMonth and settlementDay");
-assert.match(homePage, /calculateMonthlyLivingCashflow\(\s*data\.txns,\s*categoriesById,\s*period,?\s*\)/, "living cashflow derived from the settlement period");
-assert.match(homePage, /const netKrw = incomeKrw - expenseKrw/, "home net cashflow uses settlement-period income and expense");
+assert.match(homePage, /calculateUnsettledLivingCashflow\(\s*data\.txns,\s*categoriesById,\s*period,?\s*\)/, "home sell-needed cashflow is derived from unsettled settlement-period transactions");
+assert.doesNotMatch(homePage, /const netKrw = incomeKrw - expenseKrw/, "home no longer shows a separate settlement-period net card");
 assert.match(
   homePage,
-  /<InOutCards[\s\S]*incomeKrw={incomeKrw}[\s\S]*expenseKrw={expenseKrw}[\s\S]*netKrw={netKrw}[\s\S]*btcKRW={data\.btcKRW}/,
-  "HomePage passes settlement-period values explicitly to InOutCards"
+  /<SellNeededCard[\s\S]*monthlyCash={monthlyCash}[\s\S]*onMonthlyCashChange={handleMonthlyCashChange}/,
+  "HomePage passes account balance control into SellNeededCard"
 );
-const inOutCardsSrc = readFileSync("src/components/home/InOutCards.tsx", "utf8");
-assert.doesNotMatch(inOutCardsSrc, /\bd\.(income|expense)\b/, "InOutCards does not display LedgerData income or expense");
+assert.doesNotMatch(homePage, /<InOutCards\b/, "HomePage removes the old income/expense/net card group");
 
 const txnsCardSrc = readFileSync("src/components/home/TxnsCard.tsx", "utf8");
 assert.doesNotMatch(

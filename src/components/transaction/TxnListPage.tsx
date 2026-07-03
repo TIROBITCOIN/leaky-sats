@@ -29,7 +29,7 @@ const EMPTY_MESSAGES: Record<Segment, string> = {
 };
 
 export default function TxnListPage() {
-  const { data, currency, deleteTxn } = useLedger();
+  const { data, currency, deleteTxn, setTxnSettled } = useLedger();
   const navigate = useNavigate();
   const [segment, setSegment] = useState<Segment>("all");
   const [settlementDay, setSettlementDay] = useState(loadSettlementDay);
@@ -108,7 +108,7 @@ export default function TxnListPage() {
                 onEdit={() => navigate(`/add?edit=${t.id}&month=${selectedMonth}`)}
                 onDelete={() => deleteTxn(t.id)}
               >
-                <TxnRow t={t} currency={currency} btcKRW={data.btcKRW} />
+                <TxnRow t={t} currency={currency} btcKRW={data.btcKRW} onSettledChange={(settled) => setTxnSettled(t.id, settled)} />
               </SwipeableRow>
             ))}
             {filtered.length === 0 && <div className="ldg-page-sub">{EMPTY_MESSAGES[segment]}</div>}

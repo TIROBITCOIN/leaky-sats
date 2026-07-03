@@ -94,6 +94,7 @@ type Action =
   | { type: "SET_CURRENCY"; currency: Currency }
   | { type: "ADD_TXN"; input: NewTxnInput }
   | { type: "UPDATE_TXN"; id: number; input: NewTxnInput }
+  | { type: "SET_TXN_SETTLED"; id: number; settled: boolean }
   | { type: "DELETE_TXN"; id: number }
   | { type: "RESTORE_TXN"; txn: Txn; index: number }
   | { type: "SET_REFRESH_INTERVAL"; ms: number }
@@ -110,6 +111,7 @@ interface LedgerContextValue {
   data: LedgerData;
   addTxn: (input: NewTxnInput) => void;
   updateTxn: (id: number, input: NewTxnInput) => void;
+  setTxnSettled: (id: number, settled: boolean) => void;
   deleteTxn: (id: number) => void;
   pendingUndo: PendingUndo | null;
   undoLastDelete: () => void;
@@ -170,6 +172,7 @@ function isValidTxn(value: unknown): value is Txn {
     typeof txn.btcAt === "number" &&
     Number.isFinite(txn.btcAt) &&
     txn.btcAt > 0 &&
+    (txn.settled === undefined || typeof txn.settled === "boolean") &&
     (txn.recurringRuleId === undefined || typeof txn.recurringRuleId === "string")
   );
 }
@@ -340,6 +343,8 @@ function reducer(state: State, action: Action): State {
       return applyAddTxn(state, action.input);
     case "UPDATE_TXN":
       return applyUpdateTxn(state, action.id, action.input);
+    case "SET_TXN_SETTLED":
+      return applySetTxnSettled(state, action.id, action.settled);
     case "DELETE_TXN":
       return applyDeleteTxn(state, action.id);
     case "RESTORE_TXN":
@@ -450,6 +455,7 @@ function applyAddTxn(state: State, input: NewTxnInput): State {
     date: input.date,
     amount: signedAmount,
     btcAt: state.data.btcKRW,
+    settled: input.settled,
     memo: input.memo,
     recurringRuleId: input.recurringRuleId,
   };
@@ -475,11 +481,17 @@ function applyUpdateTxn(state: State, id: number, input: NewTxnInput): State {
     time: formatTxnTime(input.date),
     date: input.date,
     amount: signedAmount,
+    settled: input.settled ?? oldTxn.settled,
     memo: input.memo,
     recurringRuleId: input.recurringRuleId,
   };
   const nextTxns = state.data.txns.slice();
   nextTxns[idx] = updatedTxn;
+  return { ...state, data: withTxnSummary(state.data, nextTxns) };
+}
+
+function applySetTxnSettled(state: State, id: number, settled: boolean): State {
+  const nextTxns = state.data.txns.map((txn) => (txn.id === id ? { ...txn, settled } : txn));
   return { ...state, data: withTxnSummary(state.data, nextTxns) };
 }
 
@@ -595,6 +607,7 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
       data: state.data,
       addTxn: (input) => dispatch({ type: "ADD_TXN", input }),
       updateTxn: (id, input) => dispatch({ type: "UPDATE_TXN", id, input }),
+      setTxnSettled: (id, settled) => dispatch({ type: "SET_TXN_SETTLED", id, settled }),
       deleteTxn,
       pendingUndo,
       undoLastDelete,

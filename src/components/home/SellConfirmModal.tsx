@@ -48,12 +48,10 @@ export default function SellConfirmModal({
   const currentBtcKrw = Number.isFinite(btcKrw) && btcKrw > 0 ? btcKrw : 0;
   const parsedCash = parseFloat(cashInput);
   const cashKrw = safeNonNegative(parsedCash);
-  const sellRecordCoverageKrw = Math.max(0, result.confirmedCoverageKrw - monthlyCash);
-  const requiredBeforeCashKrw = Math.max(0, result.totalDeficitKrw - sellRecordCoverageKrw);
 
   const balanceAdjustedSell = useMemo(
-    () => applyAccountBalance(requiredBeforeCashKrw, cashKrw, currentBtcKrw),
-    [cashKrw, currentBtcKrw, requiredBeforeCashKrw]
+    () => applyAccountBalance(result.totalDeficitKrw, cashKrw, currentBtcKrw),
+    [cashKrw, currentBtcKrw, result.totalDeficitKrw]
   );
   const sellKrw = balanceAdjustedSell.sellKrw;
   const sellSats = balanceAdjustedSell.sellSats;
@@ -115,7 +113,7 @@ export default function SellConfirmModal({
         satsSold: sellSats,
         btcKrwAtSell: currentBtcKrw,
         krwCovered: sellKrw,
-        deficitKrwAtConfirm: requiredBeforeCashKrw,
+        deficitKrwAtConfirm: result.totalDeficitKrw,
         deductedFromHeldBtc: true,
         deductedBtcAmount: sellBtc,
         note: note.trim() || undefined,
@@ -136,7 +134,7 @@ export default function SellConfirmModal({
         satsSold: sellSats,
         btcKrwAtSell: currentBtcKrw,
         krwCovered: sellKrw,
-        deficitKrwAtConfirm: requiredBeforeCashKrw,
+        deficitKrwAtConfirm: result.totalDeficitKrw,
         deductedFromHeldBtc: true,
         deductedBtcAmount: sellBtc,
         note: note.trim() || undefined,
