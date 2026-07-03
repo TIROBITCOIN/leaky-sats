@@ -1,5 +1,5 @@
 import type { CategoryDef, Txn } from "../types";
-import { dateKeyFromIso } from "./month";
+import { dateKeyFromIso, getTodayDateKey } from "./month";
 
 export interface SellResult {
   incomeKrw: number;
@@ -72,11 +72,27 @@ export function calculateMonthlyLivingCashflow(
   categoriesById: Record<string, CategoryDef>,
   period: { startDate: string; endDate: string }
 ): { incomeKrw: number; expenseKrw: number } {
-  const periodTxns = filterByPeriod(txns, period);
+  return calculateLivingCashflow(filterByPeriod(txns, period), categoriesById);
+}
+
+export function calculateRemainingLivingCashflow(
+  txns: Txn[],
+  categoriesById: Record<string, CategoryDef>,
+  period: { startDate: string; endDate: string },
+  todayDateKey = getTodayDateKey()
+): { incomeKrw: number; expenseKrw: number } {
+  const remainingTxns = filterByPeriod(txns, period).filter((t) => dateKeyFromIso(t.date) >= todayDateKey);
+  return calculateLivingCashflow(remainingTxns, categoriesById);
+}
+
+function calculateLivingCashflow(
+  txns: Txn[],
+  categoriesById: Record<string, CategoryDef>
+): { incomeKrw: number; expenseKrw: number } {
   let incomeKrw = 0;
   let expenseKrw = 0;
 
-  for (const t of periodTxns) {
+  for (const t of txns) {
     if (isInvestCategory(t.cat, categoriesById)) continue;
     if (t.amount > 0) {
       incomeKrw += t.amount;

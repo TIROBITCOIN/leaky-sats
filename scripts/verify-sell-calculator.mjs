@@ -15,6 +15,7 @@ const sellCalcPath = "src/lib/sellCalculator.ts";
 assert.ok(existsSync(sellCalcPath), "sellCalculator.ts exists");
 const sellCalcSrc = readFileSync(sellCalcPath, "utf8");
 assert.match(sellCalcSrc, /calculateMonthlyLivingCashflow/, "calculateMonthlyLivingCashflow exists");
+assert.match(sellCalcSrc, /calculateRemainingLivingCashflow/, "calculateRemainingLivingCashflow exists");
 assert.match(sellCalcSrc, /calculateSellNeeded/, "calculateSellNeeded exists");
 
 // DCA / BTC 留ㅼ닔??嫄곕옒 ?먯껜??吏異쒖씠吏留??앺솢鍮?遺議?怨꾩궛?먯꽌???쒖쇅?쒕떎.
@@ -162,6 +163,112 @@ assert.deepEqual(
   "DCA / BTC 留ㅼ닔 is excluded from living expense and sell-needed inputs"
 );
 
+const remainingCashflow = sellCalculator.calculateRemainingLivingCashflow(
+  [
+    {
+      id: 1,
+      title: "Past salary",
+      cat: "salary",
+      catLabel: "Salary",
+      time: "",
+      date: "2026-07-02T09:00",
+      amount: 2_000_000,
+      btcAt: 100_000_000,
+    },
+    {
+      id: 2,
+      title: "Past rent",
+      cat: "rent",
+      catLabel: "Rent",
+      time: "",
+      date: "2026-07-02T10:00",
+      amount: -900_000,
+      btcAt: 100_000_000,
+    },
+    {
+      id: 3,
+      title: "Today card bill",
+      cat: "card_bill",
+      catLabel: "Card bill",
+      time: "",
+      date: "2026-07-03T12:00",
+      amount: -500_000,
+      btcAt: 100_000_000,
+    },
+    {
+      id: 4,
+      title: "Future bonus",
+      cat: "salary",
+      catLabel: "Salary",
+      time: "",
+      date: "2026-07-04T12:00",
+      amount: 300_000,
+      btcAt: 100_000_000,
+    },
+    {
+      id: 5,
+      title: "Future living expense",
+      cat: "card_bill",
+      catLabel: "Card bill",
+      time: "",
+      date: "2026-07-05T12:00",
+      amount: -700_000,
+      btcAt: 100_000_000,
+    },
+    {
+      id: 6,
+      title: "Future DCA",
+      cat: "btc_buy",
+      catLabel: "DCA / BTC buy",
+      time: "",
+      date: "2026-07-05T13:00",
+      amount: -200_000,
+      btcAt: 100_000_000,
+    },
+    {
+      id: 7,
+      title: "After period expense",
+      cat: "card_bill",
+      catLabel: "Card bill",
+      time: "",
+      date: "2026-08-01T12:00",
+      amount: -1_000_000,
+      btcAt: 100_000_000,
+    },
+  ],
+  {
+    salary: { id: "salary", label: "Salary", group: "income", flow: "income" },
+    rent: { id: "rent", label: "Rent", group: "expense", flow: "expense" },
+    card_bill: { id: "card_bill", label: "Card bill", group: "expense", flow: "expense" },
+    btc_buy: { id: "btc_buy", label: "DCA / BTC buy", group: "invest", flow: "expense" },
+  },
+  { startDate: "2026-07-01", endDate: "2026-07-31" },
+  "2026-07-03"
+);
+assert.deepEqual(
+  remainingCashflow,
+  { incomeKrw: 300_000, expenseKrw: 1_200_000 },
+  "remaining sell-needed inputs include today and future living cashflow only"
+);
+
+const remainingSellNeeded = sellCalculator.calculateSellNeeded({
+  incomeKrw: remainingCashflow.incomeKrw,
+  expenseKrw: remainingCashflow.expenseKrw,
+  btcKrw: 150_000_000,
+  heldBtc: 0.5,
+  confirmedCoverageKrw: 400_000,
+});
+assert.equal(
+  remainingSellNeeded.deficitKrw,
+  500_000,
+  "sell-needed KRW = remaining expenses - account balance - remaining income"
+);
+assert.equal(
+  remainingSellNeeded.sellSats,
+  Math.round((500_000 / 150_000_000) * 100_000_000),
+  "remaining sell-needed sats are based on the current BTC price"
+);
+
 // 3-6. Arithmetic verification (inline calculation tests)
 // Test: income 2,500,000 / expense 3,000,000 / btcKrw 96,700,000
 const income = 2_500_000;
@@ -196,10 +303,16 @@ assert.match(settingsPage, /heldBtcInput/, "SettingsPage has held BTC UI");
 const homePage = readFileSync("src/components/home/HomePage.tsx", "utf8");
 assert.match(homePage, /heldBtc/, "HomePage references heldBtc");
 assert.match(homePage, /getMonthlyCash/, "HomePage reads monthly cash");
+assert.match(homePage, /calculateRemainingLivingCashflow/, "HomePage calculates remaining cashflow for sell-needed amount");
 assert.match(
   homePage,
+  /confirmedCoverageKrw:\s*monthlyCash/,
+  "HomePage uses account balance as the sell-needed coverage"
+);
+assert.doesNotMatch(
+  homePage,
   /confirmedCoverageKrw:\s*monthlySellSummary\.totalKrwCovered\s*\+\s*monthlyCash/,
-  "HomePage adds monthly cash to confirmed coverage"
+  "HomePage does not use total settlement sales to calculate sell-needed amount"
 );
 assert.match(homePage, /monthlyCash=\{monthlyCash\}/, "HomePage passes monthly cash to children");
 assert.match(homePage, /onMonthlyCashChanged=\{refreshAfterSellChange\}/, "HomePage refreshes after monthly cash changes");

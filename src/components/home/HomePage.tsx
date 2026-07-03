@@ -4,7 +4,7 @@ import { useLedger } from "../../state/LedgerContext";
 import { loadWalletName } from "../../lib/walletName";
 import { getHeldBtc } from "../../lib/heldBtc";
 import { loadBtcUnit, type BtcUnit } from "../../lib/format";
-import { calculateMonthlyLivingCashflow, calculateSellNeeded } from "../../lib/sellCalculator";
+import { calculateMonthlyLivingCashflow, calculateRemainingLivingCashflow, calculateSellNeeded } from "../../lib/sellCalculator";
 import { getYearFromMonthKey } from "../../lib/month";
 import { useSelectedMonth } from "../../lib/useSelectedMonth";
 import { getSettlementMonthKeyForDate, getSettlementPeriod, loadSettlementDay } from "../../lib/settlement";
@@ -83,13 +83,18 @@ export default function HomePage() {
     categoriesById,
     period,
   );
+  const { incomeKrw: remainingIncomeKrw, expenseKrw: remainingExpenseKrw } = calculateRemainingLivingCashflow(
+    data.txns,
+    categoriesById,
+    period,
+  );
   const netKrw = incomeKrw - expenseKrw;
   const sellResult = calculateSellNeeded({
-    incomeKrw,
-    expenseKrw,
+    incomeKrw: remainingIncomeKrw,
+    expenseKrw: remainingExpenseKrw,
     btcKrw: data.btcKRW,
     heldBtc,
-    confirmedCoverageKrw: monthlySellSummary.totalKrwCovered + monthlyCash,
+    confirmedCoverageKrw: monthlyCash,
   });
 
   // 판매 기록 저장/수정/삭제 후 보유 BTC와 화면을 다시 계산한다. 저장 시에는 토스트도 함께 띄운다.
