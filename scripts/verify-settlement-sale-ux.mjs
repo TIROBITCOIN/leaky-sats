@@ -177,13 +177,14 @@ assert.match(modalSrc, /onClick=\{onClose\}/, "an explicit close control (X/痍�
 assert.doesNotMatch(modalSrc, /sellUnit/, "SellConfirmModal no longer tracks a sellUnit toggle state");
 assert.doesNotMatch(modalSrc, /handleUnitToggle/, "SellConfirmModal no longer exposes BTC/sats input toggling");
 assert.match(modalSrc, /판매량 확정/, "SellConfirmModal uses the sell amount confirmation title");
-assert.match(modalSrc, /실제 판매 금액/, "SellConfirmModal shows the actual sell amount");
+assert.match(modalSrc, /실제 판매할 sats/, "SellConfirmModal shows final sats to sell");
 assert.doesNotMatch(modalSrc, /자동 판매량/, "SellConfirmModal no longer uses the old automatic sell amount label");
-assert.match(modalSrc, /sellSats/, "SellConfirmModal calculates sats automatically");
+assert.match(modalSrc, /finalSats/, "SellConfirmModal calculates final sats automatically");
+assert.match(modalSrc, /networkFeeSats/, "SellConfirmModal includes network fee sats");
 
-// 18. Current BTC price display exists; monthly cash persistence was replaced by period start balance.
-assert.match(modalSrc, /현재 시세/, "SellConfirmModal has the current BTC price display");
-assert.doesNotMatch(modalSrc, /setMonthlyCash|getMonthlyCash|monthlyCash/, "SellConfirmModal no longer saves monthly cash");
+// 18. Effective BTC price display exists; monthly cash persistence is removed.
+assert.match(modalSrc, /실효가격/, "SellConfirmModal has the effective BTC price display");
+assert.doesNotMatch(modalSrc, /setMonthlyCash|getMonthlyCash|monthlyCash|통장 보유액/, "SellConfirmModal no longer saves monthly cash");
 
 // 19. BTC ?먮ℓ 湲곕줉 row??"?? 硫붾돱 ?먮뒗 edit/delete action 議댁옱
 assert.match(monthlyCardSrc, /SellRecordMenu|onEditRecord/, "MonthlySellSummaryCard offers an edit/delete action per record");
@@ -203,13 +204,11 @@ const expectedKeys = [
   "myledger.heldBtc.v1",
   "myledger.displayUnit.v1",
   "myledger.btcSellRecords.v1",
-  "myledger.periodStartBalance.v1",
 ];
 const ledgerContextSrc = read("src/state/LedgerContext.tsx");
 const heldBtcSrc = read("src/lib/heldBtc.ts");
 const formatSrc = read("src/lib/format.ts");
-const periodStartBalanceSrc = read("src/lib/periodStartBalance.ts");
-const allSrcForKeys = ledgerContextSrc + heldBtcSrc + formatSrc + btcSellRecordsSrc + periodStartBalanceSrc;
+const allSrcForKeys = ledgerContextSrc + heldBtcSrc + formatSrc + btcSellRecordsSrc;
 for (const key of expectedKeys) {
   assert.ok(allSrcForKeys.includes(key), `localStorage key ${key} is still present`);
 }

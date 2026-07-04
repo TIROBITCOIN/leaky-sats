@@ -23,16 +23,11 @@ assert.match(sellRecordsSrc, /totalKrwCovered/, "monthly summary has totalKrwCov
 // 5. Yearly summarize calculates totals
 assert.match(sellRecordsSrc, /totalSatsSold/, "yearly summary has totalSatsSold");
 
-// 6. Remaining deficit calculation (period start balance in sellCalculator)
+// 6. Sell-needed calculation uses the full settlement-period deficit.
 const sellCalcSrc = readFileSync("src/lib/sellCalculator.ts", "utf8");
-assert.match(sellCalcSrc, /theoreticalBalanceKrw/, "sellCalculator accepts theoreticalBalanceKrw");
+assert.doesNotMatch(sellCalcSrc, /confirmedCoverageKrw|applyAccountBalance|calculateRemainingLivingCashflow/, "sellCalculator has no cash-balance coverage path");
 assert.match(sellCalcSrc, /totalDeficitKrw/, "sellCalculator calculates totalDeficitKrw");
-// Arithmetic: deficit = max(0, totalDeficit - theoretical balance)
-assert.match(
-  sellCalcSrc,
-  /Math\.max\(0, totalDeficitKrw - safeTheoreticalBalance\)/,
-  "remaining deficit = max(0, total - theoretical balance)"
-);
+assert.match(sellCalcSrc, /Math\.max\(0, expenseKrw - incomeKrw\)/, "sell-needed KRW = max(0, period expense - period income)");
 
 // 7. BTC/sats display unit formatter reused (fmtBtcValue)
 const sellCardSrc = readFileSync("src/components/home/SellNeededCard.tsx", "utf8");
@@ -48,13 +43,15 @@ assert.match(sellCardSrc, /BTC 판매 확정/, "SellNeededCard has BTC 판매 �
 // 9. Modal has required automated sell fields
 const modalSrc = readFileSync("src/components/home/SellConfirmModal.tsx", "utf8");
 assert.match(modalSrc, /판매량 확정/, "modal uses the sell amount confirmation title");
-assert.match(modalSrc, /실제 판매 금액/, "modal shows actual sell amount");
+assert.match(modalSrc, /실제 판매할 sats/, "modal shows final sats to sell");
 assert.doesNotMatch(modalSrc, /자동 판매량/, "modal no longer uses old automatic sell amount label");
-assert.match(modalSrc, /sellSats/, "modal calculates sats automatically");
+assert.match(modalSrc, /finalSats/, "modal calculates final sats automatically");
+assert.match(modalSrc, /tradeSats/, "modal calculates trade sats before network fee");
+assert.match(modalSrc, /networkFeeSats/, "modal includes network fee sats");
 assert.match(modalSrc, /sellBtc/, "modal calculates BTC automatically");
-assert.match(modalSrc, /krwCovered:\s*sellKrw/, "modal saves auto-calculated krwCovered");
-assert.match(modalSrc, /현재 시세/, "modal shows current BTC price");
-assert.match(modalSrc, /btcKrwAtSell:\s*currentBtcKrw/, "modal snapshots current BTC price on save");
+assert.match(modalSrc, /krwCovered:\s*coveredKrw/, "modal saves auto-calculated krwCovered");
+assert.match(modalSrc, /실효가격/, "modal shows effective BTC price");
+assert.match(modalSrc, /btcKrwAtSell:\s*effectivePrice/, "modal snapshots effective BTC price on save");
 assert.doesNotMatch(modalSrc, /보유 BTC에서 차감/, "modal no longer has deduct checkbox");
 
 // 10. Saving deducts from heldBtc
@@ -68,7 +65,7 @@ assert.match(
 assert.match(modalSrc, /disabled=\{[^}]*overHeld[^}]*\}/, "save button is disabled while a deducted sale exceeds held BTC");
 assert.match(
   modalSrc,
-  /const overHeld = Number\.isFinite\(sellBtc\) && sellBtc > availableHeldBtc/,
+  /const overHeld = useMemo\(\(\) => Number\.isFinite\(sellBtc\) && sellBtc > availableHeldBtc/,
   "overheld blocking always applies to sales"
 );
 assert.match(modalSrc, /deductedFromHeldBtc:\s*true/, "saved records are always marked deducted from held BTC");

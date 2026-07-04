@@ -4,8 +4,8 @@ export const CURRENCY_STORAGE_KEY = "myledger.currency.v1";
 export const REFRESH_INTERVAL_STORAGE_KEY = "myledger.refreshInterval.v1";
 
 export const DEFAULT_CURRENCY: Currency = "KRW";
-export const DEFAULT_REFRESH_INTERVAL_MS = 60_000;
-export const ALLOWED_REFRESH_INTERVALS = [30_000, 60_000, 300_000] as const;
+export const DEFAULT_REFRESH_INTERVAL_MS = 1_000;
+export const MIN_REFRESH_INTERVAL_MS = 1_000;
 
 export function normalizeCurrency(value: unknown): Currency {
   return value === "KRW" || value === "BTC" ? value : DEFAULT_CURRENCY;
@@ -33,8 +33,8 @@ export function saveCurrency(currency: unknown): Currency {
 
 export function normalizeRefreshInterval(value: unknown): number {
   const interval = typeof value === "number" ? value : Number(value);
-  return ALLOWED_REFRESH_INTERVALS.includes(interval as (typeof ALLOWED_REFRESH_INTERVALS)[number])
-    ? interval
+  return Number.isFinite(interval) && interval >= MIN_REFRESH_INTERVAL_MS
+    ? Math.round(interval)
     : DEFAULT_REFRESH_INTERVAL_MS;
 }
 

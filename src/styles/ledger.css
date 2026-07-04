@@ -553,6 +553,9 @@
   border-radius: 12px;
   background: var(--ldg-fill);
 }
+.ldg-sell-highlight.final {
+  background: #eef6ff;
+}
 .ldg-sell-highlight-label {
   color: var(--ldg-fg-3);
   font-size: 12px;
@@ -577,12 +580,61 @@
 }
 .ldg-sell-krw-main {
   margin-top: 8px;
-  color: var(--ldg-fg);
+  color: var(--ldg-fg-3);
   font-family: var(--ldg-mono);
-  font-size: 18px;
-  font-weight: 800;
+  font-size: 13px;
+  font-weight: 700;
   letter-spacing: 0;
   font-variant-numeric: tabular-nums;
+}
+.ldg-modal-divider {
+  height: 1px;
+  background: var(--ldg-border);
+}
+.ldg-prefixed-input,
+.ldg-suffix-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ldg-prefixed-input > span,
+.ldg-suffix-input > span {
+  color: var(--ldg-fg-3);
+  font-size: 13px;
+  font-weight: 700;
+}
+.ldg-prefixed-input .ldg-input,
+.ldg-suffix-input .ldg-input {
+  flex: 1;
+  min-width: 0;
+}
+.ldg-modal-sub {
+  color: var(--ldg-fg-3);
+  font-family: var(--ldg-mono);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+.ldg-fee-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #f5d08a;
+  border-radius: 10px;
+  background: #fff7df;
+  color: #8a5b00;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.ldg-fee-warning span {
+  flex: 0 0 auto;
+}
+.ldg-sell-modal-note {
+  color: var(--ldg-fg-3);
+  font-size: 11px;
+  line-height: 1.45;
+  text-align: center;
 }
 .ldg-sell-covered {
   margin-top: 8px;
@@ -612,98 +664,6 @@
   color: var(--ldg-fg-3);
   font-size: 12px;
   line-height: 1.45;
-}
-.ldg-sell-simple-card {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.ldg-badge {
-  display: inline-flex;
-  align-items: center;
-  min-height: 22px;
-  padding: 0 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 750;
-  color: var(--ldg-fg-2);
-  background: var(--ldg-fill);
-}
-.ldg-badge.muted {
-  color: var(--ldg-fg-3);
-}
-.ldg-sell-primary {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.ldg-sell-primary strong {
-  color: var(--ldg-fg);
-  font-family: var(--ldg-mono);
-  font-size: 32px;
-  font-weight: 850;
-  letter-spacing: 0;
-  line-height: 1.06;
-  font-variant-numeric: tabular-nums;
-}
-.ldg-sell-primary span {
-  color: var(--ldg-fg-3);
-  font-size: 13px;
-}
-.ldg-sell-detail-toggle {
-  width: fit-content;
-  border: 0;
-  padding: 0;
-  background: transparent;
-  color: var(--ldg-fg-3);
-  font-size: 12px;
-  font-weight: 750;
-}
-.ldg-sell-detail-toggle span {
-  margin-left: 4px;
-  color: var(--ldg-orange);
-}
-.ldg-sell-calc-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.ldg-sell-calc-list {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-.ldg-sell-calc-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  color: var(--ldg-fg-3);
-  font-size: 12px;
-}
-.ldg-sell-calc-row strong {
-  flex-shrink: 0;
-  color: var(--ldg-fg-2);
-  font-family: var(--ldg-mono);
-  font-variant-numeric: tabular-nums;
-}
-.ldg-sell-calc-row.muted strong {
-  color: var(--ldg-fg-3);
-}
-.ldg-sell-calc-divider {
-  height: 1px;
-  background: var(--ldg-border);
-}
-.ldg-actual-balance-field {
-  margin: 0;
-}
-.ldg-sell-delta {
-  margin-top: 6px;
-  color: var(--ldg-fg-3);
-  font-size: 12px;
-}
-.ldg-start-balance-modal {
-  gap: 14px;
 }
 .ldg-recurring-card .ldg-card-head {
   align-items: flex-start;
@@ -1134,20 +1094,6 @@
 }
 .ldg-txn-amt {
   text-align: right;
-}
-.ldg-txn-settle-chip {
-  margin-top: 5px;
-  border: 0;
-  padding: 0;
-  background: transparent;
-  color: var(--ldg-fg-4);
-  font-size: 10px;
-  font-weight: 750;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-.ldg-txn-settle-chip.done {
-  color: var(--ldg-orange);
 }
 .ldg-txn-main {
   font-size: 14px;

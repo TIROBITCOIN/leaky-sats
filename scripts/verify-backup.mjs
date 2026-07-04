@@ -58,9 +58,7 @@ assert.match(backup, /RECURRING_RULES_KEY/, "recurring rules are included");
 assert.match(backup, /RECURRING_MATERIALIZED_KEY/, "recurring materialized state is included");
 assert.match(backup, /recurringRuleId/, "transaction recurringRuleId is accepted by backup validation");
 assert.match(backup, /myledger\.settlementDay\.v1/, "settlement day is included");
-assert.match(backup, /PERIOD_START_BALANCE_KEY/, "period start balance key is wired through backup");
-assert.match(backup, /MONTHLY_CASH_KEY/, "legacy monthly cash key is still accepted for migration");
-assert.doesNotMatch(backup, /monthlyCash:\s*MONTHLY_CASH_KEY/, "monthly cash is not exported as an active backup key");
+assert.doesNotMatch(backup, /MONTHLY_CASH_KEY|monthlyCash/, "monthly cash key is ignored by backup");
 assert.doesNotMatch(backup, /pendingUndo.*createBackupPayload/s, "pendingUndo is not backed up");
 assert.match(backup, /value\.app !== APP_ID/, "wrong app is rejected");
 assert.match(backup, /value\.version !== BACKUP_VERSION/, "wrong version is rejected");
@@ -133,13 +131,11 @@ const settlementSource = readFileSync(join(root, "src/lib/settlement.ts"), "utf8
   `"${monthUrl}"`
 );
 const settlementUrl = moduleUrl(settlementSource);
-const periodStartBalanceUrl = moduleUrl(readFileSync(join(root, "src/lib/periodStartBalance.ts"), "utf8"));
 const runnableBackup = readFileSync(backupPath, "utf8")
   .replace('"./format"', `"${formatUrl}"`)
   .replace('"./preferences"', `"${preferencesUrl}"`)
   .replace('"./recurringRules"', `"${recurringUrl}"`)
-  .replace('"./settlement"', `"${settlementUrl}"`)
-  .replace('"./periodStartBalance"', `"${periodStartBalanceUrl}"`);
+  .replace('"./settlement"', `"${settlementUrl}"`);
 const backupApi = await import(moduleUrl(runnableBackup));
 
 const makeJsonFile = (value) => {
@@ -155,9 +151,6 @@ class MemoryStorage {
   }
   setItem(key, value) {
     this.#items.set(key, String(value));
-  }
-  removeItem(key) {
-    this.#items.delete(key);
   }
 }
 
@@ -261,14 +254,10 @@ assert.equal(prepared.preview.categoriesCount, 1, "preview counts valid categori
 assert.equal(prepared.preview.btcSellRecordsCount, 1, "preview counts BTC sale records");
 assert.equal(prepared.preview.recurringRulesCount, 1, "preview counts recurring rules");
 assert.equal(prepared.preview.recurringMaterializedCount, 1, "preview counts recurring materialized keys");
-assert.equal(prepared.preview.invalidItemsRemoved, 5, "invalid array and legacy monthly cash items are removed and counted");
+assert.equal(prepared.preview.invalidItemsRemoved, 2, "invalid array items are removed and counted");
 assert.equal(prepared.preview.hasHeldBtc, true, "preview reports held BTC");
 assert.equal(prepared.preview.hasSettlementDay, true, "preview reports settlement day");
-assert.deepEqual(
-  prepared.payload.data["myledger.periodStartBalance.v1"],
-  { "2026-06": { startBalanceKrw: 500_000 } },
-  "valid legacy monthly cash entries are migrated to period start balances"
-);
+assert.equal(prepared.payload.data["myledger.monthlyCash.v1"], undefined, "legacy monthly cash entries are ignored");
 assert.equal(
   prepared.payload.data["myledger.txns.v1"].txns[0].recurringRuleId,
   "rec_1",
@@ -300,12 +289,7 @@ assert.equal(
   1,
   "only sanitized transaction items are restored"
 );
-assert.equal(storage.getItem("myledger.monthlyCash.v1"), null, "legacy monthly cash is removed during restore");
-assert.deepEqual(
-  JSON.parse(storage.getItem("myledger.periodStartBalance.v1")),
-  { "2026-06": { startBalanceKrw: 500_000 } },
-  "period start balance is written during restore"
-);
+assert.equal(storage.getItem("myledger.monthlyCash.v1"), null, "monthly cash is not written during restore");
 assert.equal(
   JSON.parse(storage.getItem("myledger.txns.v1")).txns[0].recurringRuleId,
   "rec_1",
