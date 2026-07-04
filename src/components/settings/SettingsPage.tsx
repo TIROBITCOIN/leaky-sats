@@ -28,18 +28,10 @@ function formatFullDate(dateKeyStr: string): string {
   const [y, m, d] = dateKeyStr.split("-").map(Number);
   return `${y}년 ${m}월 ${d}일`;
 }
-const INTERVALS: { label: string; ms: number }[] = [
-  { label: "30초", ms: 30_000 },
-  { label: "1분", ms: 60_000 },
-  { label: "5분", ms: 300_000 },
-];
-
 export default function SettingsPage() {
   const {
     currency,
     setCurrency,
-    refreshIntervalMs,
-    setRefreshIntervalMs,
     priceStatus,
     priceError,
     priceUpdatedAt,
@@ -135,24 +127,6 @@ export default function SettingsPage() {
         </div>
 
         <div className="ldg-card">
-          <div className="ldg-setting-row">
-            <div>
-              <div className="ldg-setting-label">새로고침 주기</div>
-              <div className="ldg-setting-desc">여러 공개 API를 fallback으로 사용하는 시세 자동 갱신 간격</div>
-            </div>
-            <div className="ldg-radio-group">
-              {INTERVALS.map((i) => (
-                <button
-                  type="button"
-                  key={i.label}
-                  className={refreshIntervalMs === i.ms ? "on" : ""}
-                  onClick={() => setRefreshIntervalMs(i.ms)}
-                >
-                  {i.label}
-                </button>
-              ))}
-            </div>
-          </div>
           <div className="ldg-setting-row">
             <div>
               <div className="ldg-setting-label">시세 상태</div>

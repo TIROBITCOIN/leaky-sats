@@ -1,58 +1,87 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "../../styles/layout.css";
-import { useLedger } from "../../state/LedgerContext";
-import { getSettlementMonthKeyForDate, loadSettlementDay } from "../../lib/settlement";
-import { loadPeriodStartBalances } from "../../lib/periodStartBalance";
 
-function parseKrwInput(value: string): number {
-  const parsed = Number(value.replace(/[^0-9]/g, ""));
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+const DISMISS_KEY = "myledger.onboarding.dismissed.v1";
+const SESSION_KEY = "myledger.onboarding.closedThisSession.v1";
+
+function isDismissed(): boolean {
+  try {
+    return localStorage.getItem(DISMISS_KEY) === "1";
+  } catch {
+    return false;
+  }
 }
 
-export function getCurrentOnboardingMonth(): string {
-  return getSettlementMonthKeyForDate(new Date().toISOString(), loadSettlementDay());
+function isClosedThisSession(): boolean {
+  try {
+    return sessionStorage.getItem(SESSION_KEY) === "1";
+  } catch {
+    return false;
+  }
 }
 
-export function isOnboardingVisible(month = getCurrentOnboardingMonth()): boolean {
-  return !loadPeriodStartBalances()[month];
+export function isOnboardingVisible(): boolean {
+  return !isDismissed() && !isClosedThisSession();
 }
 
-export default function OnboardingPrompt({
-  onDone,
-  month = getCurrentOnboardingMonth(),
-}: {
-  onDone: () => void;
-  month?: string;
-}) {
-  const { periodStartBalances, setPeriodStartBalance } = useLedger();
-  const [balanceInput, setBalanceInput] = useState("");
+export default function OnboardingPrompt({ onDone }: { onDone: () => void }) {
+  const navigate = useNavigate();
+  const [dontShowAgain, setDontShowAgain] = useState(false);
 
-  if (periodStartBalances[month]) return null;
+  if (!isOnboardingVisible()) return null;
 
-  const save = (skipped: boolean) => {
-    setPeriodStartBalance(month, skipped ? 0 : parseKrwInput(balanceInput), skipped);
+  const handleClose = () => {
+    try {
+      if (dontShowAgain) {
+        localStorage.setItem(DISMISS_KEY, "1");
+      } else {
+        sessionStorage.setItem(SESSION_KEY, "1");
+      }
+    } catch {
+      // ignore storage errors
+    }
     onDone();
+  };
+
+  const handleDetail = () => {
+    try {
+      localStorage.setItem(DISMISS_KEY, "1");
+    } catch {
+      // ignore
+    }
+    onDone();
+    navigate("/help");
   };
 
   return (
     <div className="ldg-modal-backdrop">
-      <div className="ldg-modal-content ldg-start-balance-modal">
-        <div className="ldg-modal-title">지금 통장에 얼마 있어?</div>
-        <input
-          type="text"
-          inputMode="numeric"
-          className="ldg-input"
-          value={balanceInput}
-          onChange={(event) => setBalanceInput(event.target.value.replace(/[^0-9]/g, ""))}
-          placeholder="0"
-          autoFocus
-        />
+      <div className="ldg-modal-content">
+        <div className="ldg-modal-title">사용방법</div>
+
+        <ol className="ldg-onboarding-steps">
+          <li>설정 탭으로 이동하여 보유 BTC를 설정하세요.</li>
+          <li>정산 기준일을 설정하세요.</li>
+          <li>수입과 지출을 입력하세요.</li>
+          <li>매월 반복되는 항목은 반복 항목으로 등록하세요.</li>
+          <li>데이터 보호를 위해 백업을 다운로드하세요.</li>
+        </ol>
+
+        <label className="ldg-modal-checkbox">
+          <input
+            type="checkbox"
+            checked={dontShowAgain}
+            onChange={(e) => setDontShowAgain(e.target.checked)}
+          />
+          <span>다시 보지 않기</span>
+        </label>
+
         <div className="ldg-modal-actions">
-          <button type="button" className="ldg-submit-btn secondary" onClick={() => save(true)}>
-            건너뛰기
+          <button type="button" className="ldg-submit-btn secondary" onClick={handleClose}>
+            닫기
           </button>
-          <button type="button" className="ldg-submit-btn" onClick={() => save(false)}>
-            저장
+          <button type="button" className="ldg-submit-btn" onClick={handleDetail}>
+            자세히 보기
           </button>
         </div>
       </div>

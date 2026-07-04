@@ -15,8 +15,9 @@ assert.match(preferences, /myledger\.refreshInterval\.v1/, "refresh interval use
 assert.match(preferences, /try\s*\{[\s\S]*localStorage\.getItem/, "preference loads guard localStorage access");
 assert.match(preferences, /catch\s*\{/, "preference loads fall back after storage errors");
 assert.match(preferences, /value === "KRW" \|\| value === "BTC"/, "currency load validates the allowed values");
-assert.match(preferences, /30_000[\s\S]*60_000[\s\S]*300_000/, "refresh interval whitelist is explicit");
-assert.match(preferences, /ALLOWED_REFRESH_INTERVALS\.includes/, "refresh interval load validates against the whitelist");
+assert.match(preferences, /DEFAULT_REFRESH_INTERVAL_MS\s*=\s*1_000/, "refresh interval defaults to one second");
+assert.match(preferences, /MIN_REFRESH_INTERVAL_MS\s*=\s*1_000/, "refresh interval has a one-second lower bound");
+assert.match(preferences, /interval >= MIN_REFRESH_INTERVAL_MS/, "refresh interval load validates against the lower bound");
 
 assert.match(ledger, /currency:\s*loadCurrency\(\)/, "initial currency loads from persistence");
 assert.match(ledger, /refreshIntervalMs:\s*loadRefreshInterval\(\)/, "initial refresh interval loads from persistence");
@@ -25,7 +26,7 @@ assert.match(ledger, /saveRefreshInterval\(state\.refreshIntervalMs\)/, "refresh
 assert.match(
   ledger,
   /refreshIntervalMs:\s*normalizeRefreshInterval\(action\.ms\)/,
-  "refresh interval actions are clamped to the whitelist"
+  "refresh interval actions are normalized to the lower bound"
 );
 
 assert.match(format, /myledger\.displayUnit\.v1/, "BTC/sats display unit remains independently persisted");
@@ -40,7 +41,7 @@ assert.match(
 );
 assert.match(
   backup,
-  /ALLOWED_REFRESH_INTERVALS\.includes\(refreshInterval[\s\S]*normalizeRefreshInterval\(refreshInterval\)/,
+  /refreshInterval >= DEFAULT_REFRESH_INTERVAL_MS[\s\S]*normalizeRefreshInterval\(refreshInterval\)/,
   "backup preparation validates refresh interval"
 );
 assert.match(
@@ -76,12 +77,12 @@ assert.equal(persisted.loadCurrency(), "BTC", "BTC currency survives reload");
 storage.setItem(persisted.CURRENCY_STORAGE_KEY, "USD");
 assert.equal(persisted.loadCurrency(), "KRW", "invalid currency falls back safely");
 
-for (const interval of [30_000, 60_000, 300_000]) {
+for (const interval of [1_000, 5_000, 30_000]) {
   persisted.saveRefreshInterval(interval);
   assert.equal(persisted.loadRefreshInterval(), interval, `${interval} refresh interval survives reload`);
 }
-storage.setItem(persisted.REFRESH_INTERVAL_STORAGE_KEY, "1000");
-assert.equal(persisted.loadRefreshInterval(), 60_000, "too-small refresh interval falls back to one minute");
-assert.equal(persisted.saveRefreshInterval(Number.NaN), 60_000, "invalid refresh interval is normalized before save");
+storage.setItem(persisted.REFRESH_INTERVAL_STORAGE_KEY, "999");
+assert.equal(persisted.loadRefreshInterval(), 1_000, "too-small refresh interval falls back to one second");
+assert.equal(persisted.saveRefreshInterval(Number.NaN), 1_000, "invalid refresh interval is normalized before save");
 
 console.log("verify:preferences-persist passed");
