@@ -444,6 +444,30 @@
   font-feature-settings: "tnum";
   overflow-wrap: anywhere;
 }
+.ldg-sell-sats-primary {
+  margin-top: 6px;
+  color: #185FA5;
+  font-family: var(--ldg-mono);
+  font-size: clamp(30px, 8vw, 38px);
+  font-weight: 850;
+  letter-spacing: 0;
+  line-height: 1.08;
+  text-align: left;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+.ldg-sell-krw-secondary {
+  margin-top: 6px;
+  color: var(--ldg-fg-3);
+  font-family: var(--ldg-mono);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
 .ldg-settlement-done {
   color: var(--ldg-pos);
   font-size: 1.35rem;
@@ -591,22 +615,18 @@
   height: 1px;
   background: var(--ldg-border);
 }
-.ldg-prefixed-input,
-.ldg-suffix-input {
-  display: flex;
+.ldg-input-with-unit {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
   align-items: center;
   gap: 8px;
 }
-.ldg-prefixed-input > span,
-.ldg-suffix-input > span {
+.ldg-input-unit {
+  width: 34px;
   color: var(--ldg-fg-3);
   font-size: 13px;
   font-weight: 700;
-}
-.ldg-prefixed-input .ldg-input,
-.ldg-suffix-input .ldg-input {
-  flex: 1;
-  min-width: 0;
+  text-align: left;
 }
 .ldg-modal-sub {
   color: var(--ldg-fg-3);
@@ -773,8 +793,13 @@
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 0;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
+}
+.ldg-price-val.full-krw {
+  font-size: clamp(11px, 3.1vw, 14px);
 }
 .ldg-price-val.mono {
   font-family: var(--ldg-mono);
@@ -1108,13 +1133,6 @@
 .ldg-txn-main.neg {
   color: var(--ldg-expense);
 }
-.ldg-txn-sub {
-  font-family: var(--ldg-mono);
-  font-size: 10px;
-  color: var(--ldg-fg-4);
-  margin-top: 2px;
-}
-
 @media (max-width: 380px) {
   .ldg-done-row,
   .ldg-sell-needed-row {

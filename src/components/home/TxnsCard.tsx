@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import type { Currency, LedgerData } from "../../types";
+import type { LedgerData } from "../../types";
 import { isIsoWithinPeriod, type SettlementPeriod } from "../../lib/settlement";
 import { useLedger } from "../../state/LedgerContext";
 import SwipeableRow from "../transaction/SwipeableRow";
@@ -9,12 +9,10 @@ const HOME_TXN_LIMIT = 5;
 
 export default function TxnsCard({
   d,
-  currency,
   selectedMonth,
   period,
 }: {
   d: LedgerData;
-  currency: Currency;
   selectedMonth: string;
   period: SettlementPeriod;
 }) {
@@ -38,7 +36,7 @@ export default function TxnsCard({
             onEdit={() => navigate(`/add?edit=${t.id}&month=${selectedMonth}`)}
             onDelete={() => deleteTxn(t.id)}
           >
-            <TxnRow t={t} currency={currency} btcKRW={d.btcKRW} />
+            <TxnRow t={t} />
           </SwipeableRow>
         ))}
         {visible.length === 0 && <div className="ldg-page-sub">이번 정산기간 거래 내역이 없어요.</div>}

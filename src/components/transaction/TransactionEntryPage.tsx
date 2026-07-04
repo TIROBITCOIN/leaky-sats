@@ -58,7 +58,7 @@ function AmountDateMemoFields({
       {extraBefore}
       <div className="ldg-field" style={{ marginTop: extraBefore ? 12 : 0 }}>
         <div className="ldg-label" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          금액 (₩)
+          금액 (원)
           <span className={`ldg-flow-badge ${isIncome ? "income" : "expense"}`}>{isIncome ? "수입" : "지출"}</span>
         </div>
         <input
@@ -69,8 +69,8 @@ function AmountDateMemoFields({
           onChange={(e) => onAmountChange(e.target.value)}
         />
         <div className="ldg-preview">
-          ≈ <b style={{ whiteSpace: "nowrap" }}>{sats.toLocaleString("en-US")} sats</b> · 현재 시세{" "}
-          <span style={{ whiteSpace: "nowrap" }}>₩{(btcKRW / 1_000_000).toFixed(1)}M</span> 기준
+          <b style={{ whiteSpace: "nowrap" }}>{sats.toLocaleString("en-US")} sats</b> · 현재 시세{" "}
+          <span style={{ whiteSpace: "nowrap" }}>{fmtKRW(btcKRW)}</span> 기준
         </div>
       </div>
 

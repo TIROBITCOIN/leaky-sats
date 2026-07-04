@@ -29,16 +29,16 @@ assert.doesNotMatch(sellCalcSrc, /confirmedCoverageKrw|applyAccountBalance|calcu
 assert.match(sellCalcSrc, /totalDeficitKrw/, "sellCalculator calculates totalDeficitKrw");
 assert.match(sellCalcSrc, /Math\.max\(0, expenseKrw - incomeKrw\)/, "sell-needed KRW = max(0, period expense - period income)");
 
-// 7. BTC/sats display unit formatter reused (fmtBtcValue)
+// 7. BTC/sats display formatters are reused.
 const sellCardSrc = readFileSync("src/components/home/SellNeededCard.tsx", "utf8");
-assert.match(sellCardSrc, /fmtBtcValue/, "SellNeededCard uses fmtBtcValue");
+assert.match(sellCardSrc, /fmtSats/, "SellNeededCard uses sats as the primary sell amount");
 const monthlyCardSrc = readFileSync("src/components/home/MonthlySellSummaryCard.tsx", "utf8");
 assert.match(monthlyCardSrc, /fmtBtcValue/, "MonthlySellSummaryCard uses fmtBtcValue");
 const yearlyCardSrc = readFileSync("src/components/home/YearlySellSummaryCard.tsx", "utf8");
 assert.match(yearlyCardSrc, /fmtBtcValue/, "YearlySellSummaryCard uses fmtBtcValue");
 
-// 8. SellNeededCard has "BTC ?먮ℓ ?뺤젙" button (Phase 12: renamed from 諛섏쁺 to ?뺤젙)
-assert.match(sellCardSrc, /BTC 판매 확정/, "SellNeededCard has BTC 판매 확정 button");
+// 8. SellNeededCard has the simplified sell button.
+assert.match(sellCardSrc, />\s*판매\s*</, "SellNeededCard has the simplified sell button");
 
 // 9. Modal has required automated sell fields
 const modalSrc = readFileSync("src/components/home/SellConfirmModal.tsx", "utf8");
@@ -50,7 +50,7 @@ assert.match(modalSrc, /tradeSats/, "modal calculates trade sats before network 
 assert.match(modalSrc, /networkFeeSats/, "modal includes network fee sats");
 assert.match(modalSrc, /sellBtc/, "modal calculates BTC automatically");
 assert.match(modalSrc, /krwCovered:\s*coveredKrw/, "modal saves auto-calculated krwCovered");
-assert.match(modalSrc, /실효가격/, "modal shows effective BTC price");
+assert.doesNotMatch(modalSrc, /실효가격/, "modal hides the effective BTC price row");
 assert.match(modalSrc, /btcKrwAtSell:\s*effectivePrice/, "modal snapshots effective BTC price on save");
 assert.doesNotMatch(modalSrc, /보유 BTC에서 차감/, "modal no longer has deduct checkbox");
 

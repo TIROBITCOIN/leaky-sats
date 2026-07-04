@@ -15,7 +15,7 @@ export default function CurrencyToggle({
         role="tab"
         aria-selected={value === "KRW"}
       >
-        <span className="ldg-toggle-glyph">₩</span> KRW
+        <span className="ldg-toggle-glyph">원</span> KRW
       </button>
       <button
         className={`ldg-toggle-btn ${value === "BTC" ? "active btc" : ""}`}

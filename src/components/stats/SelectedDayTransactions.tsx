@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import type { Currency, Txn } from "../../types";
+import type { Txn } from "../../types";
 import { useLedger } from "../../state/LedgerContext";
 import SwipeableRow from "../transaction/SwipeableRow";
 import TxnRow from "../home/TxnRow";
@@ -12,11 +12,9 @@ function formatSelectedDateLabel(dateKey: string): string {
 interface Props {
   dateKey: string;
   txns: Txn[];
-  currency: Currency;
-  btcKRW: number;
 }
 
-export default function SelectedDayTransactions({ dateKey, txns, currency, btcKRW }: Props) {
+export default function SelectedDayTransactions({ dateKey, txns }: Props) {
   const { deleteTxn } = useLedger();
   const navigate = useNavigate();
 
@@ -28,7 +26,7 @@ export default function SelectedDayTransactions({ dateKey, txns, currency, btcKR
       <div className="ldg-txn-list">
         {txns.map((t) => (
           <SwipeableRow key={t.id} txn={t} onEdit={() => navigate(`/add?edit=${t.id}`)} onDelete={() => deleteTxn(t.id)}>
-            <TxnRow t={t} currency={currency} btcKRW={btcKRW} />
+            <TxnRow t={t} />
           </SwipeableRow>
         ))}
         {txns.length === 0 && <div className="ldg-page-sub">이 날의 거래가 없습니다.</div>}

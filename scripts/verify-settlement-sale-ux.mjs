@@ -155,7 +155,8 @@ assert.doesNotMatch(categoryManagerSrc, /legacyCategories.*=.*\[\]/, "legacy cat
 assert.doesNotMatch(combinedComponents, /BTC 판매 반영/, "BTC 판매 반영 no longer appears in user-facing components");
 
 // 12. "BTC ?먮ℓ ?뺤젙" 臾몄옄??議댁옱
-assert.match(combinedComponents, /BTC 판매 확정/, "BTC 판매 확정 label is present");
+assert.doesNotMatch(combinedComponents, /BTC 판매 확정/, "old BTC sale confirmation label is absent");
+assert.match(combinedComponents, />\s*판매\s*</, "simplified sale label is present");
 
 // 13. "?먮ℓ?댁빞 ?섎뒗 鍮꾪듃肄붿씤" 臾몄옄??議댁옱
 assert.match(combinedComponents, /판매해야 하는 비트코인|정산 완료/, "SellNeededCard primary label is present");
@@ -183,7 +184,8 @@ assert.match(modalSrc, /finalSats/, "SellConfirmModal calculates final sats auto
 assert.match(modalSrc, /networkFeeSats/, "SellConfirmModal includes network fee sats");
 
 // 18. Effective BTC price display exists; monthly cash persistence is removed.
-assert.match(modalSrc, /실효가격/, "SellConfirmModal has the effective BTC price display");
+assert.doesNotMatch(modalSrc, /실효가격/, "SellConfirmModal hides the effective BTC price display");
+assert.match(modalSrc, /btcKrwAtSell:\s*effectivePrice/, "SellConfirmModal persists the effective BTC price");
 assert.doesNotMatch(modalSrc, /setMonthlyCash|getMonthlyCash|monthlyCash|통장 보유액/, "SellConfirmModal no longer saves monthly cash");
 
 // 19. BTC ?먮ℓ 湲곕줉 row??"?? 硫붾돱 ?먮뒗 edit/delete action 議댁옱
