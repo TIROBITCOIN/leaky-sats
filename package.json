@@ -27,7 +27,7 @@
     "verify:branding": "node scripts/verify-branding.mjs",
     "verify:mobile": "node scripts/verify-mobile-polish.mjs",
     "verify:sell": "node scripts/verify-sell-calculator.mjs",
-    "verify:period-balance": "node scripts/verify-period-balance.mjs",
+    "verify:total-period-sell": "node scripts/verify-total-period-sell.mjs",
     "verify:unit": "node scripts/verify-bitcoin-unit.mjs",
     "verify:sell-records": "node scripts/verify-btc-sell-records.mjs",
     "verify:month": "node scripts/verify-month-navigation.mjs",

@@ -19,7 +19,11 @@ interface Props {
 }
 
 function formatKrwWon(value: number): string {
-  return `${Math.round(value).toLocaleString("ko-KR")}원`;
+  return `${Math.round(value).toLocaleString("ko-KR")} 원`;
+}
+
+function safeNonNegative(value: number): number {
+  return Number.isFinite(value) && value >= 0 ? value : 0;
 }
 
 export default function SellConfirmModal({
@@ -36,7 +40,7 @@ export default function SellConfirmModal({
   const [error, setError] = useState("");
 
   const currentBtcKrw = Number.isFinite(btcKrw) && btcKrw > 0 ? btcKrw : 0;
-  const sellKrw = result.deficitKrw;
+  const sellKrw = safeNonNegative(result.deficitKrw);
   const sellSats = result.sellSats;
   const sellBtc = sellSats / 100_000_000;
   const fullyCovered = sellKrw <= 0;
@@ -59,7 +63,7 @@ export default function SellConfirmModal({
       return;
     }
     if (!Number.isFinite(sellBtc) || sellBtc <= 0 || sellSats <= 0) {
-      setError("계산된 판매량이 올바르지 않습니다.");
+      setError("자동 계산된 판매량이 올바르지 않습니다.");
       return;
     }
     if (sellBtc > MAX_BTC) {
@@ -75,7 +79,9 @@ export default function SellConfirmModal({
     }
 
     if (editRecord) {
-      const delta = sellBtc - previouslyDeductedBtc;
+      const oldDeducted = previouslyDeductedBtc;
+      const newDeducted = sellBtc;
+      const delta = newDeducted - oldDeducted;
 
       updateBtcSellRecord(editRecord.id, {
         btcSold: sellBtc,
@@ -119,7 +125,7 @@ export default function SellConfirmModal({
 
   return (
     <div className="ldg-modal-backdrop">
-      <div className="ldg-modal-content" onClick={(event) => event.stopPropagation()}>
+      <div className="ldg-modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="ldg-sell-modal-head">
           <div className="ldg-modal-title" style={{ marginBottom: 0 }}>
             판매량 확정
@@ -130,7 +136,7 @@ export default function SellConfirmModal({
         </div>
 
         <div className="ldg-sell-highlight">
-          <div className="ldg-sell-highlight-label">실제 판매 금액</div>
+          <div className="ldg-sell-highlight-label">실제 판매량</div>
           {fullyCovered ? (
             <div className="ldg-sell-covered">판매 불필요</div>
           ) : (
@@ -157,7 +163,7 @@ export default function SellConfirmModal({
             type="text"
             className="ldg-input"
             value={note}
-            onChange={(event) => setNote(event.target.value)}
+            onChange={(e) => setNote(e.target.value)}
             placeholder="메모"
           />
         </div>

@@ -1,12 +1,11 @@
 import type { CategoryDef, Txn } from "../types";
-import { dateKeyFromIso, getTodayDateKey } from "./month";
+import { dateKeyFromIso } from "./month";
 
 export interface SellResult {
   incomeKrw: number;
   expenseKrw: number;
   netKrw: number;
   totalDeficitKrw: number;
-  theoreticalBalanceKrw: number;
   deficitKrw: number;
   sellBtc: number;
   sellSats: number;
@@ -14,41 +13,6 @@ export interface SellResult {
   heldValueKrw: number;
   afterSellBtc: number;
   canCoverDeficit: boolean;
-}
-
-export interface BalanceAdjustedSell {
-  accountBalanceKrw: number;
-  requiredKrw: number;
-  sellKrw: number;
-  sellBtc: number;
-  sellSats: number;
-  fullyCovered: boolean;
-}
-
-function safeNonNegative(value: number): number {
-  return Number.isFinite(value) && value > 0 ? value : 0;
-}
-
-function safeFinite(value: number): number {
-  return Number.isFinite(value) ? value : 0;
-}
-
-export function applyAccountBalance(requiredKrw: number, accountBalanceKrw: number, btcKrw: number): BalanceAdjustedSell {
-  const safeRequired = safeNonNegative(requiredKrw);
-  const safeBalance = safeNonNegative(accountBalanceKrw);
-  const safeBtcKrw = safeNonNegative(btcKrw);
-  const sellKrw = Math.max(0, safeRequired - safeBalance);
-  const sellBtc = safeBtcKrw > 0 ? sellKrw / safeBtcKrw : 0;
-  const sellSats = safeBtcKrw > 0 ? Math.round(sellBtc * 100_000_000) : 0;
-
-  return {
-    accountBalanceKrw: safeBalance,
-    requiredKrw: safeRequired,
-    sellKrw: Number.isFinite(sellKrw) ? sellKrw : 0,
-    sellBtc: Number.isFinite(sellBtc) ? sellBtc : 0,
-    sellSats: Number.isFinite(sellSats) ? sellSats : 0,
-    fullyCovered: sellKrw === 0,
-  };
 }
 
 /** 정산기간(시작일~종료일, inclusive)에 속하는 거래만 남긴다. */
@@ -79,51 +43,6 @@ export function calculateMonthlyLivingCashflow(
   return calculateLivingCashflow(filterByPeriod(txns, period), categoriesById);
 }
 
-export function calculateRemainingLivingCashflow(
-  txns: Txn[],
-  categoriesById: Record<string, CategoryDef>,
-  period: { startDate: string; endDate: string },
-  todayDateKey = getTodayDateKey()
-): { incomeKrw: number; expenseKrw: number } {
-  return calculateUnsettledLivingCashflow(txns, categoriesById, period, todayDateKey);
-}
-
-export function isTxnSettled(txn: Txn, todayDateKey = getTodayDateKey()): boolean {
-  if (typeof txn.settled === "boolean") return txn.settled;
-  return dateKeyFromIso(txn.date) < todayDateKey;
-}
-
-export function calculateUnsettledLivingCashflow(
-  txns: Txn[],
-  categoriesById: Record<string, CategoryDef>,
-  period: { startDate: string; endDate: string },
-  todayDateKey = getTodayDateKey()
-): { incomeKrw: number; expenseKrw: number } {
-  const unsettledTxns = filterByPeriod(txns, period).filter((txn) => !isTxnSettled(txn, todayDateKey));
-  return calculateLivingCashflow(unsettledTxns, categoriesById);
-}
-
-export function calculateTheoreticalBalance({
-  periodStartBalanceKrw,
-  txns,
-  categoriesById,
-  period,
-  todayDateKey = getTodayDateKey(),
-}: {
-  periodStartBalanceKrw: number;
-  txns: Txn[];
-  categoriesById: Record<string, CategoryDef>;
-  period: { startDate: string; endDate: string };
-  todayDateKey?: string;
-}): number {
-  const safeStartBalance = safeNonNegative(periodStartBalanceKrw);
-  const settledCashflow = calculateLivingCashflow(
-    filterByPeriod(txns, period).filter((txn) => isTxnSettled(txn, todayDateKey)),
-    categoriesById
-  );
-  return safeStartBalance + settledCashflow.incomeKrw - settledCashflow.expenseKrw;
-}
-
 function calculateLivingCashflow(
   txns: Txn[],
   categoriesById: Record<string, CategoryDef>
@@ -146,20 +65,17 @@ function calculateLivingCashflow(
 export function calculateSellNeeded({
   incomeKrw,
   expenseKrw,
-  theoreticalBalanceKrw = 0,
   btcKrw,
   heldBtc,
 }: {
   incomeKrw: number;
   expenseKrw: number;
-  theoreticalBalanceKrw?: number;
   btcKrw: number;
   heldBtc: number;
 }): SellResult {
   const netKrw = incomeKrw - expenseKrw;
   const totalDeficitKrw = netKrw < 0 ? Math.abs(netKrw) : 0;
-  const safeTheoreticalBalance = safeFinite(theoreticalBalanceKrw);
-  const deficitKrw = Math.max(0, totalDeficitKrw - safeTheoreticalBalance);
+  const deficitKrw = Math.max(0, expenseKrw - incomeKrw);
 
   const safeBtcKrw = Number.isFinite(btcKrw) && btcKrw > 0 ? btcKrw : 0;
   const safeHeld = Number.isFinite(heldBtc) && heldBtc >= 0 ? heldBtc : 0;
@@ -175,7 +91,6 @@ export function calculateSellNeeded({
     expenseKrw,
     netKrw,
     totalDeficitKrw,
-    theoreticalBalanceKrw: safeTheoreticalBalance,
     deficitKrw,
     sellBtc: Number.isFinite(sellBtc) ? sellBtc : 0,
     sellSats: Number.isFinite(sellSats) ? sellSats : 0,
