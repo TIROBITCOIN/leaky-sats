@@ -3,7 +3,7 @@ export function registerServiceWorker() {
 
   window.addEventListener("load", () => {
     navigator.serviceWorker
-      .register("/sw.js")
+      .register("/sw.js", { updateViaCache: "none" })
       .then((registration) => {
         registration.addEventListener("updatefound", () => {
           const worker = registration.installing;

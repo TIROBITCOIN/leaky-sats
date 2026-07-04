@@ -26,7 +26,7 @@ for (const icon of manifest.icons) {
 
 assert.equal(existsSync(swPath), true, "service worker exists");
 const sw = readFileSync(swPath, "utf8");
-assert.match(sw, /myledger-shell-v5/, "service worker cache name");
+assert.match(sw, /myledger-shell-v6/, "service worker cache name");
 assert.match(sw, /mode === "navigate"/, "service worker navigation handling");
 assert.match(sw, /url\.pathname\.startsWith\("\/api\/"\)/, "service worker does not cache same-origin API routes");
 assert.match(sw, /clients\.matchAll\(\{\s*type:\s*"window"\s*\}\)/, "service worker finds open windows after updates");
@@ -41,6 +41,7 @@ assert.equal(existsSync(registerPath), true, "service worker registration file e
 const register = readFileSync(registerPath, "utf8");
 assert.match(register, /serviceWorker/, "service worker registration code");
 assert.match(register, /import\.meta\.env\.PROD/, "production-only registration");
+assert.match(register, /updateViaCache:\s*"none"/, "service worker registration bypasses cached sw.js checks");
 
 assert.equal(existsSync(installPromptPath), true, "install prompt component exists");
 assert.equal(existsSync(offlineBadgePath), true, "offline badge component exists");
