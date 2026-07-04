@@ -51,7 +51,7 @@ export default function SellConfirmModal({
 }: Props) {
   const isEdit = !!editRecord;
   const [carryoverBalanceInput, setCarryoverBalanceInput] = useState("");
-  const [premiumInput] = useState("0");
+  const [premiumInput, setPremiumInput] = useState("0");
   const [networkFeeInput, setNetworkFeeInput] = useState(String(DEFAULT_NETWORK_FEE_SATS));
   const [note, setNote] = useState(editRecord?.note ?? "");
   const [error, setError] = useState("");
@@ -198,6 +198,24 @@ export default function SellConfirmModal({
             <span className="ldg-input-unit">원</span>
           </div>
           <div className="ldg-modal-sub">{formatSats(carryoverSats)}</div>
+        </div>
+
+        <div className="ldg-modal-field">
+          <label className="ldg-modal-label" htmlFor="p2p-premium">
+            P2P 프리미엄
+          </label>
+          <div className="ldg-input-with-unit compact">
+            <input
+              id="p2p-premium"
+              type="text"
+              inputMode="decimal"
+              className="ldg-input"
+              value={premiumInput}
+              onChange={(event) => setPremiumInput(event.target.value.replace(/[^0-9.-]/g, ""))}
+              placeholder="0"
+            />
+            <span className="ldg-input-unit">%</span>
+          </div>
         </div>
 
         <div className="ldg-modal-field">

@@ -621,6 +621,10 @@
   align-items: center;
   gap: 8px;
 }
+.ldg-input-with-unit.compact {
+  grid-template-columns: minmax(88px, 128px) 34px;
+  max-width: 170px;
+}
 .ldg-input-unit {
   width: 34px;
   color: var(--ldg-fg-3);

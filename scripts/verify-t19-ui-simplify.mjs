@@ -33,10 +33,18 @@ assert.match(txnRow, /fmtKRW\(t\.amount\)/, "transaction row shows KRW amount");
 assert.doesNotMatch(txnRow, /krwToSats|ldg-txn-sub|sats/, "transaction row removes per-item sats conversion");
 
 const modal = read("src/components/home/SellConfirmModal.tsx");
-assert.match(modal, /const \[premiumInput\]\s*=\s*useState\("0"\)/, "modal keeps hidden premium state at zero");
+assert.match(modal, /const \[premiumInput,\s*setPremiumInput\]\s*=\s*useState\("0"\)/, "modal keeps editable premium state at zero");
 assert.match(modal, /premiumPct/, "modal keeps premium calculation");
 assert.match(modal, /currentBtcKrw \* \(1 \+ premiumPct \/ 100\)/, "modal keeps effective price formula internally");
-assert.doesNotMatch(modal, /P2P 프리미엄|실효가격|htmlFor="p2p-premium"|p2p-premium|formatKrwWon/, "modal removes P2P premium and effective price UI");
+assert.match(
+  modal,
+  /id="carryover-balance"[\s\S]*htmlFor="p2p-premium"[\s\S]*P2P 프리미엄[\s\S]*id="p2p-premium"[\s\S]*id="network-fee"/,
+  "modal shows P2P premium between carryover balance and network fee"
+);
+assert.match(modal, /id="p2p-premium"[\s\S]*inputMode="decimal"[\s\S]*value=\{premiumInput\}/, "premium input allows decimal values");
+assert.match(modal, /setPremiumInput\(event\.target\.value\.replace\(\s*\/\[\^0-9\.-\]\/g,\s*""\s*\)\)/, "premium input allows negative decimal input");
+assert.match(modal, /<span className="ldg-input-unit">％<\/span>|<span className="ldg-input-unit">%<\/span>/, "premium input uses a suffix percent unit");
+assert.doesNotMatch(modal, /실효가격|formatKrwWon/, "modal keeps the effective price row hidden");
 assert.match(modal, /<span[^>]*>원<\/span>/, "carryover input uses suffix won unit");
 assert.match(modal, /<span[^>]*>sats<\/span>/, "network fee input keeps suffix sats unit");
 assert.doesNotMatch(modal, /ldg-prefixed-input|<span>₩<\/span>|≈|₩/, "modal removes won prefix and approximation markers");
