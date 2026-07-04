@@ -33,23 +33,14 @@ assert.match(txnRow, /fmtKRW\(t\.amount\)/, "transaction row shows KRW amount");
 assert.doesNotMatch(txnRow, /krwToSats|ldg-txn-sub|sats/, "transaction row removes per-item sats conversion");
 
 const modal = read("src/components/home/SellConfirmModal.tsx");
-assert.match(modal, /const \[premiumInput,\s*setPremiumInput\]\s*=\s*useState\("0"\)/, "modal keeps editable premium state at zero");
-assert.match(modal, /premiumPct/, "modal keeps premium calculation");
-assert.match(modal, /currentBtcKrw \* \(1 \+ premiumPct \/ 100\)/, "modal keeps effective price formula internally");
-assert.match(
-  modal,
-  /id="carryover-balance"[\s\S]*htmlFor="p2p-premium"[\s\S]*P2P 프리미엄[\s\S]*id="p2p-premium"[\s\S]*id="network-fee"/,
-  "modal shows P2P premium between carryover balance and network fee"
-);
-assert.match(modal, /id="p2p-premium"[\s\S]*inputMode="decimal"[\s\S]*value=\{premiumInput\}/, "premium input allows decimal values");
-assert.match(modal, /setPremiumInput\(event\.target\.value\.replace\(\s*\/\[\^0-9\.-\]\/g,\s*""\s*\)\)/, "premium input allows negative decimal input");
-assert.match(modal, /<span className="ldg-input-unit">％<\/span>|<span className="ldg-input-unit">%<\/span>/, "premium input uses a suffix percent unit");
+assert.match(modal, /판매할 금액/, "modal uses the simplified sell amount title");
+assert.match(modal, /const \[amountInput,\s*setAmountInput\]\s*=\s*useState/, "modal keeps a single editable amount input state");
+assert.doesNotMatch(modal, /premiumInput|premiumPct|carryover|networkFee|tradeSats|finalSats/, "modal drops premium/carryover/network-fee/derived-sats fields");
+assert.doesNotMatch(modal, /P2P 프리미엄|이월 잔고|네트워크 수수료|실제 판매할 sats/, "modal drops the removed field labels");
 assert.doesNotMatch(modal, /실효가격|formatKrwWon/, "modal keeps the effective price row hidden");
-assert.match(modal, /<span[^>]*>원<\/span>/, "carryover input uses suffix won unit");
-assert.match(modal, /<span[^>]*>sats<\/span>/, "network fee input keeps suffix sats unit");
-assert.doesNotMatch(modal, /ldg-prefixed-input|<span>₩<\/span>|≈|₩/, "modal removes won prefix and approximation markers");
-assert.match(modal, /UTXO 개수가 늘어나면 수수료도 달라질 수 있습니다\./, "UTXO warning uses polite copy");
-assert.match(modal, /권장합니다\./, "bottom note uses polite copy");
+assert.match(modal, /<span[^>]*>원<\/span>/, "amount input uses suffix won unit");
+assert.match(modal, /≈ \{formatSats\(sats\)\}/, "modal shows a live sats conversion of the entered amount");
+assert.doesNotMatch(modal, /UTXO/, "modal no longer warns about UTXO count");
 
 const css = read("src/styles/ledger.css");
 assert.match(css, /\.ldg-sell-sats-primary/, "sell-card primary sats class is styled");
@@ -61,7 +52,6 @@ const combinedUi = [
   sellCard,
   priceWidget,
   txnRow,
-  modal,
   read("src/components/home/CurrencyToggle.tsx"),
   read("src/components/home/InOutCards.tsx"),
   read("src/components/home/BalanceCard.tsx"),

@@ -40,18 +40,18 @@ assert.match(yearlyCardSrc, /fmtBtcValue/, "YearlySellSummaryCard uses fmtBtcVal
 // 8. SellNeededCard has the simplified sell button.
 assert.match(sellCardSrc, />\s*판매\s*</, "SellNeededCard has the simplified sell button");
 
-// 9. Modal has required automated sell fields
+// 9. Modal is the simplified single-amount sell form
 const modalSrc = readFileSync("src/components/home/SellConfirmModal.tsx", "utf8");
-assert.match(modalSrc, /판매량 확정/, "modal uses the sell amount confirmation title");
-assert.match(modalSrc, /실제 판매할 sats/, "modal shows final sats to sell");
+assert.match(modalSrc, /판매할 금액/, "modal uses the simplified sell amount title");
+assert.match(modalSrc, /≈ \{formatSats\(sats\)\}/, "modal shows a live sats conversion of the entered amount");
 assert.doesNotMatch(modalSrc, /자동 판매량/, "modal no longer uses old automatic sell amount label");
-assert.match(modalSrc, /finalSats/, "modal calculates final sats automatically");
-assert.match(modalSrc, /tradeSats/, "modal calculates trade sats before network fee");
-assert.match(modalSrc, /networkFeeSats/, "modal includes network fee sats");
-assert.match(modalSrc, /sellBtc/, "modal calculates BTC automatically");
-assert.match(modalSrc, /krwCovered:\s*coveredKrw/, "modal saves auto-calculated krwCovered");
+assert.doesNotMatch(modalSrc, /carryover|premium|networkFee|tradeSats|finalSats/, "modal drops carryover/premium/network-fee/derived-sats fields");
+assert.doesNotMatch(modalSrc, /이월 잔고|P2P 프리미엄|네트워크 수수료|실제 판매할 sats/, "modal drops the removed field labels");
+assert.doesNotMatch(modalSrc, /fetchRecommendedNetworkFeeSats|UTXO/, "modal no longer loads mempool fees or warns about UTXOs");
+assert.match(modalSrc, /sellBtc/, "modal converts the entered amount to BTC");
+assert.match(modalSrc, /krwCovered:\s*amountKrw/, "modal saves the entered KRW amount as krwCovered");
 assert.doesNotMatch(modalSrc, /실효가격/, "modal hides the effective BTC price row");
-assert.match(modalSrc, /btcKrwAtSell:\s*effectivePrice/, "modal snapshots effective BTC price on save");
+assert.match(modalSrc, /btcKrwAtSell:\s*currentBtcKrw/, "modal snapshots the current BTC price on save");
 assert.doesNotMatch(modalSrc, /보유 BTC에서 차감/, "modal no longer has deduct checkbox");
 
 // 10. Saving deducts from heldBtc

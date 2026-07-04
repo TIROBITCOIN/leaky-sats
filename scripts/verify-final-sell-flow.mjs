@@ -60,13 +60,11 @@ const typesSrc = read("src/types.ts");
 assert.doesNotMatch(typesSrc, /settled\?:\s*boolean/, "transaction types no longer expose settled");
 
 const modal = read("src/components/home/SellConfirmModal.tsx");
-assert.match(modal, /carryoverBalanceKrw/, "modal keeps carryover balance as KRW input");
-assert.match(modal, /premiumPct/, "modal keeps P2P premium input");
-assert.match(modal, /networkFeeSats/, "modal keeps network fee sats input");
-assert.match(modal, /finalSats/, "modal calculates final sats");
-assert.match(modal, /tradeSats/, "modal calculates trade sats before fee");
-assert.match(modal, /fetchRecommendedNetworkFeeSats/, "modal loads mempool fee default on open");
-assert.match(modal, /UTXO/, "modal warns that UTXO count can affect fees");
+assert.match(modal, /판매할 금액/, "modal is the simplified single-amount sell form");
+assert.match(modal, /amountKrw/, "modal parses a single KRW amount input");
+assert.match(modal, /≈ \{formatSats\(sats\)\}/, "modal shows a live sats conversion");
+assert.doesNotMatch(modal, /carryoverBalanceKrw|premiumPct|networkFeeSats|tradeSats|finalSats/, "modal drops carryover/premium/network-fee/derived-sats state");
+assert.doesNotMatch(modal, /fetchRecommendedNetworkFeeSats|UTXO/, "modal no longer loads mempool fees or warns about UTXOs");
 assert.doesNotMatch(modal, /exchange|거래소|sellUnit|handleUnitToggle|1-input 1-output|monthlyCash|통장 보유액/, "modal has no exchange toggle, old unit toggle, or monthly cash path");
 
 const sellCard = read("src/components/home/SellNeededCard.tsx");
