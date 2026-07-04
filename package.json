@@ -28,6 +28,7 @@
     "verify:mobile": "node scripts/verify-mobile-polish.mjs",
     "verify:sell": "node scripts/verify-sell-calculator.mjs",
     "verify:final-sell-flow": "node scripts/verify-final-sell-flow.mjs",
+    "verify:t19-ui-simplify": "node scripts/verify-t19-ui-simplify.mjs",
     "verify:unit": "node scripts/verify-bitcoin-unit.mjs",
     "verify:sell-records": "node scripts/verify-btc-sell-records.mjs",
     "verify:month": "node scripts/verify-month-navigation.mjs",
@@ -50,7 +51,7 @@
     "verify:ownership": "node scripts/verify-ownership.mjs",
     "verify:onboarding": "node scripts/verify-onboarding.mjs",
     "verify:txn-date-label": "node scripts/verify-txn-date-label.mjs",
-    "verify:release": "npm run build && npm run verify:final-sell-flow && npm run verify:backup && npm run verify:recurring && npm run verify:price-source-ui && npm run verify:help-page && npm run verify:ownership && npm run verify:onboarding"
+    "verify:release": "npm run build && npm run verify:final-sell-flow && npm run verify:t19-ui-simplify && npm run verify:backup && npm run verify:recurring && npm run verify:price-source-ui && npm run verify:help-page && npm run verify:ownership && npm run verify:onboarding"
   },
   "dependencies": {
     "react": "^18.3.1",

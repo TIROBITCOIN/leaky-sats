@@ -17,17 +17,17 @@ const balanceCard = readFileSync("src/components/home/BalanceCard.tsx", "utf8");
 assert.match(balanceCard, /fmtBtcValue/, "BalanceCard uses fmtBtcValue");
 assert.match(balanceCard, /unit.*BtcUnit/, "BalanceCard accepts unit prop");
 
-// 4. SellNeededCard uses fmtBtcValue with unit prop
+// 4. SellNeededCard uses sats as the primary sell amount.
 const sellCard = readFileSync("src/components/home/SellNeededCard.tsx", "utf8");
-assert.match(sellCard, /fmtBtcValue/, "SellNeededCard uses fmtBtcValue");
-assert.match(sellCard, /unit.*BtcUnit/, "SellNeededCard accepts unit prop");
+assert.match(sellCard, /fmtSats/, "SellNeededCard uses fmtSats");
+assert.doesNotMatch(sellCard, /fmtBtcValue|unit.*BtcUnit/, "SellNeededCard no longer uses the BTC display unit");
 
 // 5. HomePage imports loadBtcUnit and passes unit to cards
 const homePage = readFileSync("src/components/home/HomePage.tsx", "utf8");
 assert.match(homePage, /loadBtcUnit/, "HomePage imports loadBtcUnit");
 assert.match(homePage, /btcUnit/, "HomePage has btcUnit state");
 assert.match(homePage, /BalanceCard[\s\S]*?unit=/, "HomePage passes unit to BalanceCard");
-assert.match(homePage, /SellNeededCard[\s\S]*?unit=/, "HomePage passes unit to SellNeededCard");
+assert.doesNotMatch(homePage, /<SellNeededCard(?:(?!\/>).)*unit=/s, "HomePage does not pass unit to SellNeededCard");
 
 // 6. HomePage refreshes btcUnit on visibility/focus
 assert.match(homePage, /setBtcUnit\(loadBtcUnit/, "HomePage refreshes btcUnit on visibility change");

@@ -120,7 +120,7 @@ const homePageSrc = readFileSync(join(root, "src/components/home/HomePage.tsx"),
 assert.match(homePageSrc, /SellConfirmModal/, "HomePage still owns the SellConfirmModal flow");
 assert.match(homePageSrc, /onConfirmSell/, "HomePage opens sell confirmation from SellNeededCard");
 const sellNeededSrc = readFileSync(join(root, "src/components/home/SellNeededCard.tsx"), "utf8");
-assert.match(sellNeededSrc, /BTC 판매 확정/, "SellNeededCard keeps the BTC sale confirmation action");
+assert.match(sellNeededSrc, />\s*판매\s*</, "SellNeededCard keeps the simplified sale action");
 
 // 14. 기존 localStorage key가 변경되지 않았는지
 const expectedKeys = [
@@ -144,7 +144,8 @@ for (const key of expectedKeys) {
 // 현재 사용자 용어가 유지되는지 확인
 const combinedWithLabels = combinedComponents + categoriesSrc + majorItemsSrc;
 assert.match(combinedWithLabels, /판매해야 하는 비트코인/, "판매해야 하는 비트코인 label still present");
-assert.match(combinedWithLabels, /BTC 판매 확정/, "BTC 판매 확정 label still present");
+assert.doesNotMatch(combinedWithLabels, /BTC 판매 확정/, "old BTC sale confirmation label is absent");
+assert.match(sellNeededSrc, />\s*판매\s*</, "simplified sale label is present");
 assert.match(combinedWithLabels, /DCA \/ BTC 매수/, "DCA / BTC 매수 label is present");
 assert.match(combinedWithLabels, /BTC 판매/, "BTC 판매 label still present");
 

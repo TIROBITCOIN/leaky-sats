@@ -17,7 +17,7 @@ import SelectedDayTransactions from "./SelectedDayTransactions";
 import CategoryDonut from "./CategoryDonut";
 
 export default function StatsPage() {
-  const { data, currency, categoriesById } = useLedger();
+  const { data, categoriesById } = useLedger();
   const [settlementDay, setSettlementDay] = useState(loadSettlementDay);
   const defaultSettlementMonthKey = getSettlementMonthKeyForDate(new Date().toISOString(), settlementDay);
   const [selectedMonth, setSelectedMonth] = useSelectedMonth(defaultSettlementMonthKey);
@@ -89,7 +89,7 @@ export default function StatsPage() {
           />
         </div>
 
-        <SelectedDayTransactions dateKey={selectedDate} txns={dayTxns} currency={currency} btcKRW={data.btcKRW} />
+        <SelectedDayTransactions dateKey={selectedDate} txns={dayTxns} />
 
         <div className="ldg-card">
           <div className="ldg-label" style={{ marginBottom: 10 }}>

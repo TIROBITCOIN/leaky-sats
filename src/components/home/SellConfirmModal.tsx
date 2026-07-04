@@ -20,10 +20,6 @@ interface Props {
   onSaved: () => void;
 }
 
-function formatKrwWon(value: number): string {
-  return `₩${Math.round(value).toLocaleString("ko-KR")}`;
-}
-
 function parseKrwInput(value: string): number {
   const parsed = Number(value.replace(/[^0-9]/g, ""));
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
@@ -55,7 +51,7 @@ export default function SellConfirmModal({
 }: Props) {
   const isEdit = !!editRecord;
   const [carryoverBalanceInput, setCarryoverBalanceInput] = useState("");
-  const [premiumInput, setPremiumInput] = useState("0");
+  const [premiumInput] = useState("0");
   const [networkFeeInput, setNetworkFeeInput] = useState(String(DEFAULT_NETWORK_FEE_SATS));
   const [note, setNote] = useState(editRecord?.note ?? "");
   const [error, setError] = useState("");
@@ -180,7 +176,7 @@ export default function SellConfirmModal({
             <span>{formatSats(deficitSats).replace(" sats", "")}</span>
             <span className="unit">sats</span>
           </div>
-          <div className="ldg-sell-krw-main">≈ {fmtKRW(result.deficitKrw)}</div>
+          <div className="ldg-sell-krw-main">{fmtKRW(result.deficitKrw)}</div>
         </div>
 
         <div className="ldg-modal-divider" />
@@ -189,8 +185,7 @@ export default function SellConfirmModal({
           <label className="ldg-modal-label" htmlFor="carryover-balance">
             이월 잔고
           </label>
-          <div className="ldg-prefixed-input">
-            <span>₩</span>
+          <div className="ldg-input-with-unit">
             <input
               id="carryover-balance"
               type="text"
@@ -200,38 +195,16 @@ export default function SellConfirmModal({
               onChange={(event) => setCarryoverBalanceInput(event.target.value.replace(/[^0-9]/g, ""))}
               placeholder="0"
             />
+            <span className="ldg-input-unit">원</span>
           </div>
-          <div className="ldg-modal-sub">≈ {formatSats(carryoverSats)}</div>
-        </div>
-
-        <div className="ldg-modal-field">
-          <label className="ldg-modal-label" htmlFor="p2p-premium">
-            P2P 프리미엄
-          </label>
-          <div className="ldg-suffix-input">
-            <input
-              id="p2p-premium"
-              type="text"
-              inputMode="decimal"
-              className="ldg-input"
-              value={premiumInput}
-              onChange={(event) => setPremiumInput(event.target.value)}
-              placeholder="0"
-            />
-            <span>%</span>
-          </div>
-        </div>
-
-        <div className="ldg-modal-rate-row">
-          <span>실효가격</span>
-          <strong>{formatKrwWon(effectivePrice || currentBtcKrw)}</strong>
+          <div className="ldg-modal-sub">{formatSats(carryoverSats)}</div>
         </div>
 
         <div className="ldg-modal-field">
           <label className="ldg-modal-label" htmlFor="network-fee">
             네트워크 수수료
           </label>
-          <div className="ldg-suffix-input">
+          <div className="ldg-input-with-unit">
             <input
               id="network-fee"
               type="text"
@@ -241,14 +214,14 @@ export default function SellConfirmModal({
               onChange={(event) => setNetworkFeeInput(event.target.value.replace(/[^0-9]/g, ""))}
               placeholder={String(DEFAULT_NETWORK_FEE_SATS)}
             />
-            <span>sats</span>
+            <span className="ldg-input-unit">sats</span>
           </div>
-          <div className="ldg-modal-sub">≈ {fmtKRW(feeKrw)}</div>
+          <div className="ldg-modal-sub">{fmtKRW(feeKrw)}</div>
         </div>
 
         <div className="ldg-fee-warning">
           <span aria-hidden="true">⚠</span>
-          <strong>UTXO 개수 늘면 수수료도 달라질 수 있음</strong>
+          <strong>UTXO 개수가 늘어나면 수수료도 달라질 수 있습니다.</strong>
         </div>
 
         <div className="ldg-modal-divider" />
@@ -259,7 +232,7 @@ export default function SellConfirmModal({
             <span>{finalSats.toLocaleString("en-US")}</span>
             <span className="unit">sats</span>
           </div>
-          <div className="ldg-sell-krw-main">≈ {fmtKRW(finalKrw)}</div>
+          <div className="ldg-sell-krw-main">{fmtKRW(finalKrw)}</div>
         </div>
 
         {overHeld && <div className="ldg-modal-error">보유 BTC({fmtBtcValue(availableHeldBtc, unit)})보다 많습니다.</div>}
@@ -285,7 +258,7 @@ export default function SellConfirmModal({
             {isEdit ? "수정 완료" : "판매 확정"}
           </button>
         </div>
-        <div className="ldg-sell-modal-note">수수료·가격 변동 감안해 여유 있게 판매하는 걸 권장함</div>
+        <div className="ldg-sell-modal-note">수수료와 가격 변동을 감안해 여유 있게 판매하는 것을 권장합니다.</div>
       </div>
     </div>
   );

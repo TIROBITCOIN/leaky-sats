@@ -14,7 +14,8 @@ assert.match(source, /api\.coinbase\.com\/v2\/exchange-rates\?currency=USD/, "Co
 assert.match(source, /referenceDate/, "Frankfurter reference date is parsed");
 assert.match(source, /fetchJson/, "fallback sources reuse the shared timeout and response validation helper");
 assert.match(context, /priceSourceMeta/, "price source metadata is exposed through context");
-assert.match(widget, /환율 기준일|일일 환율 기준/, "price card explains the approximate daily FX basis");
+assert.doesNotMatch(widget, /환율 기준일|일일 환율 기준/, "price card no longer shows the FX reference line");
+assert.match(widget, /TONE_LABEL\[tone\]\(formatUpdatedAt\(priceUpdatedAt\)\)/, "price card keeps a single live/update row");
 
 const runnableSource = source.replace(
   "const FETCH_TIMEOUT_MS = 8000;",

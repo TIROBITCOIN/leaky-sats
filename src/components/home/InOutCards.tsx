@@ -18,7 +18,7 @@ export default function InOutCards({
     currency === "KRW"
       ? (value >= 0 ? "+" : "") + fmtKRW(value)
       : `${value >= 0 ? "+" : "-"}₿${(Math.abs(value) / btcKRW).toFixed(5)}`;
-  const sub = (value: number) => (currency === "KRW" ? fmtBTC(value, btcKRW) : `≈${fmtKRW(value)}`);
+  const sub = (value: number) => (currency === "KRW" ? fmtBTC(value, btcKRW) : fmtKRW(value));
 
   return (
     <div className="ldg-inout">

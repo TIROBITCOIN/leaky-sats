@@ -123,10 +123,7 @@ export default function HomePage() {
           <RecurringPendingCard selectedMonth={selectedMonth} period={period} addTxn={addTxn} />
           <SellNeededCard
             result={sellResult}
-            unit={btcUnit}
-            selectedMonth={selectedMonth}
             monthlySellSummary={monthlySellSummary}
-            btcKrw={data.btcKRW}
             onConfirmSell={sellResult.deficitKrw > 0 ? () => setSellModalState({ mode: "add" }) : undefined}
           />
           <MonthlySellSummaryCard
@@ -139,7 +136,7 @@ export default function HomePage() {
           />
           <YearlySellSummaryCard summary={yearlySellSummary} unit={btcUnit} year={yearKey} />
           <PriceWidget d={data} />
-          <TxnsCard d={data} currency={currency} selectedMonth={selectedMonth} period={period} />
+          <TxnsCard d={data} selectedMonth={selectedMonth} period={period} />
         </div>
       </div>
       {sellModalState && (

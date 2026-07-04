@@ -141,9 +141,10 @@ assert.match(
   "each price column keeps its label and value vertically grouped"
 );
 
-// 5. SellNeededCard calculation connected via selectedMonth
+// 5. SellNeededCard uses already-selected monthly summaries and no longer renders month helper text.
 const sellCardSrc = readFileSync("src/components/home/SellNeededCard.tsx", "utf8");
-assert.match(sellCardSrc, /selectedMonth/, "SellNeededCard accepts selectedMonth");
+assert.doesNotMatch(sellCardSrc, /selectedMonth|getMonthLabel/, "SellNeededCard does not accept selectedMonth");
+assert.match(homePage, /monthlySellSummary=\{monthlySellSummary\}/, "HomePage passes the selected month summary to SellNeededCard");
 
 // 6. MonthlySellSummaryCard accepts selectedMonth
 const monthlyCardSrc = readFileSync("src/components/home/MonthlySellSummaryCard.tsx", "utf8");

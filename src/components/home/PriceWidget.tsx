@@ -1,5 +1,5 @@
 import type { LedgerData } from "../../types";
-import { kimchiPremium, MAX_REASONABLE_KIMCHI_PREMIUM_ABS } from "../../lib/format";
+import { fmtKRW, kimchiPremium, MAX_REASONABLE_KIMCHI_PREMIUM_ABS } from "../../lib/format";
 import { useLedger } from "../../state/LedgerContext";
 import {
   formatPriceSourceDelayDetail,
@@ -25,7 +25,6 @@ export default function PriceWidget({ d }: { d: LedgerData }) {
     priceUpdatedAt,
     priceStaleSources,
     priceSourceUpdatedAt,
-    priceSourceMeta,
   } = useLedger();
   const kimchi = kimchiPremium(d.btcKRW, d.btcUSD, d.usdKRW);
   const priceSourceTimes = [priceSourceUpdatedAt.btcKRW, priceSourceUpdatedAt.btcUSD, priceSourceUpdatedAt.usdKRW];
@@ -36,20 +35,18 @@ export default function PriceWidget({ d }: { d: LedgerData }) {
     priceStaleSources.length === 0 &&
     priceSourceTimes.every((value): value is number => value !== null) &&
     new Set(priceSourceTimes).size === 1;
-  const kimchiOutlier =
-    !Number.isFinite(kimchi) || Math.abs(kimchi) > MAX_REASONABLE_KIMCHI_PREMIUM_ABS;
+  const kimchiOutlier = !Number.isFinite(kimchi) || Math.abs(kimchi) > MAX_REASONABLE_KIMCHI_PREMIUM_ABS;
   const canShowKimchi = sourcesFresh && !kimchiOutlier;
   const kimchiClass = !canShowKimchi ? "pending" : kimchi > 3 ? "danger" : kimchi >= 0 ? "warn" : "good";
-  const kimchiDelayDetail =
-    btcKrwIsFallback
-      ? "김프 보류(해외 환산 표시 중)"
-      : priceStaleSources.length > 0
-      ? formatPriceSourceDelayDetail(priceStaleSources, priceSourceUpdatedAt)
-      : isPriceFallback
-      ? "아직 모든 시세가 한 번 이상 정상 갱신되지 않았습니다."
-      : kimchiOutlier
-      ? "계산값이 비정상 범위를 벗어나 확인을 기다리는 중입니다."
-      : "";
+  const kimchiDelayDetail = btcKrwIsFallback
+    ? "김프 보류(해외 환산 표시 중)"
+    : priceStaleSources.length > 0
+    ? formatPriceSourceDelayDetail(priceStaleSources, priceSourceUpdatedAt)
+    : isPriceFallback
+    ? "아직 모든 시세가 한 번 이상 정상 갱신되지 않았습니다."
+    : kimchiOutlier
+    ? "계산값이 비정상 범위를 벗어나 확인을 기다리는 중입니다."
+    : "";
   const kimchiLabel = canShowKimchi
     ? `김프 ${kimchi >= 0 ? "+" : ""}${kimchi.toFixed(2)}%`
     : sourcesFresh
@@ -71,7 +68,7 @@ export default function PriceWidget({ d }: { d: LedgerData }) {
       <div className="ldg-price-grid">
         <div className="ldg-price-col">
           <div className="ldg-tiny">BTC · KRW</div>
-          <div className="ldg-price-val">₩{(d.btcKRW / 1_000_000).toFixed(1)}M</div>
+          <div className="ldg-price-val full-krw">{fmtKRW(d.btcKRW)}</div>
         </div>
         <div className="ldg-price-col">
           <div className="ldg-tiny">BTC · USD</div>
@@ -81,13 +78,6 @@ export default function PriceWidget({ d }: { d: LedgerData }) {
           <div className="ldg-tiny">USD/KRW</div>
           <div className="ldg-price-val mono">{d.usdKRW.toLocaleString("en-US")}</div>
         </div>
-      </div>
-      <div className="ldg-tiny" style={{ marginTop: 8 }}>
-        {priceSourceMeta.usdKrw === "Frankfurter" && priceSourceMeta.fxReferenceDate
-          ? `환율 기준일 ${priceSourceMeta.fxReferenceDate} · 일일 환율 기준 김프(근사)`
-          : priceSourceMeta.usdKrw === "Coinbase"
-          ? "Coinbase 환율 기준 김프(근사)"
-          : "환율 기준 김프(근사)"}
       </div>
       {!canShowKimchi && kimchiDelayDetail && (
         <div className="ldg-tiny" style={{ marginTop: 8 }}>
