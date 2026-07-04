@@ -48,9 +48,10 @@ check(
   "stale Dark-only button removed",
   !/<button[^>]*>\s*Dark\s*<\/button>/.test(settingsPage)
 );
-for (const label of ["기본 통화", "표시 단위", "새로고침 주기", "시세 상태"]) {
+for (const label of ["기본 통화", "표시 단위", "시세 상태"]) {
   check(`${label} remains in SettingsPage`, settingsPage.includes(label));
 }
+check("refresh interval setting removed", !settingsPage.includes("새로고침 주기"));
 
 const formsCss = fs.readFileSync("src/styles/forms.css", "utf8");
 check("wallet-name-form CSS class exists", formsCss.includes("ldg-wallet-name-form"));
