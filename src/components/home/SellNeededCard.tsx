@@ -23,12 +23,6 @@ export default function SellNeededCard({ result, monthlySellSummary, onConfirmSe
           <div className="ldg-settlement-done">판매 완료</div>
           <div className="ldg-done-list">
             <div className="ldg-done-row">
-              <span className="ldg-done-label">예상 판매량</span>
-              <span className="ldg-done-val ldg-btc-val">
-                <strong>{fmtSats(sellSats)}</strong>
-              </span>
-            </div>
-            <div className="ldg-done-row">
               <span className="ldg-done-label">실제 판매량</span>
               <span className="ldg-done-val ldg-btc-val">
                 <strong>{fmtSats(monthlySellSummary.totalSatsSold)}</strong>

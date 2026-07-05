@@ -5,15 +5,9 @@ import { loadWalletName } from "../../lib/walletName";
 import { getHeldBtc } from "../../lib/heldBtc";
 import { loadBtcUnit, type BtcUnit } from "../../lib/format";
 import { calculateMonthlyLivingCashflow, calculateSellNeeded } from "../../lib/sellCalculator";
-import { getYearFromMonthKey } from "../../lib/month";
 import { useSelectedMonth } from "../../lib/useSelectedMonth";
 import { getSettlementMonthKeyForDate, getSettlementPeriod, loadSettlementDay } from "../../lib/settlement";
-import {
-  summarizeBtcSellRecordsByMonth,
-  summarizeBtcSellRecordsByYear,
-  listBtcSellRecordsByMonth,
-  type BtcSellRecord,
-} from "../../lib/btcSellRecords";
+import { summarizeBtcSellRecordsByMonth, type BtcSellRecord } from "../../lib/btcSellRecords";
 import MonthSelector from "../common/MonthSelector";
 import Slogan from "./Slogan";
 import LedgerHeader from "./LedgerHeader";
@@ -22,8 +16,6 @@ import BalanceCard from "./BalanceCard";
 import InOutCards from "./InOutCards";
 import SellNeededCard from "./SellNeededCard";
 import SellConfirmModal from "./SellConfirmModal";
-import MonthlySellSummaryCard from "./MonthlySellSummaryCard";
-import YearlySellSummaryCard from "./YearlySellSummaryCard";
 import PriceWidget from "./PriceWidget";
 import TxnsCard from "./TxnsCard";
 import RecurringPendingCard from "./RecurringPendingCard";
@@ -64,12 +56,9 @@ export default function HomePage() {
     };
   }, [selectedMonth]);
 
-  const yearKey = getYearFromMonthKey(selectedMonth);
   const period = getSettlementPeriod(selectedMonth, settlementDay);
 
   const monthlySellSummary = summarizeBtcSellRecordsByMonth(selectedMonth);
-  const yearlySellSummary = summarizeBtcSellRecordsByYear(yearKey);
-  const monthRecords = listBtcSellRecordsByMonth(selectedMonth);
 
   const { incomeKrw, expenseKrw } = calculateMonthlyLivingCashflow(
     data.txns,
@@ -126,15 +115,6 @@ export default function HomePage() {
             monthlySellSummary={monthlySellSummary}
             onConfirmSell={sellResult.deficitKrw > 0 ? () => setSellModalState({ mode: "add" }) : undefined}
           />
-          <MonthlySellSummaryCard
-            summary={monthlySellSummary}
-            records={monthRecords}
-            unit={btcUnit}
-            selectedMonth={selectedMonth}
-            onEditRecord={(record) => setSellModalState({ mode: "edit", record })}
-            onRecordsChanged={refreshAfterSellChange}
-          />
-          <YearlySellSummaryCard summary={yearlySellSummary} unit={btcUnit} year={yearKey} />
           <PriceWidget d={data} />
           <TxnsCard d={data} selectedMonth={selectedMonth} period={period} />
         </div>

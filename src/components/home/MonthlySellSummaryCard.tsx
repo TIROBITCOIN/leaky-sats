@@ -1,16 +1,24 @@
 import { useEffect, useRef, useState } from "react";
 import { fmtKRW, fmtBtcValue, type BtcUnit } from "../../lib/format";
-import { getMonthLabel } from "../../lib/month";
 import { deleteBtcSellRecord, type MonthSellSummary, type BtcSellRecord } from "../../lib/btcSellRecords";
 import { getHeldBtc, setHeldBtc } from "../../lib/heldBtc";
+import type { SettlementPeriod } from "../../lib/settlement";
 
 interface Props {
   summary: MonthSellSummary;
   records: BtcSellRecord[];
   unit: BtcUnit;
   selectedMonth: string;
+  period: SettlementPeriod;
   onEditRecord: (record: BtcSellRecord) => void;
   onRecordsChanged: () => void;
+}
+
+/** 정산기간을 "M/D - M/D" 형식으로 — 정산일이 1일이면 "7/1 - 7/31"처럼 그 달 전체가 된다. */
+function formatPeriodRange(period: SettlementPeriod): string {
+  const [, sm, sd] = period.startDate.split("-").map(Number);
+  const [, em, ed] = period.endDate.split("-").map(Number);
+  return `${sm}/${sd} - ${em}/${ed}`;
 }
 
 function SellRecordMenu({ open, onToggle, onEdit, onDelete }: { open: boolean; onToggle: () => void; onEdit: () => void; onDelete: () => void }) {
@@ -44,11 +52,11 @@ function SellRecordMenu({ open, onToggle, onEdit, onDelete }: { open: boolean; o
   );
 }
 
-export default function MonthlySellSummaryCard({ summary, records, unit, selectedMonth, onEditRecord, onRecordsChanged }: Props) {
+export default function MonthlySellSummaryCard({ summary, records, unit, period, onEditRecord, onRecordsChanged }: Props) {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   if (summary.count === 0) return null;
 
-  const monthLabel = getMonthLabel(selectedMonth);
+  const rangeTitle = formatPeriodRange(period);
   const recentRecords = records.slice(0, 3);
 
   const handleDelete = (r: BtcSellRecord) => {
@@ -69,7 +77,7 @@ export default function MonthlySellSummaryCard({ summary, records, unit, selecte
 
   return (
     <div className="ldg-card">
-      <div className="ldg-label">{monthLabel} 판매한 비트코인</div>
+      <div className="ldg-label">{rangeTitle} 판매한 비트코인</div>
       <div className="ldg-inout-main neg" style={{ marginTop: 6 }}>
         {fmtBtcValue(summary.totalBtcSold, unit)}
       </div>
