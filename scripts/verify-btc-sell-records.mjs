@@ -39,6 +39,13 @@ assert.match(yearlyCardSrc, /fmtBtcValue/, "YearlySellSummaryCard uses fmtBtcVal
 
 // 8. SellNeededCard has the simplified sell button.
 assert.match(sellCardSrc, />\s*판매\s*</, "SellNeededCard has the simplified sell button");
+assert.match(sellCardSrc, /records:\s*BtcSellRecord\[\]/, "SellNeededCard receives sell records for completed-card actions");
+assert.match(sellCardSrc, /onEditRecord:\s*\(record:\s*BtcSellRecord\) => void/, "SellNeededCard can request editing a sell record");
+assert.match(sellCardSrc, /onDeleteRecord:\s*\(record:\s*BtcSellRecord\) => void/, "SellNeededCard can request deleting a sell record");
+assert.match(sellCardSrc, /fmtSats\(record\.satsSold\)/, "completed sell card record rows use sats, not BTC decimal display");
+assert.match(sellCardSrc, /aria-label="판매 기록 더보기"/, "completed sell card exposes a record action menu");
+assert.match(sellCardSrc, />\s*수정\s*</, "completed sell card exposes an edit action");
+assert.match(sellCardSrc, />\s*삭제\s*</, "completed sell card exposes a delete action");
 
 // 9. Modal is the simplified single-amount sell form
 const modalSrc = readFileSync("src/components/home/SellConfirmModal.tsx", "utf8");
@@ -100,6 +107,11 @@ assert.match(tabbarCss, /text-decoration:\s*none/, "tab has text-decoration: non
 // LedgerHeader anymore) ??LedgerHeader is no longer responsible for month display.
 const homePageSrc = readFileSync("src/components/home/HomePage.tsx", "utf8");
 assert.match(homePageSrc, /MonthSelector/, "HomePage renders the shared MonthSelector");
+assert.match(homePageSrc, /listBtcSellRecordsByMonth\(selectedMonth\)/, "HomePage loads monthly sell records for the completed sell card");
+assert.match(homePageSrc, /onEditRecord=\{\(record\) => setSellModalState\(\{ mode: "edit", record \}\)\}/, "HomePage opens the sell edit modal from the completed sell card");
+assert.match(homePageSrc, /onDeleteRecord=\{handleDeleteSellRecord\}/, "HomePage wires delete actions from the completed sell card");
+assert.match(homePageSrc, /deleteBtcSellRecord\(record\.id\)/, "HomePage deletes sell records from the completed sell card");
+assert.match(homePageSrc, /setHeldBtcStorage\(getHeldBtc\(\) \+ amount\)/, "HomePage can restore held BTC when deleting a sell record");
 const monthSelectorSrc = readFileSync("src/components/common/MonthSelector.tsx", "utf8");
 assert.match(monthSelectorSrc, /getMonthLabel|getCurrentMonthLabel/, "MonthSelector uses month label utility");
 const monthSrc = readFileSync("src/lib/month.ts", "utf8");

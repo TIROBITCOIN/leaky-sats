@@ -2,12 +2,17 @@ import { useCallback, useEffect, useState } from "react";
 import "../../styles/ledger.css";
 import { useLedger } from "../../state/LedgerContext";
 import { loadWalletName } from "../../lib/walletName";
-import { getHeldBtc } from "../../lib/heldBtc";
+import { getHeldBtc, setHeldBtc as setHeldBtcStorage } from "../../lib/heldBtc";
 import { loadBtcUnit, type BtcUnit } from "../../lib/format";
 import { calculateMonthlyLivingCashflow, calculateSellNeeded } from "../../lib/sellCalculator";
 import { useSelectedMonth } from "../../lib/useSelectedMonth";
 import { getSettlementMonthKeyForDate, getSettlementPeriod, loadSettlementDay } from "../../lib/settlement";
-import { summarizeBtcSellRecordsByMonth, type BtcSellRecord } from "../../lib/btcSellRecords";
+import {
+  deleteBtcSellRecord,
+  listBtcSellRecordsByMonth,
+  summarizeBtcSellRecordsByMonth,
+  type BtcSellRecord,
+} from "../../lib/btcSellRecords";
 import MonthSelector from "../common/MonthSelector";
 import Slogan from "./Slogan";
 import LedgerHeader from "./LedgerHeader";
@@ -59,6 +64,7 @@ export default function HomePage() {
   const period = getSettlementPeriod(selectedMonth, settlementDay);
 
   const monthlySellSummary = summarizeBtcSellRecordsByMonth(selectedMonth);
+  const monthSellRecords = listBtcSellRecordsByMonth(selectedMonth);
 
   const { incomeKrw, expenseKrw } = calculateMonthlyLivingCashflow(
     data.txns,
@@ -83,6 +89,26 @@ export default function HomePage() {
     refreshAfterSellChange();
     setSellSavedMessage("BTC 판매가 확정되었습니다. 보유 BTC가 업데이트되었습니다.");
   }, [refreshAfterSellChange]);
+
+  const handleDeleteSellRecord = useCallback(
+    (record: BtcSellRecord) => {
+      if (!window.confirm("이 BTC 판매 기록을 삭제할까요?")) return;
+
+      let restore = false;
+      if (record.deductedFromHeldBtc) {
+        restore = window.confirm("보유 BTC에 되돌릴까요?\n확인: 보유 BTC에 복원 / 취소: 기록만 삭제");
+      }
+
+      deleteBtcSellRecord(record.id);
+      if (restore) {
+        const amount = record.deductedBtcAmount ?? record.btcSold;
+        setHeldBtcStorage(getHeldBtc() + amount);
+      }
+      refreshAfterSellChange();
+      setSellSavedMessage("BTC 판매 기록이 삭제되었습니다.");
+    },
+    [refreshAfterSellChange]
+  );
 
   useEffect(() => {
     if (!sellSavedMessage) return;
@@ -113,7 +139,10 @@ export default function HomePage() {
           <SellNeededCard
             result={sellResult}
             monthlySellSummary={monthlySellSummary}
+            records={monthSellRecords}
             onConfirmSell={sellResult.deficitKrw > 0 ? () => setSellModalState({ mode: "add" }) : undefined}
+            onEditRecord={(record) => setSellModalState({ mode: "edit", record })}
+            onDeleteRecord={handleDeleteSellRecord}
           />
           <PriceWidget d={data} />
           <TxnsCard d={data} selectedMonth={selectedMonth} period={period} />
