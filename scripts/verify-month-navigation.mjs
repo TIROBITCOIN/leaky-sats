@@ -153,7 +153,7 @@ assert.match(monthlyCardSrc, /selectedMonth/, "MonthlySellSummaryCard accepts se
 // 7. YearlySellSummaryCard uses year from selectedMonth
 const yearlyCardSrc = readFileSync("src/components/home/YearlySellSummaryCard.tsx", "utf8");
 assert.match(yearlyCardSrc, /year/, "YearlySellSummaryCard accepts year prop");
-assert.match(homePage, /getYearFromMonthKey\(selectedMonth\)/, "year derived from selectedMonth");
+assert.match(statsPageSrc, /getYearFromMonthKey\(selectedMonth\)/, "year derived from selectedMonth (yearly sell summary now lives in StatsPage)");
 
 // 8. SellConfirmModal accepts selectedMonth
 const modalSrc = readFileSync("src/components/home/SellConfirmModal.tsx", "utf8");
