@@ -3,5 +3,5 @@ export const APP_META = {
   ownerName: "TIROBITCOIN",
   repositoryUrl: "https://github.com/TIROBITCOIN/leaky-sats",
   productionUrl: "https://leaky-sats.vercel.app",
-  copyright: "© 2026 TIROBITCOIN. All rights reserved.",
+  copyright: "© 2026 TIROBITCOIN. v2 test",
 };
