@@ -26,11 +26,24 @@ for (const icon of manifest.icons) {
 
 assert.equal(existsSync(swPath), true, "service worker exists");
 const sw = readFileSync(swPath, "utf8");
-assert.match(sw, /myledger-shell-v6/, "service worker cache name");
+// The cache version is stamped per-deploy at build time so browsers always detect a new SW
+// (no more manual cache-name bumps).
+assert.match(sw, /myledger-shell-/, "service worker cache name is namespaced");
+assert.match(sw, /__BUILD_ID__/, "service worker cache version is a build-time placeholder (stamped per deploy)");
+assert.match(sw, /self\.skipWaiting\(\)/, "service worker skips waiting on install");
+assert.match(sw, /self\.clients\.claim\(\)/, "service worker claims clients on activate");
 assert.match(sw, /mode === "navigate"/, "service worker navigation handling");
 assert.match(sw, /url\.pathname\.startsWith\("\/api\/"\)/, "service worker does not cache same-origin API routes");
 assert.match(sw, /clients\.matchAll\(\{\s*type:\s*"window"\s*\}\)/, "service worker finds open windows after updates");
 assert.match(sw, /client\.navigate\(client\.url\)/, "service worker refreshes open windows after updates");
+
+// Build stamps the SW cache version with a content hash of the app shell.
+const buildSwPath = join(root, "scripts", "build-sw.mjs");
+assert.equal(existsSync(buildSwPath), true, "build-sw stamping script exists");
+const buildSw = readFileSync(buildSwPath, "utf8");
+assert.match(buildSw, /__BUILD_ID__/, "build-sw replaces the cache version placeholder");
+const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+assert.match(pkg.scripts.build, /build-sw\.mjs/, "build runs the service worker stamping step");
 
 const index = readFileSync(indexPath, "utf8");
 assert.match(index, /<link rel="manifest" href="\/manifest\.webmanifest"/, "index manifest link");
@@ -42,6 +55,11 @@ const register = readFileSync(registerPath, "utf8");
 assert.match(register, /serviceWorker/, "service worker registration code");
 assert.match(register, /import\.meta\.env\.PROD/, "production-only registration");
 assert.match(register, /updateViaCache:\s*"none"/, "service worker registration bypasses cached sw.js checks");
+// Client auto-reloads when a new service worker takes control, and polls for updates so an
+// already-open (installed) session picks up new deploys.
+assert.match(register, /controllerchange/, "client reloads when a new service worker takes control");
+assert.match(register, /location\.reload\(\)/, "client force-reloads on service worker update");
+assert.match(register, /registration\.update\(\)/, "client polls for service worker updates");
 
 assert.equal(existsSync(installPromptPath), true, "install prompt component exists");
 assert.equal(existsSync(offlineBadgePath), true, "offline badge component exists");

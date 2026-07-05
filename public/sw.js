@@ -1,4 +1,9 @@
-const CACHE_NAME = "myledger-shell-v6";
+// CACHE_VERSION is replaced at build time by scripts/build-sw.mjs with a content hash of the built
+// app shell, so every deploy ships a byte-different service worker and the browser always detects an
+// update — no more manual cache-name bumps. In dev the placeholder is inert (the SW is only
+// registered in production builds).
+const CACHE_VERSION = "__BUILD_ID__";
+const CACHE_NAME = `myledger-shell-${CACHE_VERSION}`;
 const APP_SHELL = [
   "/",
   "/index.html",
