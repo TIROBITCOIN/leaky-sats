@@ -190,7 +190,8 @@ assert.doesNotMatch(modalSrc, /setMonthlyCash|getMonthlyCash|monthlyCash|통장 
 
 // 19. BTC ?먮ℓ 湲곕줉 row??"?? 硫붾돱 ?먮뒗 edit/delete action 議댁옱
 assert.match(monthlyCardSrc, /SellRecordMenu|onEditRecord/, "MonthlySellSummaryCard offers an edit/delete action per record");
-assert.match(monthlyCardSrc, /ldg-txn-menu-btn/, "MonthlySellSummaryCard reuses the ??menu button styling");
+const sellRecordMenuSrc = read("src/components/common/SellRecordMenu.tsx");
+assert.match(sellRecordMenuSrc, /ldg-txn-menu-btn/, "MonthlySellSummaryCard reuses the shared menu button styling");
 
 // 20. updateBtcSellRecord/deleteBtcSellRecord ?⑥닔 議댁옱
 const btcSellRecordsSrc = read("src/lib/btcSellRecords.ts");

@@ -3,7 +3,6 @@ import { deleteBtcSellRecord, type BtcSellRecord, type MonthSellSummary } from "
 import type { SellResult } from "../../lib/sellCalculator";
 import { fmtKRW, fmtSats } from "../../lib/format";
 import { getHeldBtc, setHeldBtc } from "../../lib/heldBtc";
-import SellRecordMenu from "../common/SellRecordMenu";
 
 interface Props {
   result: SellResult;
@@ -23,7 +22,6 @@ export default function SellNeededCard({
   onRecordsChanged,
 }: Props) {
   const [recordsOpen, setRecordsOpen] = useState(false);
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const { deficitKrw, sellSats, totalDeficitKrw } = result;
   const everHadDeficit = totalDeficitKrw > 0;
   const sellRecorded = everHadDeficit && monthlySellSummary.totalKrwCovered >= totalDeficitKrw;
@@ -33,7 +31,6 @@ export default function SellNeededCard({
   if (!everHadDeficit) return null;
 
   const handleDelete = (record: BtcSellRecord) => {
-    setOpenMenuId(null);
     if (!window.confirm("이 BTC 판매 기록을 삭제할까요?")) return;
 
     let restore = false;
@@ -81,18 +78,18 @@ export default function SellNeededCard({
                 <div key={record.id} className="ldg-sell-record-row">
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div className="ldg-sell-record-date">{record.date}</div>
-                    <SellRecordMenu
-                      open={openMenuId === record.id}
-                      onToggle={() => setOpenMenuId((id) => (id === record.id ? null : record.id))}
-                      onEdit={() => {
-                        setOpenMenuId(null);
-                        onEditRecord(record);
-                      }}
-                      onDelete={() => {
-                        setOpenMenuId(null);
-                        handleDelete(record);
-                      }}
-                    />
+                    <div className="ldg-sell-record-actions" aria-label="판매 기록 작업">
+                      <button type="button" className="ldg-sell-record-action" onClick={() => onEditRecord(record)}>
+                        수정
+                      </button>
+                      <button
+                        type="button"
+                        className="ldg-sell-record-action danger"
+                        onClick={() => handleDelete(record)}
+                      >
+                        삭제
+                      </button>
+                    </div>
                   </div>
                   <div className="ldg-sell-record-detail">
                     <span>{fmtSats(record.satsSold)}</span>

@@ -413,6 +413,24 @@
 .ldg-sell-record-row .ldg-txn-menu {
   top: 22px;
 }
+.ldg-sell-record-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ldg-sell-record-action {
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--ldg-surface-2);
+  color: var(--ldg-fg-2);
+  font-size: 13px;
+  font-weight: 700;
+}
+.ldg-sell-record-action.danger {
+  color: var(--ldg-danger);
+}
 .ldg-sell-record-date {
   font-size: 11px;
   color: var(--ldg-fg-3);

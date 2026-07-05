@@ -153,7 +153,7 @@ export default function SellConfirmModal({
       <div className="ldg-modal-content" onClick={(event) => event.stopPropagation()}>
         <div className="ldg-sell-modal-head">
           <div className="ldg-modal-title" style={{ marginBottom: 0 }}>
-            판매할 금액
+            {isEdit ? "판매 기록 수정" : "판매할 금액"}
           </div>
           <button type="button" onClick={onClose} aria-label="닫기" className="ldg-sell-modal-close">
             ×

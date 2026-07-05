@@ -46,8 +46,12 @@ assert.match(sellCardSrc, /fmtSats\(record\.satsSold\)/, "completed sell card re
 assert.match(sellCardSrc, /const \[recordsOpen,\s*setRecordsOpen\]\s*=\s*useState\(false\)/, "completed sell card keeps record list collapsed by default");
 assert.match(sellCardSrc, /aria-label="판매 기록 펼치기"/, "completed sell card exposes a single top-level expand button");
 assert.match(sellCardSrc, /recordsOpen && recentRecords\.length > 0/, "completed sell record rows render only after the card is expanded");
-assert.match(sellCardSrc, /import SellRecordMenu from "\.\.\/common\/SellRecordMenu"/, "SellNeededCard reuses the shared SellRecordMenu");
+assert.doesNotMatch(sellCardSrc, /import SellRecordMenu from "\.\.\/common\/SellRecordMenu"/, "completed sell card does not hide per-record actions behind another menu");
 assert.doesNotMatch(sellCardSrc, /function SellRecordMenu/, "SellNeededCard does not define its own SellRecordMenu");
+assert.doesNotMatch(sellCardSrc, /openMenuId|setOpenMenuId/, "completed sell card has no nested per-record menu state");
+assert.match(sellCardSrc, /className="ldg-sell-record-actions"/, "completed sell card renders visible per-record actions inline");
+assert.match(sellCardSrc, /className="ldg-sell-record-action"/, "completed sell card edit action uses a dedicated touch-sized button");
+assert.match(sellCardSrc, /className="ldg-sell-record-action danger"/, "completed sell card delete action uses a dedicated touch-sized button");
 assert.match(sellCardSrc, /deleteBtcSellRecord\(record\.id\)/, "SellNeededCard deletes records from the completed card");
 assert.match(sellCardSrc, /setHeldBtc\(getHeldBtc\(\) \+ amount\)/, "SellNeededCard can restore held BTC when deleting a completed-card record");
 
@@ -61,7 +65,7 @@ assert.doesNotMatch(monthlyCardSrc, /function SellRecordMenu/, "MonthlySellSumma
 
 // 9. Modal is the simplified single-amount sell form
 const modalSrc = readFileSync("src/components/home/SellConfirmModal.tsx", "utf8");
-assert.match(modalSrc, /판매할 금액/, "modal uses the simplified sell amount title");
+assert.match(modalSrc, /\{isEdit \? "판매 기록 수정" : "판매할 금액"\}/, "modal title distinguishes edit mode from new sell mode");
 assert.match(modalSrc, /≈ \{formatSats\(sats\)\}/, "modal shows a live sats conversion of the entered amount");
 assert.doesNotMatch(modalSrc, /자동 판매량/, "modal no longer uses old automatic sell amount label");
 assert.doesNotMatch(modalSrc, /carryover|premium|networkFee|tradeSats|finalSats/, "modal drops carryover/premium/network-fee/derived-sats fields");
@@ -112,6 +116,9 @@ assert.doesNotMatch(backupSrc, /myledger\.appLock\.v1/, "appLock is not in backu
 // 13. Tab text-decoration removed
 const tabbarCss = readFileSync("src/styles/tabbar.css", "utf8");
 assert.match(tabbarCss, /text-decoration:\s*none/, "tab has text-decoration: none");
+const layoutCss = readFileSync("src/styles/layout.css", "utf8");
+assert.match(layoutCss, /\.ldg-sell-record-actions/, "completed sell record inline actions are styled");
+assert.match(layoutCss, /\.ldg-sell-record-action[\s\S]*min-height:\s*44px/, "completed sell record action buttons keep at least a 44px touch target");
 
 // 14. Home month display uses month utilities.
 // Phase 11: month-label rendering lives in the shared MonthSelector component.
