@@ -41,11 +41,23 @@ assert.match(yearlyCardSrc, /fmtBtcValue/, "YearlySellSummaryCard uses fmtBtcVal
 assert.match(sellCardSrc, />\s*판매\s*</, "SellNeededCard has the simplified sell button");
 assert.match(sellCardSrc, /records:\s*BtcSellRecord\[\]/, "SellNeededCard receives sell records for completed-card actions");
 assert.match(sellCardSrc, /onEditRecord:\s*\(record:\s*BtcSellRecord\) => void/, "SellNeededCard can request editing a sell record");
-assert.match(sellCardSrc, /onDeleteRecord:\s*\(record:\s*BtcSellRecord\) => void/, "SellNeededCard can request deleting a sell record");
+assert.match(sellCardSrc, /onRecordsChanged:\s*\(\) => void/, "SellNeededCard refreshes parent state after deleting a record");
 assert.match(sellCardSrc, /fmtSats\(record\.satsSold\)/, "completed sell card record rows use sats, not BTC decimal display");
-assert.match(sellCardSrc, /aria-label="판매 기록 더보기"/, "completed sell card exposes a record action menu");
-assert.match(sellCardSrc, />\s*수정\s*</, "completed sell card exposes an edit action");
-assert.match(sellCardSrc, />\s*삭제\s*</, "completed sell card exposes a delete action");
+assert.match(sellCardSrc, /const \[recordsOpen,\s*setRecordsOpen\]\s*=\s*useState\(false\)/, "completed sell card keeps record list collapsed by default");
+assert.match(sellCardSrc, /aria-label="판매 기록 펼치기"/, "completed sell card exposes a single top-level expand button");
+assert.match(sellCardSrc, /recordsOpen && recentRecords\.length > 0/, "completed sell record rows render only after the card is expanded");
+assert.match(sellCardSrc, /import SellRecordMenu from "\.\.\/common\/SellRecordMenu"/, "SellNeededCard reuses the shared SellRecordMenu");
+assert.doesNotMatch(sellCardSrc, /function SellRecordMenu/, "SellNeededCard does not define its own SellRecordMenu");
+assert.match(sellCardSrc, /deleteBtcSellRecord\(record\.id\)/, "SellNeededCard deletes records from the completed card");
+assert.match(sellCardSrc, /setHeldBtc\(getHeldBtc\(\) \+ amount\)/, "SellNeededCard can restore held BTC when deleting a completed-card record");
+
+const sharedSellRecordMenuSrc = readFileSync("src/components/common/SellRecordMenu.tsx", "utf8");
+assert.match(sharedSellRecordMenuSrc, /export default function SellRecordMenu/, "shared SellRecordMenu component exists");
+assert.match(sharedSellRecordMenuSrc, /aria-label="판매 기록 더보기"/, "shared SellRecordMenu keeps the per-record action affordance");
+assert.match(sharedSellRecordMenuSrc, />\s*수정\s*</, "shared SellRecordMenu exposes an edit action");
+assert.match(sharedSellRecordMenuSrc, />\s*삭제\s*</, "shared SellRecordMenu exposes a delete action");
+assert.match(monthlyCardSrc, /import SellRecordMenu from "\.\.\/common\/SellRecordMenu"/, "MonthlySellSummaryCard reuses the shared SellRecordMenu");
+assert.doesNotMatch(monthlyCardSrc, /function SellRecordMenu/, "MonthlySellSummaryCard no longer defines a duplicate SellRecordMenu");
 
 // 9. Modal is the simplified single-amount sell form
 const modalSrc = readFileSync("src/components/home/SellConfirmModal.tsx", "utf8");
@@ -109,9 +121,8 @@ const homePageSrc = readFileSync("src/components/home/HomePage.tsx", "utf8");
 assert.match(homePageSrc, /MonthSelector/, "HomePage renders the shared MonthSelector");
 assert.match(homePageSrc, /listBtcSellRecordsByMonth\(selectedMonth\)/, "HomePage loads monthly sell records for the completed sell card");
 assert.match(homePageSrc, /onEditRecord=\{\(record\) => setSellModalState\(\{ mode: "edit", record \}\)\}/, "HomePage opens the sell edit modal from the completed sell card");
-assert.match(homePageSrc, /onDeleteRecord=\{handleDeleteSellRecord\}/, "HomePage wires delete actions from the completed sell card");
-assert.match(homePageSrc, /deleteBtcSellRecord\(record\.id\)/, "HomePage deletes sell records from the completed sell card");
-assert.match(homePageSrc, /setHeldBtcStorage\(getHeldBtc\(\) \+ amount\)/, "HomePage can restore held BTC when deleting a sell record");
+assert.match(homePageSrc, /onRecordsChanged=\{refreshAfterSellChange\}/, "HomePage refreshes after completed-card record deletion");
+assert.doesNotMatch(homePageSrc, /handleDeleteSellRecord|onDeleteRecord/, "HomePage does not carry duplicate delete logic for the completed-card records");
 const monthSelectorSrc = readFileSync("src/components/common/MonthSelector.tsx", "utf8");
 assert.match(monthSelectorSrc, /getMonthLabel|getCurrentMonthLabel/, "MonthSelector uses month label utility");
 const monthSrc = readFileSync("src/lib/month.ts", "utf8");

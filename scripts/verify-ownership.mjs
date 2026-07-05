@@ -15,6 +15,12 @@ assert.match(readme, /https:\/\/github\.com\/TIROBITCOIN\/leaky-sats/, "README.m
 const appMeta = readFileSync("src/constants/appMeta.ts", "utf8");
 assert.match(appMeta, /TIROBITCOIN/, "appMeta.ts contains TIROBITCOIN");
 assert.match(appMeta, /repositoryUrl/, "appMeta.ts contains repositoryUrl");
+assert.match(
+  appMeta,
+  /copyright:\s*"© 2026 TIROBITCOIN\. All rights reserved\."/,
+  "appMeta copyright uses the production ownership copy"
+);
+assert.doesNotMatch(appMeta, /v2 test/, "temporary PWA test marker is not exposed in appMeta");
 
 // Settings or Help page references APP_META.copyright (renders © 2026 TIROBITCOIN at runtime)
 const settings = readFileSync("src/components/settings/SettingsPage.tsx", "utf8");

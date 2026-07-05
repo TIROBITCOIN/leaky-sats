@@ -41,6 +41,17 @@ const buildSwPath = join(root, "scripts", "build-sw.mjs");
 assert.equal(existsSync(buildSwPath), true, "build-sw stamping script exists");
 const buildSw = readFileSync(buildSwPath, "utf8");
 assert.match(buildSw, /__BUILD_ID__/, "build-sw replaces the cache version placeholder");
+assert.match(buildSw, /VERCEL_GIT_COMMIT_SHA/, "build-sw prefers the Vercel commit SHA for deploy-specific stamping");
+assert.match(
+  buildSw,
+  /process\.env\.VERCEL_GIT_COMMIT_SHA\?\.slice\(0,\s*12\)\s*\?\?/,
+  "build-sw uses the Vercel commit SHA when it is available"
+);
+assert.match(
+  buildSw,
+  /createHash\("sha256"\)\.update\(indexHtml\)\.digest\("hex"\)\.slice\(0,\s*12\)/,
+  "build-sw falls back to the index.html content hash for local builds"
+);
 const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 assert.match(pkg.scripts.build, /build-sw\.mjs/, "build runs the service worker stamping step");
 

@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { fmtKRW, fmtBtcValue, type BtcUnit } from "../../lib/format";
 import { deleteBtcSellRecord, type MonthSellSummary, type BtcSellRecord } from "../../lib/btcSellRecords";
 import { getHeldBtc, setHeldBtc } from "../../lib/heldBtc";
 import type { SettlementPeriod } from "../../lib/settlement";
+import SellRecordMenu from "../common/SellRecordMenu";
 
 interface Props {
   summary: MonthSellSummary;
@@ -19,37 +20,6 @@ function formatPeriodRange(period: SettlementPeriod): string {
   const [, sm, sd] = period.startDate.split("-").map(Number);
   const [, em, ed] = period.endDate.split("-").map(Number);
   return `${sm}/${sd} - ${em}/${ed}`;
-}
-
-function SellRecordMenu({ open, onToggle, onEdit, onDelete }: { open: boolean; onToggle: () => void; onEdit: () => void; onDelete: () => void }) {
-  const menuRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDocPointerDown = (e: PointerEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) onToggle();
-    };
-    document.addEventListener("pointerdown", onDocPointerDown);
-    return () => document.removeEventListener("pointerdown", onDocPointerDown);
-  }, [open, onToggle]);
-
-  return (
-    <div style={{ position: "relative" }}>
-      <button type="button" className="ldg-txn-menu-btn" onClick={onToggle} aria-label="더보기">
-        ⋯
-      </button>
-      {open && (
-        <div className="ldg-txn-menu" ref={menuRef}>
-          <button type="button" onClick={onEdit}>
-            수정
-          </button>
-          <button type="button" onClick={onDelete}>
-            삭제
-          </button>
-        </div>
-      )}
-    </div>
-  );
 }
 
 export default function MonthlySellSummaryCard({ summary, records, unit, period, onEditRecord, onRecordsChanged }: Props) {

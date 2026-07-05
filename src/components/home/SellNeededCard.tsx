@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from "react";
-import type { BtcSellRecord, MonthSellSummary } from "../../lib/btcSellRecords";
+import { useState } from "react";
+import { deleteBtcSellRecord, type BtcSellRecord, type MonthSellSummary } from "../../lib/btcSellRecords";
 import type { SellResult } from "../../lib/sellCalculator";
 import { fmtKRW, fmtSats } from "../../lib/format";
+import { getHeldBtc, setHeldBtc } from "../../lib/heldBtc";
+import SellRecordMenu from "../common/SellRecordMenu";
 
 interface Props {
   result: SellResult;
@@ -9,48 +11,7 @@ interface Props {
   records: BtcSellRecord[];
   onConfirmSell?: () => void;
   onEditRecord: (record: BtcSellRecord) => void;
-  onDeleteRecord: (record: BtcSellRecord) => void;
-}
-
-function SellRecordMenu({
-  open,
-  onToggle,
-  onEdit,
-  onDelete,
-}: {
-  open: boolean;
-  onToggle: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-}) {
-  const menuRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDocPointerDown = (event: PointerEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) onToggle();
-    };
-    document.addEventListener("pointerdown", onDocPointerDown);
-    return () => document.removeEventListener("pointerdown", onDocPointerDown);
-  }, [open, onToggle]);
-
-  return (
-    <div style={{ position: "relative" }}>
-      <button type="button" className="ldg-txn-menu-btn" onClick={onToggle} aria-label="판매 기록 더보기">
-        ⋯
-      </button>
-      {open && (
-        <div className="ldg-txn-menu" ref={menuRef}>
-          <button type="button" onClick={onEdit}>
-            수정
-          </button>
-          <button type="button" onClick={onDelete}>
-            삭제
-          </button>
-        </div>
-      )}
-    </div>
-  );
+  onRecordsChanged: () => void;
 }
 
 export default function SellNeededCard({
@@ -59,8 +20,9 @@ export default function SellNeededCard({
   records,
   onConfirmSell,
   onEditRecord,
-  onDeleteRecord,
+  onRecordsChanged,
 }: Props) {
+  const [recordsOpen, setRecordsOpen] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const { deficitKrw, sellSats, totalDeficitKrw } = result;
   const everHadDeficit = totalDeficitKrw > 0;
@@ -70,11 +32,41 @@ export default function SellNeededCard({
 
   if (!everHadDeficit) return null;
 
+  const handleDelete = (record: BtcSellRecord) => {
+    setOpenMenuId(null);
+    if (!window.confirm("이 BTC 판매 기록을 삭제할까요?")) return;
+
+    let restore = false;
+    if (record.deductedFromHeldBtc) {
+      restore = window.confirm("보유 BTC에 되돌릴까요?\n확인: 보유 BTC에 복원 / 취소: 기록만 삭제");
+    }
+
+    deleteBtcSellRecord(record.id);
+    if (restore) {
+      const amount = record.deductedBtcAmount ?? record.btcSold;
+      setHeldBtc(getHeldBtc() + amount);
+    }
+    onRecordsChanged();
+  };
+
   return (
     <div className="ldg-card">
       {sellRecorded ? (
         <>
-          <div className="ldg-settlement-done">판매 완료</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+            <div className="ldg-settlement-done">판매 완료</div>
+            {recentRecords.length > 0 && (
+              <button
+                type="button"
+                className="ldg-txn-menu-btn"
+                onClick={() => setRecordsOpen((open) => !open)}
+                aria-label="판매 기록 펼치기"
+                aria-expanded={recordsOpen}
+              >
+                ⋯
+              </button>
+            )}
+          </div>
           <div className="ldg-done-list">
             <div className="ldg-done-row">
               <span className="ldg-done-label">실제 판매량</span>
@@ -83,7 +75,7 @@ export default function SellNeededCard({
               </span>
             </div>
           </div>
-          {recentRecords.length > 0 && (
+          {recordsOpen && recentRecords.length > 0 && (
             <div style={{ marginTop: 10, borderTop: "0.5px solid var(--ldg-border)", paddingTop: 8 }}>
               {recentRecords.map((record) => (
                 <div key={record.id} className="ldg-sell-record-row">
@@ -98,7 +90,7 @@ export default function SellNeededCard({
                       }}
                       onDelete={() => {
                         setOpenMenuId(null);
-                        onDeleteRecord(record);
+                        handleDelete(record);
                       }}
                     />
                   </div>

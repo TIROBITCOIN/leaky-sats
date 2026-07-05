@@ -14,10 +14,12 @@ if (!existsSync(swPath)) {
   process.exit(1);
 }
 
-// Hash the built index.html. It references the content-hashed JS/CSS bundles, so this id changes
-// exactly when the shipped app changes and stays stable across identical rebuilds.
+// Prefer Vercel's commit SHA so every deployed commit stamps a distinct service worker, even when
+// only static assets outside index.html changed. Local builds fall back to the built app shell hash.
 const indexHtml = existsSync(indexPath) ? readFileSync(indexPath, "utf8") : "";
-const buildId = createHash("sha256").update(indexHtml).digest("hex").slice(0, 12);
+const buildId =
+  process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 12) ??
+  createHash("sha256").update(indexHtml).digest("hex").slice(0, 12);
 
 let sw = readFileSync(swPath, "utf8");
 if (!sw.includes("__BUILD_ID__")) {
