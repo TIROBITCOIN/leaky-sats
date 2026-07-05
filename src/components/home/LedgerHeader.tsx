@@ -10,8 +10,7 @@ export default function LedgerHeader({ d, walletName }: Props) {
     <div className="ldg-header">
       <div className="ldg-app-name">{walletName}</div>
       <div className="ldg-block">
-        <span className="ldg-block-dot" />
-        <span className="ldg-block-num">#{d.blockHeight.toLocaleString("en-US")}</span>
+        block height : {d.blockHeight.toLocaleString("en-US")}
       </div>
     </div>
   );

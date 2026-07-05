@@ -157,8 +157,8 @@
   background: none;
   border: 0;
   color: var(--ldg-fg);
-  font-size: 20px;
-  font-weight: 700;
+  font-size: clamp(16px, 4.4vw, 21px);
+  font-weight: 750;
   letter-spacing: 0;
   text-decoration: none;
   padding: 8px 10px;
@@ -224,31 +224,14 @@
 .ldg-block {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
   background: rgba(230, 154, 51, 0.12);
   border: 1px solid rgba(230, 154, 51, 0.3);
   color: var(--ldg-orange);
   border-radius: 99px;
-  padding: 5px 9px;
+  padding: 5px 10px;
   font-family: var(--ldg-mono);
   font-size: 11px;
   font-weight: 600;
-}
-.ldg-block-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--ldg-orange);
-  box-shadow: 0 0 0 0 rgba(230, 154, 51, 0.7);
-  animation: ldg-pulse 1.6s ease-out infinite;
-}
-@keyframes ldg-pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(230, 154, 51, 0.7);
-  }
-  100% {
-    box-shadow: 0 0 0 8px rgba(230, 154, 51, 0);
-  }
 }
 
 /* ---- Toggle ---- */
@@ -288,10 +271,6 @@
   color: #3a2200;
   box-shadow: 0 1px 4px rgba(230, 154, 51, 0.28);
 }
-.ldg-toggle-glyph {
-  font-weight: 700;
-}
-
 /* ---- Card base ---- */
 .ldg-card {
   background: var(--ldg-card);
@@ -409,12 +388,13 @@
   color: var(--ldg-expense);
 }
 .ldg-inout-main {
-  font-size: 17px;
+  font-size: clamp(13px, 4.2vw, 17px);
   font-weight: 600;
   letter-spacing: 0;
   margin-top: 6px;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
+  white-space: nowrap;
 }
 .ldg-inout-main.pos {
   color: var(--ldg-pos);
@@ -813,8 +793,11 @@
 /* ---- Calendar month view (통계, Phase 11) ---- */
 .ldg-calendar-summary {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
   gap: 10px;
+}
+.ldg-calendar-summary > div {
+  min-width: 0;
 }
 .ldg-calendar-weekdays {
   display: grid;

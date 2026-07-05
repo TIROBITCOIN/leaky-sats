@@ -35,7 +35,6 @@ export default function InOutCards({
       <div className="ldg-card ldg-net-card">
         <div>
           <div className="ldg-label">남는 금액</div>
-          <div className="ldg-tiny">현재 정산기간 생활비 기준</div>
         </div>
         <div className={`ldg-net-value ${netKrw >= 0 ? "pos" : "neg"}`}>
           {netKrw >= 0 ? "+" : "−"}

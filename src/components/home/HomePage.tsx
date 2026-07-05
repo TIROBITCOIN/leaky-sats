@@ -100,8 +100,7 @@ export default function HomePage() {
           <CurrencyToggle value={currency} onChange={setCurrency} />
           <BalanceCard heldBtc={heldBtc} unit={btcUnit} />
           <div className="ldg-home-month-selector">
-            <MonthSelector selectedMonth={selectedMonth} onChangeMonth={setSelectedMonth} label={period.label} />
-            <div className="ldg-settlement-range-label">{period.rangeLabel}</div>
+            <MonthSelector selectedMonth={selectedMonth} onChangeMonth={setSelectedMonth} label={period.rangeLabel} />
           </div>
           <InOutCards
             incomeKrw={incomeKrw}

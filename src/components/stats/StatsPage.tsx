@@ -93,8 +93,7 @@ export default function StatsPage() {
         <div className="ldg-page-sub">달력에서 날짜를 누르면 그날의 거래를 확인할 수 있어요.</div>
 
         <div className="ldg-stats-month-selector">
-          <MonthSelector selectedMonth={selectedMonth} onChangeMonth={setSelectedMonth} label={period.label} />
-          <div className="ldg-settlement-range-label">{period.rangeLabel}</div>
+          <MonthSelector selectedMonth={selectedMonth} onChangeMonth={setSelectedMonth} label={period.rangeLabel} />
         </div>
 
         <div className="ldg-card">
