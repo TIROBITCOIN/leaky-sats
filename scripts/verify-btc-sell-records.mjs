@@ -51,7 +51,19 @@ assert.doesNotMatch(modalSrc, /fetchRecommendedNetworkFeeSats|UTXO/, "modal no l
 assert.match(modalSrc, /sellBtc/, "modal converts the entered amount to BTC");
 assert.match(modalSrc, /krwCovered:\s*amountKrw/, "modal saves the entered KRW amount as krwCovered");
 assert.doesNotMatch(modalSrc, /실효가격/, "modal hides the effective BTC price row");
-assert.match(modalSrc, /btcKrwAtSell:\s*currentBtcKrw/, "modal snapshots the current BTC price on save");
+assert.match(modalSrc, /const \[isSaving,\s*setIsSaving\]\s*=\s*useState\(false\)/, "modal tracks an isSaving state");
+assert.match(modalSrc, /savingRef/, "modal uses a synchronous saving ref to block rapid duplicate submits");
+assert.match(modalSrc, /if \(savingRef\.current\) return;/, "handleSave returns immediately while a save is already running");
+assert.match(modalSrc, /setSellSaveInProgress\(true\)/, "handleSave raises the global save-in-progress flag");
+assert.match(modalSrc, /setSellSaveInProgress\(false\)/, "handleSave clears the global save-in-progress flag");
+assert.match(modalSrc, /disabled=\{overHeld \|\| isSaving\}/, "save button is disabled while saving");
+assert.match(modalSrc, /\{isSaving \? "저장 중\.\.\." : isEdit \? "수정 완료" : "판매 확정"\}/, "save button shows loading copy while saving");
+assert.match(modalSrc, /const recalcBtcKrw = editRecord \? editRecord\.btcKrwAtSell : currentBtcKrw/, "edit mode recalculates BTC with the original sell rate");
+assert.match(modalSrc, /const sellBtc = recalcBtcKrw > 0 \? amountKrw \/ recalcBtcKrw : 0/, "modal converts KRW to BTC using the recalculation rate");
+assert.match(modalSrc, /btcKrwAtSell:\s*currentBtcKrw/, "new sell records snapshot the current BTC price on save");
+const updateSellRecordCall = modalSrc.match(/updateBtcSellRecord\(editRecord\.id,\s*\{([\s\S]*?)\n\s*\}\);/);
+assert.ok(updateSellRecordCall, "modal updates an existing sell record in edit mode");
+assert.doesNotMatch(updateSellRecordCall[1], /btcKrwAtSell/, "editing a sell record must not overwrite the original sell rate");
 assert.doesNotMatch(modalSrc, /보유 BTC에서 차감/, "modal no longer has deduct checkbox");
 
 // 10. Saving deducts from heldBtc

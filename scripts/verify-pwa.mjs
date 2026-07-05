@@ -34,8 +34,7 @@ assert.match(sw, /self\.skipWaiting\(\)/, "service worker skips waiting on insta
 assert.match(sw, /self\.clients\.claim\(\)/, "service worker claims clients on activate");
 assert.match(sw, /mode === "navigate"/, "service worker navigation handling");
 assert.match(sw, /url\.pathname\.startsWith\("\/api\/"\)/, "service worker does not cache same-origin API routes");
-assert.match(sw, /clients\.matchAll\(\{\s*type:\s*"window"\s*\}\)/, "service worker finds open windows after updates");
-assert.match(sw, /client\.navigate\(client\.url\)/, "service worker refreshes open windows after updates");
+assert.doesNotMatch(sw, /client\.navigate\(client\.url\)/, "service worker does not bypass the client-side deferred reload guard");
 
 // Build stamps the SW cache version with a content hash of the app shell.
 const buildSwPath = join(root, "scripts", "build-sw.mjs");
@@ -58,8 +57,17 @@ assert.match(register, /updateViaCache:\s*"none"/, "service worker registration 
 // Client auto-reloads when a new service worker takes control, and polls for updates so an
 // already-open (installed) session picks up new deploys.
 assert.match(register, /controllerchange/, "client reloads when a new service worker takes control");
-assert.match(register, /location\.reload\(\)/, "client force-reloads on service worker update");
+assert.match(register, /requestReloadAfterSellSave/, "client defers service worker reloads while a sell save is in progress");
 assert.match(register, /registration\.update\(\)/, "client polls for service worker updates");
+
+const saveInProgressPath = join(root, "src", "lib", "sellSaveInProgress.ts");
+assert.equal(existsSync(saveInProgressPath), true, "sell save-in-progress helper exists");
+const saveInProgress = readFileSync(saveInProgressPath, "utf8");
+assert.match(saveInProgress, /__ldgSaveInProgress/, "save helper uses a global save-in-progress flag");
+assert.match(saveInProgress, /__ldgPendingReloadAfterSave/, "save helper tracks a deferred reload");
+assert.match(saveInProgress, /setSellSaveInProgress/, "save helper exports a setter");
+assert.match(saveInProgress, /requestReloadAfterSellSave/, "save helper exports a deferred reload requester");
+assert.match(saveInProgress, /window\.location\.reload\(\)/, "save helper performs the deferred reload");
 
 assert.equal(existsSync(installPromptPath), true, "install prompt component exists");
 assert.equal(existsSync(offlineBadgePath), true, "offline badge component exists");

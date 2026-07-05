@@ -91,6 +91,7 @@ export function addBtcSellRecord(
   record: Omit<BtcSellRecord, "id" | "createdAt">
 ): BtcSellRecord {
   const btcSold = safeNum(record.btcSold);
+  const createdAt = new Date().toISOString();
   const newRecord: BtcSellRecord = {
     ...record,
     id: generateId(),
@@ -100,9 +101,26 @@ export function addBtcSellRecord(
     krwCovered: safeNum(record.krwCovered),
     deficitKrwAtConfirm: safeNum(record.deficitKrwAtConfirm),
     deductedBtcAmount: record.deductedFromHeldBtc ? safeNum(record.deductedBtcAmount ?? btcSold) : undefined,
-    createdAt: new Date().toISOString(),
+    createdAt,
   };
   const records = loadRecords();
+  const createdAtMs = new Date(createdAt).getTime();
+  const nearDuplicate = records.find((existing) => {
+    const existingCreatedAtMs = new Date(existing.createdAt).getTime();
+    return (
+      existing.month === newRecord.month &&
+      existing.krwCovered === newRecord.krwCovered &&
+      Number.isFinite(existingCreatedAtMs) &&
+      Math.abs(createdAtMs - existingCreatedAtMs) <= 5_000
+    );
+  });
+  if (nearDuplicate) {
+    console.warn("Possible duplicate BTC sell record saved within 5 seconds", {
+      previousId: nearDuplicate.id,
+      month: newRecord.month,
+      krwCovered: newRecord.krwCovered,
+    });
+  }
   records.unshift(newRecord);
   saveRecords(records);
   return newRecord;

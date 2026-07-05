@@ -1,3 +1,5 @@
+import { requestReloadAfterSellSave } from "./lib/sellSaveInProgress";
+
 export function registerServiceWorker() {
   if (!("serviceWorker" in navigator) || !import.meta.env.PROD) return;
 
@@ -9,7 +11,7 @@ export function registerServiceWorker() {
   navigator.serviceWorker.addEventListener("controllerchange", () => {
     if (refreshing) return;
     refreshing = true;
-    window.location.reload();
+    requestReloadAfterSellSave();
   });
 
   window.addEventListener("load", () => {

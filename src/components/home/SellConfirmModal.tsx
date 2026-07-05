@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { SellResult } from "../../lib/sellCalculator";
 import { fmtBtcValue, type BtcUnit } from "../../lib/format";
 import { addBtcSellRecord, updateBtcSellRecord, type BtcSellRecord } from "../../lib/btcSellRecords";
 import { getHeldBtc, setHeldBtc } from "../../lib/heldBtc";
 import type { SettlementPeriod } from "../../lib/settlement";
+import { setSellSaveInProgress } from "../../lib/sellSaveInProgress";
 
 const MAX_BTC = 21_000_000;
 const SATS_PER_BTC = 100_000_000;
@@ -44,10 +45,13 @@ export default function SellConfirmModal({
     initialAmountKrw > 0 ? String(Math.round(initialAmountKrw)) : ""
   );
   const [error, setError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const savingRef = useRef(false);
 
   const currentBtcKrw = Number.isFinite(btcKrw) && btcKrw > 0 ? btcKrw : 0;
+  const recalcBtcKrw = editRecord ? editRecord.btcKrwAtSell : currentBtcKrw;
   const amountKrw = parseKrwInput(amountInput);
-  const sellBtc = currentBtcKrw > 0 ? amountKrw / currentBtcKrw : 0;
+  const sellBtc = recalcBtcKrw > 0 ? amountKrw / recalcBtcKrw : 0;
   const sats = Math.round(sellBtc * SATS_PER_BTC);
 
   const currentHeldBtc = getHeldBtc();
@@ -57,66 +61,91 @@ export default function SellConfirmModal({
   const availableHeldBtc = currentHeldBtc + previouslyDeductedBtc;
   const overHeld = useMemo(() => Number.isFinite(sellBtc) && sellBtc > availableHeldBtc, [sellBtc, availableHeldBtc]);
 
-  const handleSave = () => {
-    if (!Number.isFinite(currentBtcKrw) || currentBtcKrw <= 0) {
-      setError("BTC 가격이 올바르지 않습니다.");
-      return;
-    }
-    if (!Number.isFinite(sellBtc) || sellBtc <= 0 || sats <= 0) {
-      setError("판매 금액을 입력하세요.");
-      return;
-    }
-    if (sellBtc > MAX_BTC) {
-      setError("값이 너무 큽니다.");
-      return;
-    }
-
-    const heldBtcAtSave = getHeldBtc();
-    const availableHeldBtcAtSave = heldBtcAtSave + previouslyDeductedBtc;
-    if (sellBtc > availableHeldBtcAtSave) {
-      setError("보유 BTC보다 많이 판매할 수 없습니다.");
-      return;
-    }
-
-    if (editRecord) {
-      const delta = sellBtc - previouslyDeductedBtc;
-
-      updateBtcSellRecord(editRecord.id, {
-        btcSold: sellBtc,
-        satsSold: sats,
-        btcKrwAtSell: currentBtcKrw,
-        krwCovered: amountKrw,
-        deficitKrwAtConfirm: result.deficitKrw,
-        deductedFromHeldBtc: true,
-        deductedBtcAmount: sellBtc,
-      });
-
-      if (delta !== 0) {
-        const current = getHeldBtc();
-        setHeldBtc(Math.max(0, current - delta));
+  useEffect(() => {
+    return () => {
+      if (savingRef.current) {
+        savingRef.current = false;
+        setSellSaveInProgress(false);
       }
-    } else {
-      const today = new Date();
-      const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    };
+  }, []);
 
-      addBtcSellRecord({
-        month: selectedMonth,
-        date: dateStr,
-        btcSold: sellBtc,
-        satsSold: sats,
-        btcKrwAtSell: currentBtcKrw,
-        krwCovered: amountKrw,
-        deficitKrwAtConfirm: result.deficitKrw,
-        deductedFromHeldBtc: true,
-        deductedBtcAmount: sellBtc,
-      });
+  const releaseSaving = () => {
+    savingRef.current = false;
+    setIsSaving(false);
+    setSellSaveInProgress(false);
+  };
 
-      const current = getHeldBtc();
-      setHeldBtc(Math.max(0, current - sellBtc));
+  const handleSave = () => {
+    if (savingRef.current) return;
+
+    savingRef.current = true;
+    setIsSaving(true);
+    setSellSaveInProgress(true);
+    setError("");
+
+    try {
+      if (!Number.isFinite(recalcBtcKrw) || recalcBtcKrw <= 0) {
+        setError("BTC 가격이 올바르지 않습니다.");
+        return;
+      }
+      if (!Number.isFinite(sellBtc) || sellBtc <= 0 || sats <= 0) {
+        setError("판매 금액을 입력하세요.");
+        return;
+      }
+      if (sellBtc > MAX_BTC) {
+        setError("값이 너무 큽니다.");
+        return;
+      }
+
+      const heldBtcAtSave = getHeldBtc();
+      const availableHeldBtcAtSave = heldBtcAtSave + previouslyDeductedBtc;
+      if (sellBtc > availableHeldBtcAtSave) {
+        setError("보유 BTC보다 많이 판매할 수 없습니다.");
+        return;
+      }
+
+      if (editRecord) {
+        const delta = sellBtc - previouslyDeductedBtc;
+
+        updateBtcSellRecord(editRecord.id, {
+          btcSold: sellBtc,
+          satsSold: sats,
+          krwCovered: amountKrw,
+          deficitKrwAtConfirm: result.deficitKrw,
+          deductedFromHeldBtc: true,
+          deductedBtcAmount: sellBtc,
+        });
+
+        if (delta !== 0) {
+          const current = getHeldBtc();
+          setHeldBtc(Math.max(0, current - delta));
+        }
+      } else {
+        const today = new Date();
+        const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+        addBtcSellRecord({
+          month: selectedMonth,
+          date: dateStr,
+          btcSold: sellBtc,
+          satsSold: sats,
+          btcKrwAtSell: currentBtcKrw,
+          krwCovered: amountKrw,
+          deficitKrwAtConfirm: result.deficitKrw,
+          deductedFromHeldBtc: true,
+          deductedBtcAmount: sellBtc,
+        });
+
+        const current = getHeldBtc();
+        setHeldBtc(Math.max(0, current - sellBtc));
+      }
+
+      onSaved();
+      onClose();
+    } finally {
+      releaseSaving();
     }
-
-    onSaved();
-    onClose();
   };
 
   return (
@@ -156,8 +185,8 @@ export default function SellConfirmModal({
           <button type="button" className="ldg-submit-btn secondary" onClick={onClose}>
             취소
           </button>
-          <button type="button" className="ldg-submit-btn" onClick={handleSave} disabled={overHeld}>
-            {isEdit ? "수정 완료" : "판매 확정"}
+          <button type="button" className="ldg-submit-btn" onClick={handleSave} disabled={overHeld || isSaving}>
+            {isSaving ? "저장 중..." : isEdit ? "수정 완료" : "판매 확정"}
           </button>
         </div>
       </div>
