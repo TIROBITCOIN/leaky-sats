@@ -17,6 +17,7 @@ export function isSellCompleted(
 ): boolean {
   const targetKrw = Math.round(result.totalDeficitKrw);
   if (targetKrw <= 0) return false;
+  if (monthlySellSummary.count > 0 || records.length > 0) return true;
 
   const coveredKrw = Math.round(monthlySellSummary.totalKrwCovered);
   if (coveredKrw >= targetKrw) return true;
