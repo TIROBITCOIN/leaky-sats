@@ -108,7 +108,7 @@ export default function SellConfirmModal({
       if (editRecord) {
         const delta = sellBtc - previouslyDeductedBtc;
 
-        updateBtcSellRecord(editRecord.id, {
+        const savedRecord = updateBtcSellRecord(editRecord.id, {
           btcSold: sellBtc,
           satsSold: sats,
           krwCovered: amountKrw,
@@ -116,6 +116,10 @@ export default function SellConfirmModal({
           deductedFromHeldBtc: true,
           deductedBtcAmount: sellBtc,
         });
+        if (!savedRecord) {
+          setError("판매 기록을 저장하지 못했습니다. 다시 시도하세요.");
+          return;
+        }
 
         if (delta !== 0) {
           const current = getHeldBtc();
@@ -125,7 +129,7 @@ export default function SellConfirmModal({
         const today = new Date();
         const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
-        addBtcSellRecord({
+        const savedRecord = addBtcSellRecord({
           month: selectedMonth,
           date: dateStr,
           btcSold: sellBtc,
@@ -136,6 +140,10 @@ export default function SellConfirmModal({
           deductedFromHeldBtc: true,
           deductedBtcAmount: sellBtc,
         });
+        if (!savedRecord) {
+          setError("판매 기록을 저장하지 못했습니다. 다시 시도하세요.");
+          return;
+        }
 
         const current = getHeldBtc();
         setHeldBtc(Math.max(0, current - sellBtc));

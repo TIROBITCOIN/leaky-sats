@@ -77,10 +77,13 @@ function loadRecords(): BtcSellRecord[] {
   }
 }
 
-function saveRecords(records: BtcSellRecord[]) {
+function saveRecords(records: BtcSellRecord[]): boolean {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-  } catch { /* ignore */ }
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function generateId(): string {
@@ -89,7 +92,7 @@ function generateId(): string {
 
 export function addBtcSellRecord(
   record: Omit<BtcSellRecord, "id" | "createdAt">
-): BtcSellRecord {
+): BtcSellRecord | null {
   const btcSold = safeNum(record.btcSold);
   const createdAt = new Date().toISOString();
   const newRecord: BtcSellRecord = {
@@ -122,8 +125,7 @@ export function addBtcSellRecord(
     });
   }
   records.unshift(newRecord);
-  saveRecords(records);
-  return newRecord;
+  return saveRecords(records) ? newRecord : null;
 }
 
 /** 기존 판매 기록의 필드를 부분 수정한다. 보유 BTC 보정은 호출하는 쪽(SellConfirmModal)의 책임이다 —
@@ -148,8 +150,7 @@ export function updateBtcSellRecord(
       patch.deficitKrwAtConfirm !== undefined ? safeNum(patch.deficitKrwAtConfirm) : current.deficitKrwAtConfirm,
   };
   records[idx] = updated;
-  saveRecords(records);
-  return updated;
+  return saveRecords(records) ? updated : null;
 }
 
 export function deleteBtcSellRecord(id: string): boolean {
@@ -157,8 +158,7 @@ export function deleteBtcSellRecord(id: string): boolean {
   const idx = records.findIndex((r) => r.id === id);
   if (idx === -1) return false;
   records.splice(idx, 1);
-  saveRecords(records);
-  return true;
+  return saveRecords(records);
 }
 
 export function getBtcSellRecordById(id: string): BtcSellRecord | null {
