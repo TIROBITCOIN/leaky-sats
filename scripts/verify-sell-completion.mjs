@@ -71,8 +71,8 @@ assert.equal(
     { totalBtcSold: partialRecord.btcSold, totalSatsSold: partialRecord.satsSold, totalKrwCovered: partialRecord.krwCovered, count: 1 },
     [partialRecord],
   ),
-  false,
-  "partial sale records do not complete the card",
+  true,
+  "any saved sell record completes the card so the sell button cannot deduct held BTC twice",
 );
 
 const sellCardSrc = read("src/components/home/SellNeededCard.tsx");
