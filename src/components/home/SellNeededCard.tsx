@@ -3,6 +3,7 @@ import { deleteBtcSellRecord, type BtcSellRecord, type MonthSellSummary } from "
 import type { SellResult } from "../../lib/sellCalculator";
 import { fmtKRW, fmtSats } from "../../lib/format";
 import { getHeldBtc, setHeldBtc } from "../../lib/heldBtc";
+import { isSellCompleted } from "../../lib/sellCompletion";
 
 interface Props {
   result: SellResult;
@@ -24,7 +25,7 @@ export default function SellNeededCard({
   const [recordsOpen, setRecordsOpen] = useState(false);
   const { deficitKrw, sellSats, totalDeficitKrw } = result;
   const everHadDeficit = totalDeficitKrw > 0;
-  const sellRecorded = everHadDeficit && monthlySellSummary.totalKrwCovered >= totalDeficitKrw;
+  const sellRecorded = isSellCompleted(result, monthlySellSummary, records);
   const needSell = deficitKrw > 0 && !sellRecorded;
   const recentRecords = records.slice(0, 3);
 
