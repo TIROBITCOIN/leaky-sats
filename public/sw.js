@@ -31,6 +31,17 @@ self.addEventListener("activate", (event) => {
       .keys()
       .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
       .then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ type: "window", includeUncontrolled: true }))
+      .then((clients) =>
+        Promise.all(
+          clients.map((client) => {
+            const url = new URL(client.url);
+            if (url.searchParams.get("myledger-sw-version") === CACHE_VERSION) return undefined;
+            url.searchParams.set("myledger-sw-version", CACHE_VERSION);
+            return client.navigate(url.href);
+          })
+        )
+      )
   );
 });
 
