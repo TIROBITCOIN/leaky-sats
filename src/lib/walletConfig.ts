@@ -41,11 +41,14 @@ export type AddressCacheEntry = {
 export type AddressCacheMap = Record<string, AddressCacheEntry>;
 export type LastBalanceMap = Record<string, WalletBalance>;
 
+/** Fixed defaults (no settings UI): wide gap scan + always count unconfirmed. */
+export const WALLET_DEFAULT_GAP_LIMIT = 200;
+
 const DEFAULT_CONFIG: WalletSyncConfig = {
   enabled: false,
   wallets: [],
   mempoolApiUrl: "",
-  gapLimit: 20,
+  gapLimit: WALLET_DEFAULT_GAP_LIMIT,
   includeUnconfirmed: true,
 };
 
@@ -90,16 +93,13 @@ export function loadWalletConfig(): WalletSyncConfig {
     if (!raw) return { ...DEFAULT_CONFIG, wallets: [] };
     const parsed = JSON.parse(raw) as Partial<WalletSyncConfig>;
     const wallets = Array.isArray(parsed.wallets) ? parsed.wallets.filter(isWalletEntry) : [];
-    const gapLimit =
-      typeof parsed.gapLimit === "number" && Number.isInteger(parsed.gapLimit) && parsed.gapLimit >= 1 && parsed.gapLimit <= 200
-        ? parsed.gapLimit
-        : 20;
     return {
       enabled: parsed.enabled === true,
       wallets,
       mempoolApiUrl: typeof parsed.mempoolApiUrl === "string" ? parsed.mempoolApiUrl : "",
-      gapLimit,
-      includeUnconfirmed: parsed.includeUnconfirmed !== false,
+      // UI removed: always use fixed product defaults (migrate older 20 → 200).
+      gapLimit: WALLET_DEFAULT_GAP_LIMIT,
+      includeUnconfirmed: true,
     };
   } catch {
     return { ...DEFAULT_CONFIG, wallets: [] };
