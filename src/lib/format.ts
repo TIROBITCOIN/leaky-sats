@@ -33,6 +33,32 @@ export function parseKrwInput(value: string): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
+/** BTC 입력: 숫자·소수점만 남기고 소수 8자리까지. */
+export function formatBtcInput(value: string | number): string {
+  if (typeof value === "number") {
+    if (!Number.isFinite(value) || value <= 0) return "";
+    const fixed = value.toFixed(8).replace(/\.?0+$/, "");
+    return fixed === "0" ? "" : fixed;
+  }
+  let cleaned = value.replace(/[^0-9.]/g, "");
+  const firstDot = cleaned.indexOf(".");
+  if (firstDot !== -1) {
+    cleaned =
+      cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, "");
+    const [whole, frac = ""] = cleaned.split(".");
+    cleaned = `${whole}.${frac.slice(0, 8)}`;
+  }
+  return cleaned;
+}
+
+/** BTC 입력 문자열 → 양수. 비어 있거나 0 이하면 0. */
+export function parseBtcInput(value: string): number {
+  const cleaned = formatBtcInput(value);
+  if (!cleaned || cleaned === ".") return 0;
+  const parsed = Number(cleaned);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
 /** 좁은 달력 셀에 맞춘 축약 원화 표시. 1만원 이상이면 "X.X만", 미만이면 보통 천단위 콤마. */
 export const fmtKRWCompact = (n: number): string => {
   const sign = n < 0 ? "-" : "";

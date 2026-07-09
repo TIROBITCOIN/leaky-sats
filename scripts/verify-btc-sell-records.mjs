@@ -63,17 +63,22 @@ assert.match(sharedSellRecordMenuSrc, />\s*삭제\s*</, "shared SellRecordMenu e
 assert.match(monthlyCardSrc, /import SellRecordMenu from "\.\.\/common\/SellRecordMenu"/, "MonthlySellSummaryCard reuses the shared SellRecordMenu");
 assert.doesNotMatch(monthlyCardSrc, /function SellRecordMenu/, "MonthlySellSummaryCard no longer defines a duplicate SellRecordMenu");
 
-// 9. Modal is the simplified single-amount sell form
+// 9. Modal is measured-input sell form (schema v2) — no KRW→BTC reverse calc for held deduction
 const modalSrc = readFileSync("src/components/home/SellConfirmModal.tsx", "utf8");
-assert.match(modalSrc, /\{isEdit \? "판매 기록 수정" : "판매할 금액"\}/, "modal title distinguishes edit mode from new sell mode");
-assert.match(modalSrc, /≈ \{formatSats\(sats\)\}/, "modal shows a live sats conversion of the entered amount");
+assert.match(modalSrc, /판매 확정 \(실측\)|판매 기록 수정/, "modal title supports measured sell / edit");
+assert.match(modalSrc, /실제 받은 원화/, "modal asks for measured KRW received");
+assert.match(modalSrc, /지갑에서 나간 BTC/, "modal asks for measured BTC spent from wallet");
+assert.match(modalSrc, /btcSpentFromWallet/, "modal tracks measured wallet BTC outflow");
+assert.match(modalSrc, /krwReceived/, "modal tracks measured KRW received");
+assert.match(modalSrc, /schemaVersion:\s*2/, "modal saves schemaVersion 2");
+assert.match(modalSrc, /calculateEffectiveSellPriceKrw/, "modal computes effective sell price");
+assert.match(modalSrc, /실효 매도가/, "modal shows effective sell price");
 assert.doesNotMatch(modalSrc, /자동 판매량/, "modal no longer uses old automatic sell amount label");
-assert.doesNotMatch(modalSrc, /carryover|premium|networkFee|tradeSats|finalSats/, "modal drops carryover/premium/network-fee/derived-sats fields");
-assert.doesNotMatch(modalSrc, /이월 잔고|P2P 프리미엄|네트워크 수수료|실제 판매할 sats/, "modal drops the removed field labels");
+assert.doesNotMatch(modalSrc, /carryover|premiumPct|tradeSats|finalSats/, "modal drops carryover/premium/derived-sats fields");
+assert.doesNotMatch(modalSrc, /이월 잔고|P2P 프리미엄|실제 판매할 sats/, "modal drops the removed field labels");
 assert.doesNotMatch(modalSrc, /fetchRecommendedNetworkFeeSats|UTXO/, "modal no longer loads mempool fees or warns about UTXOs");
-assert.match(modalSrc, /sellBtc/, "modal converts the entered amount to BTC");
-assert.match(modalSrc, /krwCovered:\s*amountKrw/, "modal saves the entered KRW amount as krwCovered");
-assert.doesNotMatch(modalSrc, /실효가격/, "modal hides the effective BTC price row");
+assert.match(modalSrc, /krwCovered:\s*krwReceived/, "modal saves measured KRW as krwCovered");
+assert.match(modalSrc, /btcSold:\s*btcSpentFromWallet/, "modal saves measured BTC as btcSold");
 assert.match(modalSrc, /const \[isSaving,\s*setIsSaving\]\s*=\s*useState\(false\)/, "modal tracks an isSaving state");
 assert.match(modalSrc, /savingRef/, "modal uses a synchronous saving ref to block rapid duplicate submits");
 assert.match(modalSrc, /if \(savingRef\.current\) return;/, "handleSave returns immediately while a save is already running");
@@ -81,30 +86,29 @@ assert.match(modalSrc, /setSellSaveInProgress\(true\)/, "handleSave raises the g
 assert.match(modalSrc, /setSellSaveInProgress\(false\)/, "handleSave clears the global save-in-progress flag");
 assert.match(modalSrc, /disabled=\{overHeld \|\| isSaving\}/, "save button is disabled while saving");
 assert.match(modalSrc, /\{isSaving \? "저장 중\.\.\." : isEdit \? "수정 완료" : "판매 확정"\}/, "save button shows loading copy while saving");
-assert.match(modalSrc, /const recalcBtcKrw = editRecord \? editRecord\.btcKrwAtSell : currentBtcKrw/, "edit mode recalculates BTC with the original sell rate");
-assert.match(modalSrc, /const sellBtc = recalcBtcKrw > 0 \? amountKrw \/ recalcBtcKrw : 0/, "modal converts KRW to BTC using the recalculation rate");
-assert.match(modalSrc, /btcKrwAtSell:\s*currentBtcKrw/, "new sell records snapshot the current BTC price on save");
-const updateSellRecordCall = modalSrc.match(/updateBtcSellRecord\(editRecord\.id,\s*\{([\s\S]*?)\n\s*\}\);/);
-assert.ok(updateSellRecordCall, "modal updates an existing sell record in edit mode");
-assert.doesNotMatch(updateSellRecordCall[1], /btcKrwAtSell/, "editing a sell record must not overwrite the original sell rate");
+assert.match(modalSrc, /btcKrwAtSell:\s*effective/, "btcKrwAtSell stores the effective sell price");
+assert.match(modalSrc, /marketBtcKrwAtSell/, "modal snapshots the app market price for comparison");
+assert.match(modalSrc, /updateBtcSellRecord\(editRecord\.id/, "modal updates an existing sell record in edit mode");
 assert.doesNotMatch(modalSrc, /보유 BTC에서 차감/, "modal no longer has deduct checkbox");
+assert.match(sellRecordsSrc, /schemaVersion\?/, "BtcSellRecord type includes schemaVersion");
+assert.match(sellRecordsSrc, /export function calculateEffectiveSellPriceKrw/, "effective price helper is exported");
 
-// 10. Saving deducts from heldBtc
+// 10. Saving deducts measured BTC from heldBtc (manual mode)
 assert.match(modalSrc, /setHeldBtc/, "modal calls setHeldBtc for deduction");
 assert.match(modalSrc, /Math\.max\(0/, "deduction does not go below 0");
 assert.match(
   modalSrc,
-  /const heldBtcAtSave = getHeldBtc\(\);[\s\S]*if \(sellBtc > availableHeldBtcAtSave\) \{[\s\S]*setError\("보유 BTC보다 많이 판매할 수 없습니다\."\);[\s\S]*return;/,
+  /const heldBtcAtSave = getHeldBtc\(\);[\s\S]*if \(btcSpentFromWallet > availableHeldBtcAtSave\) \{[\s\S]*setError\("보유 BTC보다 많이 판매할 수 없습니다\."\);[\s\S]*return;/,
   "handleSave rechecks held BTC and returns before saving an overheld sale"
 );
 assert.match(modalSrc, /disabled=\{[^}]*overHeld[^}]*\}/, "save button is disabled while a deducted sale exceeds held BTC");
 assert.match(
   modalSrc,
-  /const overHeld = useMemo\(\(\) => Number\.isFinite\(sellBtc\) && sellBtc > availableHeldBtc/,
-  "overheld blocking always applies to sales"
+  /const overHeld = useMemo\(\s*\(\) => Number\.isFinite\(btcSpentFromWallet\) && btcSpentFromWallet > availableHeldBtc/s,
+  "overheld blocking uses measured wallet BTC"
 );
-assert.match(modalSrc, /deductedFromHeldBtc:\s*true/, "saved records are always marked deducted from held BTC");
-assert.match(modalSrc, /deductedBtcAmount:\s*sellBtc/, "saved records snapshot the deducted BTC amount");
+assert.match(modalSrc, /deductedFromHeldBtc:\s*true/, "manual-mode records are marked deducted from held BTC");
+assert.match(modalSrc, /deductedBtcAmount:\s*btcSpentFromWallet/, "saved records snapshot the measured deducted BTC amount");
 
 // 11. backup.ts includes btcSellRecords
 const backupSrc = readFileSync("src/lib/backup.ts", "utf8");

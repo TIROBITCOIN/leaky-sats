@@ -33,13 +33,14 @@ assert.match(txnRow, /fmtKRW\(t\.amount\)/, "transaction row shows KRW amount");
 assert.doesNotMatch(txnRow, /krwToSats|ldg-txn-sub|sats/, "transaction row removes per-item sats conversion");
 
 const modal = read("src/components/home/SellConfirmModal.tsx");
-assert.match(modal, /판매할 금액/, "modal uses the simplified sell amount title");
-assert.match(modal, /const \[amountInput,\s*setAmountInput\]\s*=\s*useState/, "modal keeps a single editable amount input state");
-assert.doesNotMatch(modal, /premiumInput|premiumPct|carryover|networkFee|tradeSats|finalSats/, "modal drops premium/carryover/network-fee/derived-sats fields");
-assert.doesNotMatch(modal, /P2P 프리미엄|이월 잔고|네트워크 수수료|실제 판매할 sats/, "modal drops the removed field labels");
-assert.doesNotMatch(modal, /실효가격|formatKrwWon/, "modal keeps the effective price row hidden");
-assert.match(modal, /<span[^>]*>원<\/span>/, "amount input uses suffix won unit");
-assert.match(modal, /≈ \{formatSats\(sats\)\}/, "modal shows a live sats conversion of the entered amount");
+assert.match(modal, /판매 확정 \(실측\)|실제 받은 원화/, "modal uses measured sell copy");
+assert.match(modal, /const \[krwInput,\s*setKrwInput\]\s*=\s*useState/, "modal keeps measured KRW input state");
+assert.match(modal, /const \[btcInput,\s*setBtcInput\]\s*=\s*useState/, "modal keeps measured BTC input state");
+assert.doesNotMatch(modal, /premiumInput|premiumPct|carryover|tradeSats|finalSats/, "modal drops premium/carryover/derived-sats fields");
+assert.doesNotMatch(modal, /P2P 프리미엄|이월 잔고|실제 판매할 sats/, "modal drops the removed field labels");
+assert.match(modal, /실효 매도가/, "modal shows effective sell price from measured inputs");
+assert.match(modal, /<span[^>]*>원<\/span>/, "KRW input uses suffix won unit");
+assert.match(modal, /formatSats\(satsSold\)/, "modal shows sats for measured BTC spent");
 assert.doesNotMatch(modal, /UTXO/, "modal no longer warns about UTXO count");
 
 const css = read("src/styles/ledger.css");
