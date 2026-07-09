@@ -198,7 +198,7 @@ export async function scanWallet(
   baseUrl: string,
   options: ScanOptions = {}
 ): Promise<ScanWalletResult> {
-  const gapLimit = sanitizeGapLimit(options.gapLimit ?? 20);
+  const gapLimit = sanitizeGapLimit(options.gapLimit ?? 200);
   const hardCap = sanitizeHardCap(options.hardCap ?? 200);
   const batchSize = options.batchSize ?? gapLimit;
   const concurrency = options.concurrency ?? MEMPOOL_LOOKUP_CONCURRENCY;

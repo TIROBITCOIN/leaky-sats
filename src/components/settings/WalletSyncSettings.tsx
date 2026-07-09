@@ -439,7 +439,7 @@ export default function WalletSyncSettings() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13 }}>{wallet.label}</div>
                     <div className="ldg-balance-sub">
-                      {bal ? fmtSats(config.includeUnconfirmed ? bal.totalSats : bal.confirmedSats) : "—"}
+                      {bal ? fmtSats(bal.totalSats) : "—"}
                       {" · "}
                       {formatSyncTime(bal?.fetchedAt ?? null)}
                       {bal && bal.unconfirmedSats > 0
@@ -592,48 +592,6 @@ export default function WalletSyncSettings() {
               </div>
             </div>
           )}
-
-          <div className="ldg-setting-row" style={{ marginTop: 12 }}>
-            <div>
-              <div className="ldg-setting-label">gap limit</div>
-              <div className="ldg-setting-desc">연속 미사용 주소 한도 (1–200)</div>
-            </div>
-            <select
-              className="ldg-select"
-              style={{ width: 88 }}
-              value={config.gapLimit}
-              onChange={(e) => persist({ ...config, gapLimit: Number(e.target.value) })}
-            >
-              {[10, 20, 40, 80, 100, 200].map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="ldg-setting-row">
-            <div>
-              <div className="ldg-setting-label">미확정 잔고 포함</div>
-              <div className="ldg-setting-desc">미확정 UTXO를 합산에 포함</div>
-            </div>
-            <div className="ldg-radio-group">
-              <button
-                type="button"
-                className={config.includeUnconfirmed ? "on" : ""}
-                onClick={() => persist({ ...config, includeUnconfirmed: true })}
-              >
-                포함
-              </button>
-              <button
-                type="button"
-                className={!config.includeUnconfirmed ? "on" : ""}
-                onClick={() => persist({ ...config, includeUnconfirmed: false })}
-              >
-                확정만
-              </button>
-            </div>
-          </div>
 
           <div className="ldg-balance-sub" style={{ marginTop: 10 }}>
             {mode === "wallet-sync"
