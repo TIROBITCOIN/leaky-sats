@@ -42,6 +42,18 @@ export async function testMempoolConnection(
 ): Promise<{ ok: boolean; height?: number; error?: string }> {
   const url = baseUrl.trim();
   if (!url) return { ok: false, error: "mempool API URL을 입력하세요." };
+
+  const isHttp =
+    /^http:\/\//i.test(url) &&
+    !/^http:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/i.test(url);
+  if (isHttp && typeof location !== "undefined" && location.protocol === "https:") {
+    return {
+      ok: false,
+      error:
+        "Mixed Content: HTTPS 앱에서는 http:// API를 호출할 수 없습니다. Tailscale https://….ts.net URL을 쓰세요. (docs/MEMPOOL_HTTPS_CORS.md)",
+    };
+  }
+
   try {
     const { tipHeightUrl, fetchMempoolJson } = await import("./wallet/mempoolClient");
     const raw = await fetchMempoolJson(tipHeightUrl(url));
@@ -52,11 +64,18 @@ export async function testMempoolConnection(
     return { ok: true, height };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    const name = error instanceof Error ? error.name : "";
+    if (name === "AbortError" || name === "TimeoutError" || /aborted|timeout/i.test(message)) {
+      return {
+        ok: false,
+        error: "시간 초과. Tailscale 연결과 mempool 응답 속도를 확인하세요.",
+      };
+    }
     if (/Failed to fetch|NetworkError|CORS|Load failed/i.test(message)) {
       return {
         ok: false,
         error:
-          "연결 실패(CORS 또는 네트워크). mempool 앱의 CORS 설정 또는 Tailscale HTTPS URL을 확인하세요.",
+          "CORS/네트워크 차단. 주소창에서 tip height는 되는데 앱만 실패하면 mempool 앞에 CORS 헤더가 필요합니다. deploy/mempool-cors-proxy 또는 docs/MEMPOOL_HTTPS_CORS.md",
       };
     }
     return { ok: false, error: message };

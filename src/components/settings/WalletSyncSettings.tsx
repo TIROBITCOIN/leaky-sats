@@ -354,7 +354,10 @@ export default function WalletSyncSettings() {
         <>
           <div style={{ marginTop: 12 }}>
             <div className="ldg-label" style={{ marginBottom: 6 }}>
-              mempool API URL
+              mempool API URL (HTTPS · CORS)
+            </div>
+            <div className="ldg-setting-desc" style={{ marginBottom: 6 }}>
+              예: https://umbrel-xxx.ts.net/api · Mixed Content/CORS 해결은 docs/MEMPOOL_HTTPS_CORS.md
             </div>
             <div className="ldg-wallet-name-form">
               <input
