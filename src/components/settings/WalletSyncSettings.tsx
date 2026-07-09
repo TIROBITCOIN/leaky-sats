@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import {
   defaultWalletLabel,
   generateWalletId,
-  getAggregatedTotalSats,
   getHeldBtcMode,
   isDuplicateDescriptor,
   loadLastBalances,
@@ -77,12 +76,10 @@ export default function WalletSyncSettings() {
   const [editLabel, setEditLabel] = useState("");
   const [qrOpen, setQrOpen] = useState(false);
 
-  const [agg, setAgg] = useState(() => getAggregatedTotalSats());
   const balances = loadLastBalances();
 
   const refresh = useCallback(() => {
     setConfig(loadWalletConfig());
-    setAgg(getAggregatedTotalSats());
     if (getHeldBtcMode() === "wallet-sync") {
       const v = getHeldBtc();
       setHeldBtcInput(v === 0 ? "" : String(v));
@@ -96,7 +93,6 @@ export default function WalletSyncSettings() {
   const persist = (next: WalletSyncConfig) => {
     saveWalletConfig(next);
     setConfig(next);
-    setAgg(getAggregatedTotalSats());
   };
 
   const setMode = (enabled: boolean) => {
@@ -254,7 +250,6 @@ export default function WalletSyncSettings() {
     const nextBalances = loadLastBalances();
     delete nextBalances[wallet.id];
     saveLastBalances(nextBalances);
-    setAgg(getAggregatedTotalSats());
   };
 
   const startEdit = (wallet: WalletEntry) => {
@@ -297,13 +292,12 @@ export default function WalletSyncSettings() {
   };
 
   const syncMode = config.enabled;
-  const mode = getHeldBtcMode();
 
   return (
     <div className="ldg-card">
-      <div className="ldg-setting-label">{syncMode ? "지갑 동기화" : "보유 BTC"}</div>
+      <div className="ldg-setting-label">지갑 동기화</div>
       <div className="ldg-setting-desc" style={{ marginBottom: 10 }}>
-        Xpub 을 import 하여 자동으로 보유 잔액을 조회하거나 수동으로 보유 잔액을 입력할 수 있습니다.
+        공개키를 불러와 자동으로 보유 잔액을 조회하거나 수동으로 보유 잔액을 입력할 수 있습니다.
       </div>
 
       <div className="ldg-setting-row">
@@ -323,28 +317,31 @@ export default function WalletSyncSettings() {
 
       {!syncMode ? (
         <>
-          <div className="ldg-wallet-name-form" style={{ marginTop: 12 }}>
-            <input
-              type="text"
-              inputMode="decimal"
-              className="ldg-input"
-              value={heldBtcInput}
-              onChange={(e) => {
-                const v = e.target.value;
-                if (v === "" || /^\d*\.?\d{0,8}$/.test(v)) {
-                  setHeldBtcInput(v);
-                  setHeldBtcSaved(false);
-                }
-              }}
-              placeholder="0.00000000"
-            />
-            <div className="ldg-wallet-name-btns">
-              <button type="button" className="ldg-submit-btn" style={compactBtnStyle} onClick={saveHeldBtc}>
-                저장
-              </button>
-              <button type="button" className="ldg-submit-btn secondary" style={compactBtnStyle} onClick={resetHeldBtc}>
-                초기화
-              </button>
+          <div className="ldg-field" style={{ marginTop: 12 }}>
+            <div className="ldg-label">보유 BTC</div>
+            <div className="ldg-wallet-name-form">
+              <input
+                type="text"
+                inputMode="decimal"
+                className="ldg-input"
+                value={heldBtcInput}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === "" || /^\d*\.?\d{0,8}$/.test(v)) {
+                    setHeldBtcInput(v);
+                    setHeldBtcSaved(false);
+                  }
+                }}
+                placeholder="0.00000000"
+              />
+              <div className="ldg-wallet-name-btns">
+                <button type="button" className="ldg-submit-btn" style={compactBtnStyle} onClick={saveHeldBtc}>
+                  저장
+                </button>
+                <button type="button" className="ldg-submit-btn secondary" style={compactBtnStyle} onClick={resetHeldBtc}>
+                  초기화
+                </button>
+              </div>
             </div>
           </div>
           {heldBtcSaved && (
@@ -593,13 +590,11 @@ export default function WalletSyncSettings() {
             </div>
           )}
 
-          <div className="ldg-balance-sub" style={{ marginTop: 10 }}>
-            {mode === "wallet-sync"
-              ? `합산 ${fmtSats(agg.totalSats)} · 포함 ${agg.includedCount}/${agg.walletCount}개 · ${formatSyncTime(agg.lastFetchedAt)}${
-                  syncing ? " · 동기화 중…" : ""
-                }`
-              : null}
-          </div>
+          {syncing && (
+            <div className="ldg-balance-sub" style={{ marginTop: 10 }}>
+              동기화 중…
+            </div>
+          )}
           {syncMsg && (
             <div className="ldg-backup-status ok" style={{ marginTop: 8 }}>
               {syncMsg}
