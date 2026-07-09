@@ -3,3 +3,4 @@ export * from "./xpub";
 export * from "./mempoolClient";
 export * from "./balance";
 export * from "./scan";
+export * from "./qrParse";

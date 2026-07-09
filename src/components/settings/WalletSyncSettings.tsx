@@ -15,8 +15,10 @@ import {
   WALLET_LABEL_MAX,
 } from "../../lib/walletConfig";
 import type { WalletDescriptor } from "../../lib/wallet/xpub";
+import type { QrWatchPayload } from "../../lib/wallet/qrParse";
 import { previewXpubAddresses, syncAllWallets, testMempoolConnection, validateXpub } from "../../lib/walletSync";
 import { fmtSats } from "../../lib/format";
+import QrScannerModal from "./QrScannerModal";
 
 function statusDotColor(status: string): string {
   if (status === "online") return "var(--ldg-pos)";
@@ -59,6 +61,7 @@ export default function WalletSyncSettings() {
 
   const [editId, setEditId] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState("");
+  const [qrOpen, setQrOpen] = useState(false);
 
   const [agg, setAgg] = useState(() => getAggregatedTotalSats());
   const balances = loadLastBalances();
@@ -145,6 +148,7 @@ export default function WalletSyncSettings() {
     setAdding(false);
     setAddError(null);
     setAddPreview([]);
+    setQrOpen(false);
   };
 
   const handleXpubChange = async (value: string) => {
@@ -164,6 +168,19 @@ export default function WalletSyncSettings() {
     } catch (error) {
       setAddError(error instanceof Error ? error.message : String(error));
     }
+  };
+
+  const handleQrScan = (payload: QrWatchPayload) => {
+    setAddError(null);
+    if (payload.kind === "xpub") {
+      setAddMode("xpub");
+      void handleXpubChange(payload.xpub);
+      return;
+    }
+    setAddMode("addresses");
+    setAddXpub("");
+    setAddPreview([]);
+    setAddAddresses(payload.addresses.join("\n"));
   };
 
   const handleAddSave = async () => {
@@ -415,6 +432,13 @@ export default function WalletSyncSettings() {
                 placeholder="zpub6…"
                 rows={3}
               />
+              <button
+                type="button"
+                className="ldg-submit-btn secondary ldg-qr-scan-btn"
+                onClick={() => setQrOpen(true)}
+              >
+                카메라로 QR 스캔
+              </button>
               {addPreview.length > 0 && (
                 <div className="ldg-setting-desc" style={{ marginTop: 6 }}>
                   미리보기 (receive 0–2): 지갑 앱 주소와 대조하세요.
@@ -437,6 +461,13 @@ export default function WalletSyncSettings() {
                 placeholder={"bc1q…\nbc1q…"}
                 rows={3}
               />
+              <button
+                type="button"
+                className="ldg-submit-btn secondary ldg-qr-scan-btn"
+                onClick={() => setQrOpen(true)}
+              >
+                카메라로 QR 스캔
+              </button>
             </div>
           )}
           {addError && <div className="ldg-modal-error" style={{ marginTop: 8 }}>{addError}</div>}
@@ -450,6 +481,8 @@ export default function WalletSyncSettings() {
           </div>
         </div>
       )}
+
+      <QrScannerModal open={qrOpen} onClose={() => setQrOpen(false)} onScan={handleQrScan} />
 
       <div className="ldg-setting-row" style={{ marginTop: 12 }}>
         <div>
