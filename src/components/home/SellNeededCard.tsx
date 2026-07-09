@@ -23,13 +23,15 @@ export default function SellNeededCard({
   onRecordsChanged,
 }: Props) {
   const [recordsOpen, setRecordsOpen] = useState(false);
-  const { deficitKrw, sellSats, totalDeficitKrw } = result;
-  const everHadDeficit = totalDeficitKrw > 0;
-  const sellRecorded = isSellCompleted(result, monthlySellSummary, records);
+  const { deficitKrw, sellSats, netKrw } = result;
+  const hasSellRecords = monthlySellSummary.count > 0 || records.length > 0;
+  // isSellCompleted는 흑자(targetKrw<=0)에서 false를 반환하므로,
+  // 이미 판매 기록이 있는 흑자 기간은 완료 표시를 우선한다.
+  const sellRecorded =
+    isSellCompleted(result, monthlySellSummary, records) || (hasSellRecords && deficitKrw <= 0);
   const needSell = deficitKrw > 0 && !sellRecorded;
+  const isSurplus = netKrw >= 0 && !sellRecorded;
   const recentRecords = records.slice(0, 3);
-
-  if (!everHadDeficit) return null;
 
   const handleDelete = (record: BtcSellRecord) => {
     if (!window.confirm("이 BTC 판매 기록을 삭제할까요?")) return;
@@ -112,6 +114,13 @@ export default function SellNeededCard({
               판매
             </button>
           )}
+        </>
+      ) : isSurplus ? (
+        <>
+          <div className="ldg-label">판매해야 하는 비트코인</div>
+          <div className="ldg-sell-krw-secondary" style={{ marginTop: 8 }}>
+            이번 정산기간에는 팔 비트코인이 없습니다
+          </div>
         </>
       ) : null}
     </div>

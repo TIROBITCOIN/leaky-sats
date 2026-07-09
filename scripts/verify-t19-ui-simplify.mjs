@@ -33,15 +33,15 @@ assert.match(txnRow, /fmtKRW\(t\.amount\)/, "transaction row shows KRW amount");
 assert.doesNotMatch(txnRow, /krwToSats|ldg-txn-sub|sats/, "transaction row removes per-item sats conversion");
 
 const modal = read("src/components/home/SellConfirmModal.tsx");
-assert.match(modal, /판매 확정 \(실측\)|실제 받은 원화/, "modal uses measured sell copy");
+assert.match(modal, /판매 확정|받은 원화|보낸 비트코인/, "modal uses simplified measured sell copy");
 assert.match(modal, /const \[krwInput,\s*setKrwInput\]\s*=\s*useState/, "modal keeps measured KRW input state");
 assert.match(modal, /const \[btcInput,\s*setBtcInput\]\s*=\s*useState/, "modal keeps measured BTC input state");
 assert.doesNotMatch(modal, /premiumInput|premiumPct|carryover|tradeSats|finalSats/, "modal drops premium/carryover/derived-sats fields");
-assert.doesNotMatch(modal, /P2P 프리미엄|이월 잔고|실제 판매할 sats/, "modal drops the removed field labels");
-assert.match(modal, /실효 매도가/, "modal shows effective sell price from measured inputs");
+assert.doesNotMatch(modal, /P2P 프리미엄|이월 잔고|실제 판매할 sats|실효 매도가|전송 수수료/, "modal drops removed field labels and summary rows");
 assert.match(modal, /<span[^>]*>원<\/span>/, "KRW input uses suffix won unit");
 assert.match(modal, /formatSats\(satsSold\)/, "modal shows sats for measured BTC spent");
 assert.doesNotMatch(modal, /UTXO/, "modal no longer warns about UTXO count");
+assert.match(sellCard, /이번 정산기간에는 팔 비트코인이 없습니다/, "surplus sell card shows guidance instead of a sell button");
 
 const css = read("src/styles/ledger.css");
 assert.match(css, /\.ldg-sell-sats-primary/, "sell-card primary sats class is styled");
