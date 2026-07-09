@@ -8,6 +8,8 @@ import { calculateMonthlyLivingCashflow, calculateSellNeeded } from "../../lib/s
 import { useSelectedMonth } from "../../lib/useSelectedMonth";
 import { getSettlementMonthKeyForDate, getSettlementPeriod, loadSettlementDay } from "../../lib/settlement";
 import { listBtcSellRecordsByMonth, summarizeBtcSellRecordsByMonth, type BtcSellRecord } from "../../lib/btcSellRecords";
+import { getAggregatedTotalSats, getHeldBtcMode, WALLET_SYNC_EVENT } from "../../lib/walletConfig";
+import { syncAllWallets } from "../../lib/walletSync";
 import MonthSelector from "../common/MonthSelector";
 import Slogan from "./Slogan";
 import LedgerHeader from "./LedgerHeader";
@@ -46,13 +48,25 @@ export default function HomePage() {
       setSettlementDay(loadSettlementDay());
     };
     const onVisibility = () => {
-      if (document.visibilityState === "visible") refresh();
+      if (document.visibilityState === "visible") {
+        refresh();
+        if (getHeldBtcMode() === "wallet-sync") {
+          void syncAllWallets({ force: false }).then(() => setHeldBtc(getHeldBtc()));
+        }
+      }
     };
+    const onWalletSync = () => setHeldBtc(getHeldBtc());
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("focus", refresh);
+    window.addEventListener(WALLET_SYNC_EVENT, onWalletSync);
+    // Initial throttled sync when home mounts in wallet-sync mode
+    if (getHeldBtcMode() === "wallet-sync") {
+      void syncAllWallets({ force: false }).then(() => setHeldBtc(getHeldBtc()));
+    }
     return () => {
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("focus", refresh);
+      window.removeEventListener(WALLET_SYNC_EVENT, onWalletSync);
     };
   }, [selectedMonth]);
 
@@ -83,6 +97,9 @@ export default function HomePage() {
   const handleSellSaved = useCallback(() => {
     refreshAfterSellChange();
     setSellSavedMessage("BTC 판매가 확정되었습니다. 보유 BTC가 업데이트되었습니다.");
+    if (getHeldBtcMode() === "wallet-sync") {
+      void syncAllWallets({ force: true }).then(() => setHeldBtc(getHeldBtc()));
+    }
   }, [refreshAfterSellChange]);
 
   useEffect(() => {
@@ -91,6 +108,36 @@ export default function HomePage() {
     return () => clearTimeout(id);
   }, [sellSavedMessage]);
 
+  const syncMeta = (() => {
+    const mode = getHeldBtcMode();
+    if (mode !== "wallet-sync") {
+      return { mode, walletCount: 0, lastSyncLabel: "", unconfirmedSats: 0, wallets: [] };
+    }
+    const agg = getAggregatedTotalSats();
+    let lastSyncLabel = "동기화 기록 없음";
+    if (agg.lastFetchedAt) {
+      const diffMs = Date.now() - new Date(agg.lastFetchedAt).getTime();
+      if (Number.isFinite(diffMs) && diffMs < 60_000) lastSyncLabel = "방금 전 동기화";
+      else if (diffMs < 3_600_000) lastSyncLabel = `${Math.floor(diffMs / 60_000)}분 전 동기화`;
+      else if (diffMs < 86_400_000) lastSyncLabel = `${Math.floor(diffMs / 3_600_000)}시간 전 동기화`;
+      else lastSyncLabel = "오래전 동기화";
+    }
+    return {
+      mode,
+      walletCount: agg.walletCount,
+      lastSyncLabel,
+      unconfirmedSats: agg.unconfirmedSats,
+      warning: agg.anyPartialOrOffline ? "일부 지갑 조회 실패 · 마지막 값 포함" : undefined,
+      wallets: agg.wallets.map((w) => ({
+        id: w.id,
+        label: w.label,
+        totalSats: w.totalSats,
+        unconfirmedSats: w.unconfirmedSats,
+        status: w.status,
+      })),
+    };
+  })();
+
   return (
     <div className="ldg-page-root">
       <div className="ldg-screen">
@@ -98,7 +145,7 @@ export default function HomePage() {
           <Slogan />
           <LedgerHeader d={data} walletName={walletName} />
           <CurrencyToggle value={currency} onChange={setCurrency} />
-          <BalanceCard heldBtc={heldBtc} unit={btcUnit} />
+          <BalanceCard heldBtc={heldBtc} unit={btcUnit} syncMeta={syncMeta} />
           <div className="ldg-home-month-selector">
             <MonthSelector selectedMonth={selectedMonth} onChangeMonth={setSelectedMonth} label={period.rangeLabel} />
           </div>

@@ -14,7 +14,7 @@ import {
   updateBtcSellRecord,
   type BtcSellRecord,
 } from "../../lib/btcSellRecords";
-import { getHeldBtc, setHeldBtc } from "../../lib/heldBtc";
+import { getHeldBtc, getHeldBtcMode, setHeldBtc } from "../../lib/heldBtc";
 import type { SettlementPeriod } from "../../lib/settlement";
 import { setSellSaveInProgress } from "../../lib/sellSaveInProgress";
 
@@ -84,9 +84,13 @@ export default function SellConfirmModal({
     : 0;
   const currentHeldBtc = getHeldBtc();
   const availableHeldBtc = currentHeldBtc + previouslyDeductedBtc;
+  const walletSyncMode = getHeldBtcMode() === "wallet-sync";
   const overHeld = useMemo(
-    () => Number.isFinite(btcSpentFromWallet) && btcSpentFromWallet > availableHeldBtc,
-    [btcSpentFromWallet, availableHeldBtc]
+    () =>
+      !walletSyncMode &&
+      Number.isFinite(btcSpentFromWallet) &&
+      btcSpentFromWallet > availableHeldBtc,
+    [walletSyncMode, btcSpentFromWallet, availableHeldBtc]
   );
 
   useEffect(() => {
@@ -140,11 +144,15 @@ export default function SellConfirmModal({
         return;
       }
 
-      const heldBtcAtSave = getHeldBtc();
-      const availableHeldBtcAtSave = heldBtcAtSave + previouslyDeductedBtc;
-      if (btcSpentFromWallet > availableHeldBtcAtSave) {
-        setError("보유 BTC보다 많이 판매할 수 없습니다.");
-        return;
+      // wallet-sync: chain is source of truth — do not deduct heldBtc (avoids double-subtract).
+      const walletSync = getHeldBtcMode() === "wallet-sync";
+      if (!walletSync) {
+        const heldBtcAtSave = getHeldBtc();
+        const availableHeldBtcAtSave = heldBtcAtSave + previouslyDeductedBtc;
+        if (btcSpentFromWallet > availableHeldBtcAtSave) {
+          setError("보유 BTC보다 많이 판매할 수 없습니다.");
+          return;
+        }
       }
 
       const sellPayload = {
@@ -153,8 +161,8 @@ export default function SellConfirmModal({
         btcKrwAtSell: effective,
         krwCovered: krwReceived,
         deficitKrwAtConfirm: result.deficitKrw,
-        deductedFromHeldBtc: true,
-        deductedBtcAmount: btcSpentFromWallet,
+        deductedFromHeldBtc: !walletSync,
+        deductedBtcAmount: walletSync ? undefined : btcSpentFromWallet,
         schemaVersion: 2 as const,
         btcSpentFromWallet,
         krwReceived,
@@ -163,13 +171,13 @@ export default function SellConfirmModal({
       };
 
       if (editRecord) {
-        const delta = btcSpentFromWallet - previouslyDeductedBtc;
+        const delta = walletSync ? 0 : btcSpentFromWallet - previouslyDeductedBtc;
         const savedRecord = updateBtcSellRecord(editRecord.id, sellPayload);
         if (!savedRecord) {
           setError("판매 기록을 저장하지 못했습니다. 다시 시도하세요.");
           return;
         }
-        if (delta !== 0) {
+        if (!walletSync && delta !== 0) {
           const current = getHeldBtc();
           setHeldBtc(Math.max(0, current - delta));
         }
@@ -187,8 +195,10 @@ export default function SellConfirmModal({
           return;
         }
 
-        const current = getHeldBtc();
-        setHeldBtc(Math.max(0, current - btcSpentFromWallet));
+        if (!walletSync) {
+          const current = getHeldBtc();
+          setHeldBtc(Math.max(0, current - btcSpentFromWallet));
+        }
       }
 
       onSaved();

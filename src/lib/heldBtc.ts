@@ -1,6 +1,13 @@
+import { getAggregatedTotalSats, getHeldBtcMode, satsToBtc, type HeldBtcMode } from "./walletConfig";
+
 const STORAGE_KEY = "myledger.heldBtc.v1";
 
+export type { HeldBtcMode };
+
 export function getHeldBtc(): number {
+  if (getHeldBtcMode() === "wallet-sync") {
+    return satsToBtc(getAggregatedTotalSats().totalSats);
+  }
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw === null) return 0;
@@ -11,8 +18,15 @@ export function getHeldBtc(): number {
   }
 }
 
-export function setHeldBtc(value: number): number {
+/**
+ * Manual mode: write localStorage.
+ * Wallet-sync mode: no-op unless force (used by sync to mirror aggregate for compatibility).
+ */
+export function setHeldBtc(value: number, options?: { force?: boolean }): number {
   const safe = Number.isFinite(value) && value >= 0 ? value : 0;
+  if (getHeldBtcMode() === "wallet-sync" && !options?.force) {
+    return getHeldBtc();
+  }
   try {
     localStorage.setItem(STORAGE_KEY, String(safe));
   } catch {
@@ -34,4 +48,4 @@ export function calculateHeldBtcValuation(heldBtc: number, btcKrw: number): numb
   return heldBtc * btcKrw;
 }
 
-export { STORAGE_KEY as HELD_BTC_STORAGE_KEY };
+export { STORAGE_KEY as HELD_BTC_STORAGE_KEY, getHeldBtcMode };
