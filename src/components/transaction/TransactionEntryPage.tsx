@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import "../../styles/ledger.css";
 import "../../styles/forms.css";
@@ -55,8 +55,10 @@ function AmountDateMemoFields({
   extraAfter?: ReactNode;
 }) {
   // 금액은 커스텀 키패드, 제목·메모·날짜는 시스템 키보드 — 서로 배타적으로 동작한다.
-  const [keypadOpen, setKeypadOpen] = useState(false);
-  const closeKeypad = () => setKeypadOpen(false);
+  // iOS Safari는 readOnly <input>에도 시스템 키보드를 올리는 경우가 있어, 금액은 <button>으로 둔다.
+  const [keypadOpen, setKeypadOpen] = useState(true);
+  const closeKeypad = useCallback(() => setKeypadOpen(false), []);
+  const openKeypad = useCallback(() => setKeypadOpen(true), []);
 
   return (
     <>
@@ -67,24 +69,16 @@ function AmountDateMemoFields({
           금액 (원)
           <span className={`ldg-flow-badge ${isIncome ? "income" : "expense"}`}>{isIncome ? "수입" : "지출"}</span>
         </div>
-        <input
+        <button
+          type="button"
           className={`ldg-amount-input ldg-amount-display${keypadOpen ? " open" : ""}${amountValue ? "" : " empty"}`}
-          type="text"
-          readOnly
-          inputMode="none"
-          autoComplete="off"
-          placeholder="0"
-          value={amountValue}
           aria-label="금액 (원). 탭하면 숫자 키패드가 열립니다"
           aria-haspopup="dialog"
           aria-expanded={keypadOpen}
-          onFocus={(event) => {
-            // iOS가 시스템 키보드를 올리지 않도록 즉시 blur 후 커스텀 키패드만 연다.
-            event.currentTarget.blur();
-            setKeypadOpen(true);
-          }}
-          onClick={() => setKeypadOpen(true)}
-        />
+          onClick={openKeypad}
+        >
+          {amountValue || "0"}
+        </button>
         <div className="ldg-preview">
           <b style={{ whiteSpace: "nowrap" }}>{sats.toLocaleString("en-US")} sats</b> · 현재 시세{" "}
           <span style={{ whiteSpace: "nowrap" }}>{fmtKRW(btcKRW)}</span> 기준

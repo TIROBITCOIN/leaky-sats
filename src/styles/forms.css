@@ -42,17 +42,21 @@
   color: var(--ldg-fg-4);
 }
 
-/* T28: readOnly 금액 표시 — 시스템 키보드 대신 커스텀 키패드 사용 */
-.ldg-amount-display {
+/* T28: 금액 표시는 button — iOS readOnly input 시스템 키보드 우회 */
+button.ldg-amount-display {
   display: block;
+  width: 100%;
   text-align: left;
   cursor: pointer;
   border-radius: 10px;
-  padding: 4px 2px;
-  min-height: 44px;
+  padding: 8px 6px;
+  min-height: 48px;
   -webkit-user-select: none;
   user-select: none;
-  caret-color: transparent;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  appearance: none;
+  -webkit-appearance: none;
 }
 .ldg-amount-display.open {
   background: rgba(230, 154, 51, 0.08);
@@ -62,10 +66,11 @@
   color: var(--ldg-fg-4);
 }
 
+/* action-sheet(z=1000)보다 위, 탭바/콘텐츠 위에 확실히 노출 */
 .ldg-amount-keypad-root {
   position: fixed;
   inset: 0;
-  z-index: 80;
+  z-index: 1100;
   pointer-events: none;
 }
 .ldg-amount-keypad-scrim {
@@ -73,9 +78,10 @@
   inset: 0;
   border: 0;
   padding: 0;
-  background: rgba(17, 17, 20, 0.18);
+  background: rgba(17, 17, 20, 0.28);
   pointer-events: auto;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 .ldg-amount-keypad {
   position: absolute;
@@ -85,8 +91,16 @@
   pointer-events: auto;
   background: #f7f6f2;
   border-top: 1px solid var(--ldg-border);
-  box-shadow: 0 -8px 28px rgba(20, 20, 30, 0.12);
-  padding: 10px 10px calc(10px + var(--safe-bottom));
+  box-shadow: 0 -8px 28px rgba(20, 20, 30, 0.16);
+  padding: 8px 10px calc(12px + var(--safe-bottom));
+  /* iOS fixed bottom 안전 영역 */
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+}
+.ldg-amount-keypad-hint {
+  text-align: center;
+  font-size: 12px;
+  color: var(--ldg-fg-3);
+  margin: 2px 0 8px;
 }
 .ldg-amount-keypad-grid {
   display: grid;
@@ -100,7 +114,7 @@
   font-size: 22px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  min-height: 52px;
+  min-height: 54px;
   border: 0;
   border-radius: 12px;
   background: #ffffff;
@@ -108,6 +122,9 @@
   box-shadow: 0 1px 0 rgba(17, 17, 20, 0.06);
   cursor: pointer;
   touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
   transition: transform 0.1s ease, background 0.12s ease, opacity 0.12s ease;
 }
 .ldg-amount-key:active {
@@ -131,7 +148,7 @@
 
 /* 키패드가 열린 동안 하단 여백 — 저장 버튼이 가려지지 않도록 */
 body.ldg-amount-keypad-open .ldg-content {
-  padding-bottom: calc(var(--safe-bottom) + 280px);
+  padding-bottom: calc(var(--safe-bottom) + 300px);
 }
 
 @media (prefers-reduced-motion: reduce) {
