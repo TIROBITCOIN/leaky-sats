@@ -42,36 +42,43 @@
   color: var(--ldg-fg-4);
 }
 
-/* T28: 금액 표시는 button — iOS readOnly input 시스템 키보드 우회 */
-button.ldg-amount-display {
+/* T28: 금액 전용 wrapper — 클릭을 여기서 소비해 탭바로 전파되지 않게 한다 */
+.ldg-amount-field {
   display: block;
   width: 100%;
-  text-align: left;
-  cursor: pointer;
   border-radius: 10px;
-  padding: 8px 6px;
+  padding: 4px 2px;
   min-height: 48px;
-  -webkit-user-select: none;
-  user-select: none;
+  cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
-  appearance: none;
-  -webkit-appearance: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
-.ldg-amount-display.open {
+.ldg-amount-field.open {
   background: rgba(230, 154, 51, 0.08);
   box-shadow: inset 0 0 0 1px rgba(230, 154, 51, 0.35);
+}
+.ldg-amount-field .ldg-amount-display {
+  pointer-events: none; /* 클릭은 wrapper 가 처리 — input 포커스/키보드 원천 차단 */
+  width: 100%;
+  cursor: pointer;
+  caret-color: transparent;
 }
 .ldg-amount-display.empty {
   color: var(--ldg-fg-4);
 }
 
-/* action-sheet(z=1000)보다 위, 탭바/콘텐츠 위에 확실히 노출 */
+/*
+ * 키패드는 .app-frame 안에 portal 된다 (position:absolute).
+ * pointer-events:none 을 쓰지 않는다 — iOS 에서 하위 탭바로 클릭이 통과하는 원인.
+ * z-index 는 탭바(6)·action-sheet(1000) 위.
+ */
 .ldg-amount-keypad-root {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 1100;
-  pointer-events: none;
+  pointer-events: auto;
 }
 .ldg-amount-keypad-scrim {
   position: absolute;
@@ -79,7 +86,6 @@ button.ldg-amount-display {
   border: 0;
   padding: 0;
   background: rgba(17, 17, 20, 0.28);
-  pointer-events: auto;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
@@ -88,12 +94,10 @@ button.ldg-amount-display {
   left: 0;
   right: 0;
   bottom: 0;
-  pointer-events: auto;
   background: #f7f6f2;
   border-top: 1px solid var(--ldg-border);
   box-shadow: 0 -8px 28px rgba(20, 20, 30, 0.16);
-  padding: 8px 10px calc(12px + var(--safe-bottom));
-  /* iOS fixed bottom 안전 영역 */
+  padding: 8px 10px;
   padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
 }
 .ldg-amount-keypad-hint {
@@ -149,6 +153,11 @@ button.ldg-amount-display {
 /* 키패드가 열린 동안 하단 여백 — 저장 버튼이 가려지지 않도록 */
 body.ldg-amount-keypad-open .ldg-content {
   padding-bottom: calc(var(--safe-bottom) + 300px);
+}
+/* 키패드 열린 동안 탭 전환 실수 방지 (레이어가 덮지만 이중 안전장치) */
+body.ldg-amount-keypad-open .ldg-tabbar {
+  pointer-events: none;
+  visibility: hidden;
 }
 
 @media (prefers-reduced-motion: reduce) {
