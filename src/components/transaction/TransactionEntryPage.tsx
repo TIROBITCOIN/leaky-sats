@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import "../../styles/ledger.css";
 import "../../styles/forms.css";
 import { useLedger } from "../../state/LedgerContext";
-import { fmtKRW, krwToSats } from "../../lib/format";
+import { formatKrwInput, fmtKRW, krwToSats, parseKrwInput } from "../../lib/format";
 import { getTodayDateKey, isValidMonthKey } from "../../lib/month";
 import {
   loadSettlementDay,
@@ -13,6 +13,7 @@ import {
 } from "../../lib/settlement";
 import type { CategoryId } from "../../types";
 import CategoryGroupPicker from "./CategoryGroupPicker";
+import AmountKeypad from "./AmountKeypad";
 import { MAJOR_ITEM_GROUPS, type MajorItem } from "../../lib/majorItems";
 import {
   addRecurringRule,
@@ -53,20 +54,36 @@ function AmountDateMemoFields({
   extraBefore?: ReactNode;
   extraAfter?: ReactNode;
 }) {
+  // 금액은 커스텀 키패드, 제목·메모·날짜는 시스템 키보드 — 서로 배타적으로 동작한다.
+  const [keypadOpen, setKeypadOpen] = useState(false);
+  const closeKeypad = () => setKeypadOpen(false);
+
   return (
     <>
-      {extraBefore}
+      {/* 제목 등 텍스트 필드 포커스 시 금액 키패드를 닫아 키보드 동작을 분리한다. */}
+      {extraBefore ? <div onFocusCapture={closeKeypad}>{extraBefore}</div> : null}
       <div className="ldg-field" style={{ marginTop: extraBefore ? 12 : 0 }}>
         <div className="ldg-label" style={{ display: "flex", alignItems: "center", gap: 6 }}>
           금액 (원)
           <span className={`ldg-flow-badge ${isIncome ? "income" : "expense"}`}>{isIncome ? "수입" : "지출"}</span>
         </div>
         <input
-          className="ldg-amount-input"
-          inputMode="numeric"
+          className={`ldg-amount-input ldg-amount-display${keypadOpen ? " open" : ""}${amountValue ? "" : " empty"}`}
+          type="text"
+          readOnly
+          inputMode="none"
+          autoComplete="off"
           placeholder="0"
           value={amountValue}
-          onChange={(e) => onAmountChange(e.target.value)}
+          aria-label="금액 (원). 탭하면 숫자 키패드가 열립니다"
+          aria-haspopup="dialog"
+          aria-expanded={keypadOpen}
+          onFocus={(event) => {
+            // iOS가 시스템 키보드를 올리지 않도록 즉시 blur 후 커스텀 키패드만 연다.
+            event.currentTarget.blur();
+            setKeypadOpen(true);
+          }}
+          onClick={() => setKeypadOpen(true)}
         />
         <div className="ldg-preview">
           <b style={{ whiteSpace: "nowrap" }}>{sats.toLocaleString("en-US")} sats</b> · 현재 시세{" "}
@@ -81,20 +98,34 @@ function AmountDateMemoFields({
           type="date"
           value={dateValue}
           onChange={(e) => onDateChange(e.target.value)}
+          onFocus={closeKeypad}
           required
         />
       </div>
 
       <div className="ldg-field">
         <div className="ldg-label">메모 (선택)</div>
-        <textarea className="ldg-textarea" value={memoValue} onChange={(e) => onMemoChange(e.target.value)} />
+        <textarea
+          className="ldg-textarea"
+          value={memoValue}
+          onChange={(e) => onMemoChange(e.target.value)}
+          onFocus={closeKeypad}
+        />
       </div>
 
-      {extraAfter}
-      <button className="ldg-submit-btn" type="submit" disabled={disabled} style={{ marginTop: 14 }}>
+      {extraAfter ? <div onFocusCapture={closeKeypad}>{extraAfter}</div> : null}
+      <button
+        className="ldg-submit-btn"
+        type="submit"
+        disabled={disabled}
+        style={{ marginTop: 14 }}
+        onClick={closeKeypad}
+      >
         {isIncome ? "+" : "-"}
-        {fmtKRW(Number(amountValue.replace(/[^0-9]/g, "")) || 0)} {submitLabel}
+        {fmtKRW(parseKrwInput(amountValue))} {submitLabel}
       </button>
+
+      <AmountKeypad open={keypadOpen} value={amountValue} onChange={onAmountChange} onClose={closeKeypad} />
     </>
   );
 }
@@ -127,7 +158,9 @@ export default function TransactionEntryPage() {
   // 편집은 정본(큰 카테고리 + 사용자 추가) 집합만 선택지로 보여준다.
   const [selectedItem, setSelectedItem] = useState<MajorItem | null>(null);
 
-  const [amount, setAmount] = useState(() => (editingTxn ? String(Math.abs(editingTxn.amount)) : ""));
+  const [amount, setAmount] = useState(() =>
+    editingTxn ? formatKrwInput(Math.abs(editingTxn.amount)) : ""
+  );
   const [cat, setCat] = useState<CategoryId>(
     () =>
       editingTxn?.cat ??
@@ -147,7 +180,7 @@ export default function TransactionEntryPage() {
   const selectedCategory = categories.find((c) => c.id === cat) ?? categories[0];
   const isIncome = selectedCategory.flow === "income";
 
-  const amountNum = Number(amount.replace(/[^0-9]/g, "")) || 0;
+  const amountNum = parseKrwInput(amount);
   const sats = useMemo(() => krwToSats(amountNum, data.btcKRW), [amountNum, data.btcKRW]);
   const recurringDay = normalizeRecurringDay(Number(date.slice(8, 10)));
 

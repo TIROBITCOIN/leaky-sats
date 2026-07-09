@@ -12,6 +12,27 @@ export function formatCategoryLabel(label: string): string {
 export const fmtKRW = (n: number): string =>
   `${n < 0 ? "-" : ""}${Math.abs(n).toLocaleString("ko-KR")}원`;
 
+/** 금액 입력 필드용: 숫자만 남긴다. */
+export function parseDigits(value: string): string {
+  return value.replace(/[^0-9]/g, "");
+}
+
+/** 금액 입력 필드용: 숫자만 파싱한 뒤 천 단위 콤마(ko-KR)로 표시. 빈 입력은 "". */
+export function formatKrwInput(value: string | number): string {
+  const digits =
+    typeof value === "number"
+      ? String(Math.max(0, Math.round(value)))
+      : parseDigits(value);
+  if (!digits) return "";
+  return Number(digits).toLocaleString("ko-KR");
+}
+
+/** 금액 입력 문자열 → 양수 정수. 비어 있거나 0 이하면 0. */
+export function parseKrwInput(value: string): number {
+  const parsed = Number(parseDigits(value));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
 /** 좁은 달력 셀에 맞춘 축약 원화 표시. 1만원 이상이면 "X.X만", 미만이면 보통 천단위 콤마. */
 export const fmtKRWCompact = (n: number): string => {
   const sign = n < 0 ? "-" : "";

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { SellResult } from "../../lib/sellCalculator";
-import { fmtBtcValue, type BtcUnit } from "../../lib/format";
+import { formatKrwInput, fmtBtcValue, parseKrwInput, type BtcUnit } from "../../lib/format";
 import { addBtcSellRecord, updateBtcSellRecord, type BtcSellRecord } from "../../lib/btcSellRecords";
 import { getHeldBtc, setHeldBtc } from "../../lib/heldBtc";
 import type { SettlementPeriod } from "../../lib/settlement";
@@ -20,11 +20,6 @@ interface Props {
   onSaved: () => void;
 }
 
-function parseKrwInput(value: string): number {
-  const parsed = Number(value.replace(/[^0-9]/g, ""));
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
-}
-
 function formatSats(value: number): string {
   return `${Math.round(value).toLocaleString("en-US")} sats`;
 }
@@ -42,7 +37,7 @@ export default function SellConfirmModal({
   // 기본값 = 이번 판매의 부족분(sellNeededKrw). 수정 모드에서는 저장된 판매 금액을 그대로 보여준다.
   const initialAmountKrw = editRecord ? editRecord.krwCovered : result.deficitKrw;
   const [amountInput, setAmountInput] = useState(
-    initialAmountKrw > 0 ? String(Math.round(initialAmountKrw)) : ""
+    initialAmountKrw > 0 ? formatKrwInput(Math.round(initialAmountKrw)) : ""
   );
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -174,9 +169,12 @@ export default function SellConfirmModal({
               id="sell-amount"
               type="text"
               inputMode="numeric"
+              pattern="[0-9,]*"
+              autoComplete="off"
+              enterKeyHint="done"
               className="ldg-input"
               value={amountInput}
-              onChange={(event) => setAmountInput(event.target.value.replace(/[^0-9]/g, ""))}
+              onChange={(event) => setAmountInput(formatKrwInput(event.target.value))}
               placeholder="0"
               autoFocus
             />

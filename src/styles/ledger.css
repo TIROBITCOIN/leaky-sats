@@ -290,7 +290,7 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--ldg-fg-3);
-  font-weight: 500;
+  font-weight: var(--ldg-card-label-weight, 400);
 }
 .ldg-link {
   font: inherit;
@@ -346,10 +346,10 @@
   text-align: center;
 }
 
-/* ---- Balance ---- */
+/* ---- Balance (T28: main = --ldg-card-main-weight, sub = regular) ---- */
 .ldg-balance-main {
   font-size: 34px;
-  font-weight: 600;
+  font-weight: var(--ldg-card-main-weight, 600);
   letter-spacing: 0;
   margin-top: 6px;
   font-variant-numeric: tabular-nums;
@@ -358,6 +358,7 @@
 .ldg-balance-sub {
   font-family: var(--ldg-mono);
   font-size: 12px;
+  font-weight: var(--ldg-card-sub-weight, 400);
   color: var(--ldg-fg-3);
   margin-top: 2px;
 }
@@ -378,7 +379,7 @@
 .ldg-net-value {
   flex-shrink: 0;
   font-size: 19px;
-  font-weight: 750;
+  font-weight: var(--ldg-card-main-weight, 600);
   font-variant-numeric: tabular-nums;
 }
 .ldg-net-value.pos {
@@ -389,7 +390,7 @@
 }
 .ldg-inout-main {
   font-size: clamp(13px, 4.2vw, 17px);
-  font-weight: 600;
+  font-weight: var(--ldg-card-main-weight, 600);
   letter-spacing: 0;
   margin-top: 6px;
   font-variant-numeric: tabular-nums;
@@ -405,6 +406,7 @@
 .ldg-inout-sub {
   font-family: var(--ldg-mono);
   font-size: 11px;
+  font-weight: var(--ldg-card-sub-weight, 400);
   color: var(--ldg-fg-4);
   margin-top: 2px;
 }
@@ -412,13 +414,14 @@
   margin-top: 8px;
   color: var(--ldg-fg-4);
   font-size: 12px;
+  font-weight: var(--ldg-card-label-weight, 400);
 }
 .ldg-sell-deficit-value {
   margin-top: 2px;
   color: var(--ldg-neg);
   font-family: var(--ldg-mono);
   font-size: clamp(25px, 7vw, 32px);
-  font-weight: 800;
+  font-weight: var(--ldg-card-main-weight, 600);
   letter-spacing: 0;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
@@ -429,7 +432,7 @@
   color: #185FA5;
   font-family: var(--ldg-mono);
   font-size: clamp(30px, 8vw, 38px);
-  font-weight: 850;
+  font-weight: var(--ldg-card-main-weight, 600);
   letter-spacing: 0;
   line-height: 1.08;
   text-align: left;
@@ -442,7 +445,7 @@
   color: var(--ldg-fg-3);
   font-family: var(--ldg-mono);
   font-size: 14px;
-  font-weight: 700;
+  font-weight: var(--ldg-card-sub-weight, 400);
   letter-spacing: 0;
   text-align: left;
   font-variant-numeric: tabular-nums;
@@ -451,7 +454,7 @@
 .ldg-settlement-done {
   color: var(--ldg-pos);
   font-size: 1.35rem;
-  font-weight: 800;
+  font-weight: var(--ldg-card-main-weight, 600);
   letter-spacing: 0;
   line-height: 1.2;
   text-align: left;
@@ -472,6 +475,7 @@
   flex: 0 0 auto;
   color: var(--ldg-fg-3);
   font-size: 12px;
+  font-weight: var(--ldg-card-label-weight, 400);
   line-height: 1.4;
   white-space: nowrap;
 }
@@ -479,6 +483,7 @@
   color: var(--ldg-fg-2);
   font-family: var(--ldg-mono);
   font-size: 14px;
+  font-weight: var(--ldg-card-sub-weight, 400);
   line-height: 1.35;
   text-align: right;
   min-width: 0;
@@ -488,7 +493,7 @@
 }
 .ldg-done-val strong {
   display: block;
-  font-weight: 800;
+  font-weight: var(--ldg-card-main-weight, 600);
 }
 .ldg-done-val .sub {
   display: block;

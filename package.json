@@ -30,6 +30,7 @@
     "verify:final-sell-flow": "node scripts/verify-final-sell-flow.mjs",
     "verify:t19-ui-simplify": "node scripts/verify-t19-ui-simplify.mjs",
     "verify:t27-ui-polish": "node scripts/verify-t27-ui-polish.mjs",
+    "verify:t28-ui": "node scripts/verify-t28-ui.mjs",
     "verify:unit": "node scripts/verify-bitcoin-unit.mjs",
     "verify:sell-save": "node scripts/verify-sell-save-persistence.mjs",
     "verify:sell-completion": "node scripts/verify-sell-completion.mjs",
@@ -55,7 +56,7 @@
     "verify:ownership": "node scripts/verify-ownership.mjs",
     "verify:onboarding": "node scripts/verify-onboarding.mjs",
     "verify:txn-date-label": "node scripts/verify-txn-date-label.mjs",
-    "verify:release": "npm run build && npm run verify:final-sell-flow && npm run verify:t19-ui-simplify && npm run verify:t27-ui-polish && npm run verify:sell-save && npm run verify:sell-completion && npm run verify:pwa-client-refresh && npm run verify:backup && npm run verify:recurring && npm run verify:price-source-ui && npm run verify:help-page && npm run verify:ownership && npm run verify:onboarding"
+    "verify:release": "npm run build && npm run verify:final-sell-flow && npm run verify:t19-ui-simplify && npm run verify:t27-ui-polish && npm run verify:t28-ui && npm run verify:sell-save && npm run verify:sell-completion && npm run verify:pwa-client-refresh && npm run verify:backup && npm run verify:recurring && npm run verify:price-source-ui && npm run verify:help-page && npm run verify:ownership && npm run verify:onboarding"
   },
   "dependencies": {
     "react": "^18.3.1",

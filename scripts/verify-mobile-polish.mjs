@@ -55,6 +55,8 @@ check("refresh interval setting removed", !settingsPage.includes("새로고침 �
 
 const formsCss = fs.readFileSync("src/styles/forms.css", "utf8");
 check("wallet-name-form CSS class exists", formsCss.includes("ldg-wallet-name-form"));
+check("shared inputs use 16px font (iOS zoom guard)", /\.ldg-input,[\s\S]*?font-size:\s*16px/s.test(formsCss));
+check("date inputs use 16px font", /\.ldg-input\[type="date"\]\s*\{[\s\S]*font-size:\s*16px/s.test(formsCss));
 
 const homePage = fs.readFileSync("src/components/home/HomePage.tsx", "utf8");
 check("walletName in HomePage", homePage.includes("walletName"));

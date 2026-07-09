@@ -242,4 +242,54 @@ assert.equal(
   "29th rule uses February 29 in a leap year"
 );
 
+assert.equal(
+  recurring.getRecurringDueDate({ startDate: "2026-07-01", endDate: "2026-07-31" }, 12),
+  "2026-07-12",
+  "getRecurringDueDate mirrors mapRecurringRuleDate for calendar months"
+);
+assert.equal(
+  recurring.isRecurringDue({ startDate: "2026-07-01", endDate: "2026-07-31" }, 20, "2026-07-10"),
+  false,
+  "isRecurringDue hides rules before their due date"
+);
+assert.equal(
+  recurring.isRecurringDue({ startDate: "2026-07-01", endDate: "2026-07-31" }, 20, "2026-07-20"),
+  true,
+  "isRecurringDue shows rules on or after their due date"
+);
+assert.equal(
+  recurring.isRecurringDue({ startDate: "2026-08-01", endDate: "2026-08-31" }, 1, "2026-07-15"),
+  false,
+  "isRecurringDue hides next-month items when previewing early"
+);
+
+const dueRule = recurring.addRecurringRule({
+  title: "구독료",
+  cat: "subscription",
+  isIncome: false,
+  dayOfMonth: 3,
+  lastAmount: 12000,
+});
+const laterRule = recurring.addRecurringRule({
+  title: "관리비",
+  cat: "housing",
+  isIncome: false,
+  dayOfMonth: 10,
+  lastAmount: 80000,
+});
+const dueList = recurring.listDuePendingRecurringRules(
+  "2026-07",
+  { startDate: "2026-07-01", endDate: "2026-07-31" },
+  "2026-07-05"
+);
+assert.deepEqual(
+  dueList.map((item) => item.id),
+  [dueRule.id],
+  "listDuePendingRecurringRules returns only due, non-materialized rules in date order"
+);
+assert.ok(
+  !dueList.some((item) => item.id === laterRule.id),
+  "not-yet-due rules stay out of the pending list"
+);
+
 console.log("verify:recurring passed");
