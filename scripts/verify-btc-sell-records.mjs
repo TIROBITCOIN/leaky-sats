@@ -65,14 +65,15 @@ assert.doesNotMatch(monthlyCardSrc, /function SellRecordMenu/, "MonthlySellSumma
 
 // 9. Modal is measured-input sell form (schema v2) — no KRW→BTC reverse calc for held deduction
 const modalSrc = readFileSync("src/components/home/SellConfirmModal.tsx", "utf8");
-assert.match(modalSrc, /판매 확정 \(실측\)|판매 기록 수정/, "modal title supports measured sell / edit");
-assert.match(modalSrc, /실제 받은 원화/, "modal asks for measured KRW received");
-assert.match(modalSrc, /지갑에서 나간 BTC/, "modal asks for measured BTC spent from wallet");
+assert.match(modalSrc, /\{isEdit \? "판매 기록 수정" : "판매 확정"\}/, "modal title supports measured sell / edit");
+assert.match(modalSrc, /받은 원화/, "modal asks for measured KRW received");
+assert.match(modalSrc, /보낸 비트코인/, "modal asks for measured BTC spent from wallet");
 assert.match(modalSrc, /btcSpentFromWallet/, "modal tracks measured wallet BTC outflow");
 assert.match(modalSrc, /krwReceived/, "modal tracks measured KRW received");
 assert.match(modalSrc, /schemaVersion:\s*2/, "modal saves schemaVersion 2");
-assert.match(modalSrc, /calculateEffectiveSellPriceKrw/, "modal computes effective sell price");
-assert.match(modalSrc, /실효 매도가/, "modal shows effective sell price");
+assert.match(modalSrc, /calculateEffectiveSellPriceKrw/, "modal still computes effective sell price for storage");
+assert.doesNotMatch(modalSrc, /실효 매도가|앱 시세 \(참고\)|시세 대비/, "modal hides effective/market price rows");
+assert.doesNotMatch(modalSrc, /전송 수수료/, "modal no longer shows optional network fee input");
 assert.doesNotMatch(modalSrc, /자동 판매량/, "modal no longer uses old automatic sell amount label");
 assert.doesNotMatch(modalSrc, /carryover|premiumPct|tradeSats|finalSats/, "modal drops carryover/premium/derived-sats fields");
 assert.doesNotMatch(modalSrc, /이월 잔고|P2P 프리미엄|실제 판매할 sats/, "modal drops the removed field labels");
@@ -88,10 +89,13 @@ assert.match(modalSrc, /disabled=\{overHeld \|\| isSaving\}/, "save button is di
 assert.match(modalSrc, /\{isSaving \? "저장 중\.\.\." : isEdit \? "수정 완료" : "판매 확정"\}/, "save button shows loading copy while saving");
 assert.match(modalSrc, /btcKrwAtSell:\s*effective/, "btcKrwAtSell stores the effective sell price");
 assert.match(modalSrc, /marketBtcKrwAtSell/, "modal snapshots the app market price for comparison");
+assert.match(modalSrc, /networkFeeSats:\s*undefined/, "modal leaves networkFeeSats undefined (schema kept, UI removed)");
 assert.match(modalSrc, /updateBtcSellRecord\(editRecord\.id/, "modal updates an existing sell record in edit mode");
 assert.doesNotMatch(modalSrc, /보유 BTC에서 차감/, "modal no longer has deduct checkbox");
 assert.match(sellRecordsSrc, /schemaVersion\?/, "BtcSellRecord type includes schemaVersion");
 assert.match(sellRecordsSrc, /export function calculateEffectiveSellPriceKrw/, "effective price helper is exported");
+assert.match(sellCardSrc, /이번 정산기간에는 팔 비트코인이 없습니다/, "surplus state shows no-sell guidance copy");
+assert.match(sellCardSrc, /isSurplus|netKrw >= 0/, "sell card branches on surplus/netKrw");
 
 // 10. Saving deducts measured BTC from heldBtc (manual mode)
 assert.match(modalSrc, /setHeldBtc/, "modal calls setHeldBtc for deduction");

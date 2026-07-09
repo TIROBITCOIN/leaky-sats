@@ -60,10 +60,11 @@ const typesSrc = read("src/types.ts");
 assert.doesNotMatch(typesSrc, /settled\?:\s*boolean/, "transaction types no longer expose settled");
 
 const modal = read("src/components/home/SellConfirmModal.tsx");
-assert.match(modal, /판매 확정 \(실측\)|실제 받은 원화/, "modal is the measured-input sell form");
+assert.match(modal, /판매 확정|받은 원화/, "modal is the measured-input sell form");
 assert.match(modal, /krwReceived|parseKrwInput\(krwInput\)/, "modal parses measured KRW received");
 assert.match(modal, /btcSpentFromWallet/, "modal parses measured BTC spent from wallet");
 assert.match(modal, /formatSats\(satsSold\)/, "modal shows sats for measured BTC");
+assert.doesNotMatch(modal, /실효 매도가|전송 수수료/, "modal UI hides fee input and price summary rows");
 assert.doesNotMatch(modal, /carryoverBalanceKrw|premiumPct|tradeSats|finalSats/, "modal drops carryover/premium/derived-sats state");
 assert.doesNotMatch(modal, /fetchRecommendedNetworkFeeSats|UTXO/, "modal no longer loads mempool fees or warns about UTXOs");
 assert.doesNotMatch(modal, /sellUnit|handleUnitToggle|1-input 1-output|monthlyCash|통장 보유액/, "modal has no old unit toggle or monthly cash path");

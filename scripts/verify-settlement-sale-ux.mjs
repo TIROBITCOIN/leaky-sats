@@ -177,15 +177,15 @@ assert.match(modalSrc, /onClick=\{onClose\}/, "an explicit close control (X/痍�
 // 17. SellConfirmModal uses measured KRW + wallet BTC inputs (schema v2)
 assert.doesNotMatch(modalSrc, /sellUnit/, "SellConfirmModal no longer tracks a sellUnit toggle state");
 assert.doesNotMatch(modalSrc, /handleUnitToggle/, "SellConfirmModal no longer exposes BTC/sats input toggling");
-assert.match(modalSrc, /판매 확정 \(실측\)|실제 받은 원화/, "SellConfirmModal uses measured sell form copy");
+assert.match(modalSrc, /판매 확정|받은 원화|보낸 비트코인/, "SellConfirmModal uses simplified measured sell form copy");
 assert.doesNotMatch(modalSrc, /실제 판매할 sats/, "SellConfirmModal no longer shows a derived final sats row");
 assert.doesNotMatch(modalSrc, /자동 판매량/, "SellConfirmModal no longer uses the old automatic sell amount label");
 assert.doesNotMatch(modalSrc, /finalSats|tradeSats/, "SellConfirmModal drops derived-sats fields");
 assert.match(modalSrc, /btcSpentFromWallet/, "SellConfirmModal tracks measured wallet BTC outflow");
 assert.match(modalSrc, /formatSats\(satsSold\)/, "SellConfirmModal shows sats for measured BTC");
+assert.doesNotMatch(modalSrc, /실효 매도가|전송 수수료/, "SellConfirmModal UI hides fee input and price summary rows");
 
 // 18. Effective price is stored; app market price is snapshotted separately; monthly cash stays removed.
-assert.match(modalSrc, /실효 매도가/, "SellConfirmModal shows effective sell price from measured inputs");
 assert.match(modalSrc, /btcKrwAtSell:\s*effective/, "SellConfirmModal persists effective sell price");
 assert.match(modalSrc, /marketBtcKrwAtSell/, "SellConfirmModal snapshots app market price");
 assert.match(modalSrc, /schemaVersion:\s*2/, "SellConfirmModal writes schema v2 records");

@@ -4,9 +4,7 @@ import {
   formatBtcInput,
   formatKrwInput,
   fmtBtcValue,
-  fmtKRW,
   parseBtcInput,
-  parseDigits,
   parseKrwInput,
   type BtcUnit,
 } from "../../lib/format";
@@ -61,7 +59,7 @@ export default function SellConfirmModal({
   const isEdit = !!editRecord;
   const currentBtcKrw = Number.isFinite(btcKrw) && btcKrw > 0 ? btcKrw : 0;
 
-  // v2 실측 입력: 받은 원화 + 지갑에서 나간 BTC (+ 선택 수수료)
+  // v2 실측 입력: 받은 원화 + 보낸 비트코인 (수수료 UI는 Phase 1.5에서 제거, 스키마 필드는 유지)
   const initialKrw = editRecord
     ? editRecord.krwReceived ?? editRecord.krwCovered
     : result.deficitKrw;
@@ -71,30 +69,15 @@ export default function SellConfirmModal({
   const [btcInput, setBtcInput] = useState(() =>
     initialBtcSpent(editRecord, result.deficitKrw, currentBtcKrw)
   );
-  const [feeSatsInput, setFeeSatsInput] = useState(() => {
-    if (editRecord?.networkFeeSats && editRecord.networkFeeSats > 0) {
-      return String(Math.round(editRecord.networkFeeSats));
-    }
-    return "";
-  });
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const savingRef = useRef(false);
 
   const krwReceived = parseKrwInput(krwInput);
   const btcSpentFromWallet = parseBtcInput(btcInput);
-  const networkFeeSats = Number(parseDigits(feeSatsInput)) || 0;
+  // networkFeeSats 입력 UI 제거 — 저장 시 undefined (스키마 필드는 향후용으로 유지)
+  const networkFeeSats = 0;
   const satsSold = Math.round(btcSpentFromWallet * SATS_PER_BTC);
-
-  const effectivePrice = useMemo(
-    () => calculateEffectiveSellPriceKrw(krwReceived, btcSpentFromWallet, networkFeeSats),
-    [krwReceived, btcSpentFromWallet, networkFeeSats]
-  );
-
-  const marketDeltaPct = useMemo(() => {
-    if (!effectivePrice || !(currentBtcKrw > 0)) return null;
-    return ((effectivePrice - currentBtcKrw) / currentBtcKrw) * 100;
-  }, [effectivePrice, currentBtcKrw]);
 
   const previouslyDeductedBtc = editRecord?.deductedFromHeldBtc
     ? editRecord.deductedBtcAmount ?? editRecord.btcSold
@@ -131,11 +114,11 @@ export default function SellConfirmModal({
 
     try {
       if (!Number.isFinite(krwReceived) || krwReceived <= 0) {
-        setError("실제 받은 원화를 입력하세요.");
+        setError("받은 원화를 입력하세요.");
         return;
       }
       if (!Number.isFinite(btcSpentFromWallet) || btcSpentFromWallet <= 0) {
-        setError("지갑에서 나간 BTC를 입력하세요.");
+        setError("보낸 비트코인을 입력하세요.");
         return;
       }
       if (btcSpentFromWallet > MAX_BTC) {
@@ -143,17 +126,17 @@ export default function SellConfirmModal({
         return;
       }
       if (networkFeeSats < 0 || !Number.isFinite(networkFeeSats)) {
-        setError("전송 수수료가 올바르지 않습니다.");
+        setError("수수료 값이 올바르지 않습니다.");
         return;
       }
       const feeBtc = networkFeeSats / SATS_PER_BTC;
       if (feeBtc >= btcSpentFromWallet) {
-        setError("전송 수수료가 나간 BTC보다 크거나 같습니다.");
+        setError("수수료가 보낸 비트코인보다 크거나 같습니다.");
         return;
       }
       const effective = calculateEffectiveSellPriceKrw(krwReceived, btcSpentFromWallet, networkFeeSats);
       if (effective === null || !(effective > 0)) {
-        setError("실효 매도가를 계산할 수 없습니다.");
+        setError("매도 단가를 계산할 수 없습니다.");
         return;
       }
 
@@ -176,7 +159,7 @@ export default function SellConfirmModal({
         btcSpentFromWallet,
         krwReceived,
         marketBtcKrwAtSell: currentBtcKrw > 0 ? currentBtcKrw : undefined,
-        networkFeeSats: networkFeeSats > 0 ? networkFeeSats : undefined,
+        networkFeeSats: undefined,
       };
 
       if (editRecord) {
@@ -220,20 +203,16 @@ export default function SellConfirmModal({
       <div className="ldg-modal-content" onClick={(event) => event.stopPropagation()}>
         <div className="ldg-sell-modal-head">
           <div className="ldg-modal-title" style={{ marginBottom: 0 }}>
-            {isEdit ? "판매 기록 수정" : "판매 확정 (실측)"}
+            {isEdit ? "판매 기록 수정" : "판매 확정"}
           </div>
           <button type="button" onClick={onClose} aria-label="닫기" className="ldg-sell-modal-close">
             ×
           </button>
         </div>
 
-        <p className="ldg-sell-cash-help" style={{ marginTop: 4, marginBottom: 10 }}>
-          거래소에 실제로 들어온 원화와, 지갑에서 실제로 나간 BTC를 그대로 적으세요. 앱 시세로 역산하지 않습니다.
-        </p>
-
         <div className="ldg-modal-field">
           <div className="ldg-label" style={{ marginBottom: 6 }}>
-            실제 받은 원화
+            받은 원화
           </div>
           <div className="ldg-input-with-unit">
             <input
@@ -254,7 +233,7 @@ export default function SellConfirmModal({
 
         <div className="ldg-modal-field" style={{ marginTop: 12 }}>
           <div className="ldg-label" style={{ marginBottom: 6 }}>
-            지갑에서 나간 BTC
+            보낸 비트코인
           </div>
           <div className="ldg-input-with-unit">
             <input
@@ -271,49 +250,6 @@ export default function SellConfirmModal({
           </div>
           {satsSold > 0 && <div className="ldg-modal-sub">{formatSats(satsSold)}</div>}
         </div>
-
-        <div className="ldg-modal-field" style={{ marginTop: 12 }}>
-          <div className="ldg-label" style={{ marginBottom: 6 }}>
-            전송 수수료 (선택)
-          </div>
-          <div className="ldg-input-with-unit">
-            <input
-              id="sell-network-fee"
-              type="text"
-              inputMode="numeric"
-              autoComplete="off"
-              className="ldg-input"
-              value={feeSatsInput}
-              onChange={(event) => setFeeSatsInput(event.target.value.replace(/[^0-9]/g, ""))}
-              placeholder="0"
-            />
-            <span className="ldg-input-unit" style={{ width: 42 }}>
-              sats
-            </span>
-          </div>
-        </div>
-
-        {effectivePrice !== null && (
-          <div className="ldg-modal-rate-row" style={{ marginTop: 12 }}>
-            <span>실효 매도가</span>
-            <strong>{fmtKRW(Math.round(effectivePrice))}</strong>
-          </div>
-        )}
-        {currentBtcKrw > 0 && (
-          <div className="ldg-modal-rate-row">
-            <span>앱 시세 (참고)</span>
-            <strong>{fmtKRW(Math.round(currentBtcKrw))}</strong>
-          </div>
-        )}
-        {marketDeltaPct !== null && Number.isFinite(marketDeltaPct) && (
-          <div className="ldg-modal-rate-row">
-            <span>시세 대비</span>
-            <strong>
-              {marketDeltaPct >= 0 ? "+" : ""}
-              {marketDeltaPct.toFixed(2)}%
-            </strong>
-          </div>
-        )}
 
         {overHeld && (
           <div className="ldg-modal-error">보유 BTC({fmtBtcValue(availableHeldBtc, unit)})보다 많습니다.</div>
