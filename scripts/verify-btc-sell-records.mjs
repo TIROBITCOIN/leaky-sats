@@ -16,9 +16,12 @@ assert.match(sellRecordsSrc, /summarizeBtcSellRecordsByMonth/, "summarizeBtcSell
 assert.match(sellRecordsSrc, /summarizeBtcSellRecordsByYear/, "summarizeBtcSellRecordsByYear exists");
 assert.match(sellRecordsSrc, /deleteBtcSellRecord/, "deleteBtcSellRecord exists");
 
-// 4. Monthly summarize calculates totals
+// 4. Monthly summarize calculates totals + Phase 4 pricing stats
 assert.match(sellRecordsSrc, /totalBtcSold/, "monthly summary has totalBtcSold");
 assert.match(sellRecordsSrc, /totalKrwCovered/, "monthly summary has totalKrwCovered");
+assert.match(sellRecordsSrc, /avgEffectivePriceKrw/, "monthly summary includes avg effective price");
+assert.match(sellRecordsSrc, /avgPremiumPct/, "monthly summary includes avg premium vs market");
+assert.match(sellRecordsSrc, /export function summarizeSellPricing/, "pricing summary helper exists");
 
 // 5. Yearly summarize calculates totals
 assert.match(sellRecordsSrc, /totalSatsSold/, "yearly summary has totalSatsSold");
@@ -34,8 +37,11 @@ const sellCardSrc = readFileSync("src/components/home/SellNeededCard.tsx", "utf8
 assert.match(sellCardSrc, /fmtSats/, "SellNeededCard uses sats as the primary sell amount");
 const monthlyCardSrc = readFileSync("src/components/home/MonthlySellSummaryCard.tsx", "utf8");
 assert.match(monthlyCardSrc, /fmtBtcValue/, "MonthlySellSummaryCard uses fmtBtcValue");
+assert.match(monthlyCardSrc, /실효 평균/, "MonthlySellSummaryCard shows average effective sell price");
+assert.match(monthlyCardSrc, /시세 대비/, "MonthlySellSummaryCard shows premium vs market");
 const yearlyCardSrc = readFileSync("src/components/home/YearlySellSummaryCard.tsx", "utf8");
 assert.match(yearlyCardSrc, /fmtBtcValue/, "YearlySellSummaryCard uses fmtBtcValue");
+assert.match(yearlyCardSrc, /실효 평균/, "YearlySellSummaryCard shows average effective sell price");
 
 // 8. SellNeededCard has the simplified sell button.
 assert.match(sellCardSrc, />\s*판매\s*</, "SellNeededCard has the simplified sell button");

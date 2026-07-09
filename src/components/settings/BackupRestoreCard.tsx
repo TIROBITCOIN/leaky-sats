@@ -12,6 +12,7 @@ import {
   type BackupPayload,
   type BackupPreview,
 } from "../../lib/backup";
+import { backupContainsWatchDescriptors } from "../../lib/walletConfig";
 
 type Status = { tone: "ok" | "error" | "idle"; text: string };
 type PendingRestore = { fileName: string; payload: BackupPayload; preview: BackupPreview };
@@ -58,10 +59,16 @@ export default function BackupRestoreCard() {
   };
 
   const handleDownload = async () => {
+    const watchNote = backupContainsWatchDescriptors()
+      ? " 주의: 백업에 와치온리 xpub/주소가 포함됩니다. 유출 시 거래 내역 프라이버시가 깨질 수 있으니 안전하게 보관하세요."
+      : "";
     if (!encryptExport) {
       downloadBackup();
       recordBackupSuccess();
-      setStatus({ tone: "ok", text: "백업 파일을 다운로드했습니다. 마지막 백업 시간이 저장되었습니다." });
+      setStatus({
+        tone: "ok",
+        text: `백업 파일을 다운로드했습니다. 마지막 백업 시간이 저장되었습니다.${watchNote}`,
+      });
       return;
     }
     if (!backupPassword) {
@@ -77,7 +84,10 @@ export default function BackupRestoreCard() {
       recordBackupSuccess();
       setBackupPassword("");
       setBackupPasswordConfirm("");
-      setStatus({ tone: "ok", text: "암호화 백업 파일을 다운로드했습니다. 마지막 백업 시간이 저장되었습니다." });
+      setStatus({
+        tone: "ok",
+        text: `암호화 백업 파일을 다운로드했습니다. 마지막 백업 시간이 저장되었습니다.${watchNote}`,
+      });
     } catch (error) {
       setStatus({ tone: "error", text: error instanceof Error ? error.message : "암호화 백업에 실패했습니다." });
     }
@@ -146,7 +156,8 @@ export default function BackupRestoreCard() {
         백업 / 복원
       </div>
       <div className="ldg-page-sub" style={{ marginBottom: 12 }}>
-        localStorage 전용 앱이라 브라우저 데이터 삭제나 기기 변경 전에 백업이 필요합니다. 시드, 개인키, API 키는 저장하지 않습니다.
+        localStorage 전용 앱이라 브라우저 데이터 삭제나 기기 변경 전에 백업이 필요합니다. 시드, 개인키, API
+        키는 저장하지 않습니다. 지갑 동기화를 쓰면 와치온리 xpub/주소가 백업에 포함될 수 있습니다.
       </div>
       <div className="ldg-backup-status idle" style={{ marginBottom: 12 }}>
         마지막 백업: {formatLastBackupAt(lastBackupAt)}

@@ -54,6 +54,20 @@ export default function MonthlySellSummaryCard({ summary, records, unit, period,
       <div className="ldg-balance-sub">
         {fmtKRW(summary.totalKrwCovered)} 충당 · {summary.count}건
       </div>
+      {(summary.avgEffectivePriceKrw != null || summary.avgPremiumPct != null) && (
+        <div className="ldg-balance-sub" style={{ marginTop: 4 }}>
+          {summary.avgEffectivePriceKrw != null && (
+            <span>실효 평균 {fmtKRW(Math.round(summary.avgEffectivePriceKrw))}</span>
+          )}
+          {summary.avgEffectivePriceKrw != null && summary.avgPremiumPct != null && " · "}
+          {summary.avgPremiumPct != null && (
+            <span>
+              시세 대비 {summary.avgPremiumPct >= 0 ? "+" : ""}
+              {summary.avgPremiumPct.toFixed(2)}%
+            </span>
+          )}
+        </div>
+      )}
 
       {recentRecords.length > 0 && (
         <div style={{ marginTop: 10, borderTop: "0.5px solid var(--ldg-border)", paddingTop: 8 }}>
@@ -76,7 +90,23 @@ export default function MonthlySellSummaryCard({ summary, records, unit, period,
                 <span className="ldg-sell-record-krw">{fmtKRW(r.krwCovered)}</span>
               </div>
               <div className="ldg-sell-record-rate">
-                BTC/KRW {fmtKRW(r.btcKrwAtSell)}
+                실효 {fmtKRW(r.btcKrwAtSell)}
+                {typeof r.marketBtcKrwAtSell === "number" &&
+                  r.marketBtcKrwAtSell > 0 &&
+                  Number.isFinite(r.btcKrwAtSell) && (
+                    <>
+                      {" · "}
+                      시세 대비{" "}
+                      {(((r.btcKrwAtSell - r.marketBtcKrwAtSell) / r.marketBtcKrwAtSell) * 100 >= 0
+                        ? "+"
+                        : "") +
+                        (
+                          ((r.btcKrwAtSell - r.marketBtcKrwAtSell) / r.marketBtcKrwAtSell) *
+                          100
+                        ).toFixed(2)}
+                      %
+                    </>
+                  )}
               </div>
             </div>
           ))}
