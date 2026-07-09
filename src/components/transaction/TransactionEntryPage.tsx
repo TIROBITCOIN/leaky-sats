@@ -55,10 +55,13 @@ function AmountDateMemoFields({
   extraAfter?: ReactNode;
 }) {
   // 금액은 커스텀 키패드, 제목·메모·날짜는 시스템 키보드 — 서로 배타적으로 동작한다.
-  // iOS Safari는 readOnly <input>에도 시스템 키보드를 올리는 경우가 있어, 금액은 <button>으로 둔다.
   const [keypadOpen, setKeypadOpen] = useState(true);
   const closeKeypad = useCallback(() => setKeypadOpen(false), []);
-  const openKeypad = useCallback(() => setKeypadOpen(true), []);
+  const openKeypad = useCallback((event?: { preventDefault?: () => void; stopPropagation?: () => void }) => {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    setKeypadOpen(true);
+  }, []);
 
   return (
     <>
@@ -69,16 +72,55 @@ function AmountDateMemoFields({
           금액 (원)
           <span className={`ldg-flow-badge ${isIncome ? "income" : "expense"}`}>{isIncome ? "수입" : "지출"}</span>
         </div>
-        <button
-          type="button"
-          className={`ldg-amount-input ldg-amount-display${keypadOpen ? " open" : ""}${amountValue ? "" : " empty"}`}
+        {/*
+          전용 wrapper: 클릭/포인터 이벤트를 여기서 소비해 상위·탭바로 전파되지 않게 한다.
+          input 은 readOnly + inputMode=none 으로 시스템 키보드를 막고,
+          mousedown/focus 에서 preventDefault 로 iOS 포커스 키보드를 차단한다.
+        */}
+        <div
+          className={`ldg-amount-field${keypadOpen ? " open" : ""}`}
+          role="button"
+          tabIndex={0}
           aria-label="금액 (원). 탭하면 숫자 키패드가 열립니다"
           aria-haspopup="dialog"
           aria-expanded={keypadOpen}
           onClick={openKeypad}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              openKeypad();
+            }
+          }}
         >
-          {amountValue || "0"}
-        </button>
+          <input
+            className={`ldg-amount-input ldg-amount-display${amountValue ? "" : " empty"}`}
+            type="text"
+            readOnly
+            inputMode="none"
+            autoComplete="off"
+            tabIndex={-1}
+            placeholder="0"
+            value={amountValue}
+            // 값이 비어 있을 때 표시용 (readOnly 라 onChange 불필요)
+            onChange={() => {}}
+            onFocus={(event) => {
+              event.preventDefault();
+              event.target.blur();
+              openKeypad();
+            }}
+            onMouseDown={(event) => {
+              // 포커스 자체를 막아 시스템 키보드가 뜨지 않게 한다.
+              event.preventDefault();
+              event.stopPropagation();
+              openKeypad();
+            }}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              openKeypad();
+            }}
+          />
+        </div>
         <div className="ldg-preview">
           <b style={{ whiteSpace: "nowrap" }}>{sats.toLocaleString("en-US")} sats</b> · 현재 시세{" "}
           <span style={{ whiteSpace: "nowrap" }}>{fmtKRW(btcKRW)}</span> 기준
