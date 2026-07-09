@@ -42,6 +42,104 @@
   color: var(--ldg-fg-4);
 }
 
+/* T28: readOnly 금액 표시 — 시스템 키보드 대신 커스텀 키패드 사용 */
+.ldg-amount-display {
+  display: block;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 10px;
+  padding: 4px 2px;
+  min-height: 44px;
+  -webkit-user-select: none;
+  user-select: none;
+  caret-color: transparent;
+}
+.ldg-amount-display.open {
+  background: rgba(230, 154, 51, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(230, 154, 51, 0.35);
+}
+.ldg-amount-display.empty {
+  color: var(--ldg-fg-4);
+}
+
+.ldg-amount-keypad-root {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  pointer-events: none;
+}
+.ldg-amount-keypad-scrim {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: rgba(17, 17, 20, 0.18);
+  pointer-events: auto;
+  cursor: pointer;
+}
+.ldg-amount-keypad {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: auto;
+  background: #f7f6f2;
+  border-top: 1px solid var(--ldg-border);
+  box-shadow: 0 -8px 28px rgba(20, 20, 30, 0.12);
+  padding: 10px 10px calc(10px + var(--safe-bottom));
+}
+.ldg-amount-keypad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  max-width: 420px;
+  margin: 0 auto;
+}
+.ldg-amount-key {
+  font: inherit;
+  font-size: 22px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  min-height: 52px;
+  border: 0;
+  border-radius: 12px;
+  background: #ffffff;
+  color: var(--ldg-fg);
+  box-shadow: 0 1px 0 rgba(17, 17, 20, 0.06);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.1s ease, background 0.12s ease, opacity 0.12s ease;
+}
+.ldg-amount-key:active {
+  transform: scale(0.97);
+  background: rgba(17, 17, 20, 0.06);
+}
+.ldg-amount-key-action {
+  font-size: 20px;
+  color: var(--ldg-fg-2);
+  background: rgba(17, 17, 20, 0.06);
+}
+.ldg-amount-key-done {
+  font-size: 15px;
+  font-weight: 700;
+  background: var(--ldg-orange);
+  color: #0a0a0a;
+}
+.ldg-amount-key-done:active {
+  filter: brightness(0.95);
+}
+
+/* 키패드가 열린 동안 하단 여백 — 저장 버튼이 가려지지 않도록 */
+body.ldg-amount-keypad-open .ldg-content {
+  padding-bottom: calc(var(--safe-bottom) + 280px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ldg-amount-key:active {
+    transform: scale(0.99);
+  }
+}
+
 .ldg-input,
 .ldg-textarea,
 .ldg-select {
@@ -51,7 +149,8 @@
   color: var(--ldg-fg);
   border-radius: 12px;
   padding: 12px 14px;
-  font-size: 14px;
+  /* 16px 미만이면 iOS Safari가 포커스 시 페이지를 확대한다. */
+  font-size: 16px;
   outline: none;
   width: 100%;
   max-width: 100%;
@@ -69,18 +168,28 @@
 }
 .ldg-date-field {
   overflow: hidden;
+  min-width: 0;
+  max-width: 100%;
 }
 .ldg-input[type="date"] {
   display: block;
   inline-size: 100%;
   max-inline-size: 100%;
   min-inline-size: 0;
+  min-height: 48px;
+  font-size: 16px;
+  line-height: 1.25;
   -webkit-appearance: none;
   appearance: none;
+  color-scheme: light;
 }
 .ldg-input[type="date"]::-webkit-date-and-time-value {
   min-width: 0;
   text-align: left;
+}
+.ldg-input[type="date"]::-webkit-calendar-picker-indicator {
+  margin-inline-start: 4px;
+  opacity: 0.55;
 }
 .ldg-textarea {
   resize: none;

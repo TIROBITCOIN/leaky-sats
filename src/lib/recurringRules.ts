@@ -1,4 +1,4 @@
-import { getDaysInMonth } from "./month";
+import { getDaysInMonth, getTodayDateKey } from "./month";
 
 const RULES_STORAGE_KEY = "myledger.recurringRules.v1";
 const MATERIALIZED_STORAGE_KEY = "myledger.recurringMaterialized.v1";
@@ -208,6 +208,47 @@ export function mapRecurringRuleDate(
   const endMonth = period.endDate.slice(0, 7);
   const candidates = [...new Set([dateForMonth(startMonth, day), dateForMonth(endMonth, day)])];
   return candidates.find((date) => date >= period.startDate && date <= period.endDate) ?? period.startDate;
+}
+
+/** 해당 정산기간에서 규칙의 예정일(YYYY-MM-DD). mapRecurringRuleDate와 동일. */
+export function getRecurringDueDate(
+  period: { startDate: string; endDate: string },
+  dayOfMonth: number
+): string {
+  return mapRecurringRuleDate(period, dayOfMonth);
+}
+
+/**
+ * 반복 항목을 홈 카드에 노출해도 되는 시점인지 판단한다.
+ * dueDate(정산기간 안 매핑일)가 todayKey 이하일 때만 true.
+ * 미래 정산월로 미리 이동해도, 그 달의 실제 예정일이 오기 전에는 숨긴다.
+ */
+export function isRecurringDue(
+  period: { startDate: string; endDate: string },
+  dayOfMonth: number,
+  todayKey: string = getTodayDateKey()
+): boolean {
+  return getRecurringDueDate(period, dayOfMonth) <= todayKey;
+}
+
+/**
+ * 선택 정산월에서 아직 처리하지 않았고, 예정일이 도래한 규칙만 날짜순으로 반환한다.
+ * recurringMaterialized 키 스키마는 변경하지 않는다.
+ */
+export function listDuePendingRecurringRules(
+  selectedMonth: string,
+  period: { startDate: string; endDate: string },
+  todayKey: string = getTodayDateKey()
+): RecurringRule[] {
+  return listRecurringRules()
+    .filter((rule) => !isRecurringMaterialized(rule.id, selectedMonth))
+    .filter((rule) => isRecurringDue(period, rule.dayOfMonth, todayKey))
+    .sort((a, b) => {
+      const dueA = getRecurringDueDate(period, a.dayOfMonth);
+      const dueB = getRecurringDueDate(period, b.dayOfMonth);
+      if (dueA !== dueB) return dueA.localeCompare(dueB);
+      return a.title.localeCompare(b.title, "ko");
+    });
 }
 
 export {

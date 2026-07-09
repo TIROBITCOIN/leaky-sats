@@ -20,4 +20,13 @@
   --ldg-mono: var(--ldg-sans);
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  /*
+   * T28 card type scale
+   * before: main 700~850, labels 500, mixed secondary weights
+   * after:  only primary numbers use main weight; labels/sub use regular
+   */
+  --ldg-card-label-weight: 400;
+  --ldg-card-main-weight: 600;
+  --ldg-card-sub-weight: 400;
 }
