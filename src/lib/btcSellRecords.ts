@@ -4,9 +4,12 @@ export interface BtcSellRecord {
   id: string;
   month: string; // "YYYY-MM"
   date: string; // "YYYY-MM-DD"
+  /** 지갑에서 나간 BTC (v2 실측). v1은 시세 역산값. */
   btcSold: number;
   satsSold: number;
+  /** v2: 실효 매도가 (받은 원 ÷ 순 BTC). v1: 당시 앱 시세. */
   btcKrwAtSell: number;
+  /** v2: 실제 받은 원화. v1: 입력 원화. */
   krwCovered: number;
   deficitKrwAtConfirm: number;
   deductedFromHeldBtc: boolean;
@@ -18,6 +21,17 @@ export interface BtcSellRecord {
   deductedBtcAmount?: number;
   note?: string;
   createdAt: string;
+
+  // --- schema v2 (optional; 기존 v1 레코드와 공존) ---
+  schemaVersion?: 2;
+  /** 실측: 지갑에서 나간 총 BTC (수수료 포함). btcSold와 동일값 권장. */
+  btcSpentFromWallet?: number;
+  /** 실측: 입금 원화. krwCovered와 동일값 권장. */
+  krwReceived?: number;
+  /** 저장 시점 앱 시세 스냅샷 (김프/괴리 계산용). */
+  marketBtcKrwAtSell?: number;
+  /** 온체인 전송 수수료 (sats). 통계용 선택 필드. */
+  networkFeeSats?: number;
 }
 
 export interface MonthSellSummary {
@@ -39,6 +53,10 @@ function safeNum(v: unknown): number {
   return v;
 }
 
+function isOptionalFiniteNumber(value: unknown): boolean {
+  return value === undefined || (typeof value === "number" && Number.isFinite(value));
+}
+
 function isValidRecord(r: unknown): r is BtcSellRecord {
   if (!r || typeof r !== "object") return false;
   const rec = r as Partial<BtcSellRecord>;
@@ -53,8 +71,28 @@ function isValidRecord(r: unknown): r is BtcSellRecord {
     typeof rec.deficitKrwAtConfirm === "number" && Number.isFinite(rec.deficitKrwAtConfirm) &&
     typeof rec.deductedFromHeldBtc === "boolean" &&
     (rec.deductedBtcAmount === undefined || (typeof rec.deductedBtcAmount === "number" && Number.isFinite(rec.deductedBtcAmount))) &&
-    typeof rec.createdAt === "string"
+    typeof rec.createdAt === "string" &&
+    (rec.schemaVersion === undefined || rec.schemaVersion === 2) &&
+    isOptionalFiniteNumber(rec.btcSpentFromWallet) &&
+    isOptionalFiniteNumber(rec.krwReceived) &&
+    isOptionalFiniteNumber(rec.marketBtcKrwAtSell) &&
+    isOptionalFiniteNumber(rec.networkFeeSats)
   );
+}
+
+/** 실효 매도가 = 받은 원 ÷ (나간 BTC − 수수료 BTC). 분모 ≤ 0 이면 null. */
+export function calculateEffectiveSellPriceKrw(
+  krwReceived: number,
+  btcSpentFromWallet: number,
+  networkFeeSats = 0
+): number | null {
+  if (!Number.isFinite(krwReceived) || krwReceived <= 0) return null;
+  if (!Number.isFinite(btcSpentFromWallet) || btcSpentFromWallet <= 0) return null;
+  const feeBtc =
+    Number.isFinite(networkFeeSats) && networkFeeSats > 0 ? networkFeeSats / 1e8 : 0;
+  const netBtc = btcSpentFromWallet - feeBtc;
+  if (!(netBtc > 0)) return null;
+  return krwReceived / netBtc;
 }
 
 function loadRecords(): BtcSellRecord[] {
@@ -104,6 +142,13 @@ export function addBtcSellRecord(
     krwCovered: safeNum(record.krwCovered),
     deficitKrwAtConfirm: safeNum(record.deficitKrwAtConfirm),
     deductedBtcAmount: record.deductedFromHeldBtc ? safeNum(record.deductedBtcAmount ?? btcSold) : undefined,
+    schemaVersion: record.schemaVersion === 2 ? 2 : record.schemaVersion,
+    btcSpentFromWallet:
+      record.btcSpentFromWallet !== undefined ? safeNum(record.btcSpentFromWallet) : undefined,
+    krwReceived: record.krwReceived !== undefined ? safeNum(record.krwReceived) : undefined,
+    marketBtcKrwAtSell:
+      record.marketBtcKrwAtSell !== undefined ? safeNum(record.marketBtcKrwAtSell) : undefined,
+    networkFeeSats: record.networkFeeSats !== undefined ? safeNum(record.networkFeeSats) : undefined,
     createdAt,
   };
   const records = loadRecords();
@@ -148,6 +193,13 @@ export function updateBtcSellRecord(
     krwCovered: patch.krwCovered !== undefined ? safeNum(patch.krwCovered) : current.krwCovered,
     deficitKrwAtConfirm:
       patch.deficitKrwAtConfirm !== undefined ? safeNum(patch.deficitKrwAtConfirm) : current.deficitKrwAtConfirm,
+    btcSpentFromWallet:
+      patch.btcSpentFromWallet !== undefined ? safeNum(patch.btcSpentFromWallet) : current.btcSpentFromWallet,
+    krwReceived: patch.krwReceived !== undefined ? safeNum(patch.krwReceived) : current.krwReceived,
+    marketBtcKrwAtSell:
+      patch.marketBtcKrwAtSell !== undefined ? safeNum(patch.marketBtcKrwAtSell) : current.marketBtcKrwAtSell,
+    networkFeeSats: patch.networkFeeSats !== undefined ? safeNum(patch.networkFeeSats) : current.networkFeeSats,
+    schemaVersion: patch.schemaVersion !== undefined ? patch.schemaVersion : current.schemaVersion,
   };
   records[idx] = updated;
   return saveRecords(records) ? updated : null;
