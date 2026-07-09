@@ -18,20 +18,22 @@ const pendingCard = read("src/components/home/RecurringPendingCard.tsx");
 assert.match(keypad, /createPortal/, "AmountKeypad portals to body");
 assert.match(keypad, /ldg-amount-keypad/, "AmountKeypad uses keypad styles");
 assert.match(keypad, /formatKrwInput/, "keypad writes formatted amounts");
+assert.match(keypad, /onPointerDown/, "keypad uses pointer events for reliable iOS taps");
 assert.match(entry, /AmountKeypad/, "transaction entry mounts AmountKeypad");
-assert.match(entry, /readOnly/, "amount field is readOnly to block the system keyboard");
-assert.match(entry, /inputMode="none"/, "amount field opts out of the system numeric keypad");
+// iOS: readOnly <input> still summons the system keyboard — amount must be a button
+assert.match(entry, /<button[\s\S]*ldg-amount-display/, "amount display is a button, not an input");
+assert.match(entry, /useState\(true\)/, "amount keypad opens by default on the entry form");
 assert.match(entry, /ldg-amount-display/, "amount field uses the custom display class");
 assert.match(entry, /onFocusCapture=\{closeKeypad\}/, "text fields close the amount keypad on focus");
-assert.match(formsCss, /\.ldg-amount-keypad\s*\{/, "keypad sheet CSS exists");
-assert.match(formsCss, /body\.ldg-amount-keypad-open/, "open keypad reserves bottom space");
 assert.doesNotMatch(
-  entry.match(/className=\{`ldg-amount-input[\s\S]*?`\}[\s\S]*?\/>/)?.[0] ??
-    entry.match(/className=\{`ldg-amount-input[\s\S]*?<\/input>/)?.[0] ??
-    "",
-  /inputMode="numeric"/,
-  "amount display no longer requests the system numeric keypad"
+  entry,
+  /ldg-amount-display[\s\S]{0,200}readOnly|readOnly[\s\S]{0,200}ldg-amount-display/,
+  "amount display is not a readOnly input"
 );
+assert.match(formsCss, /\.ldg-amount-keypad\s*\{/, "keypad sheet CSS exists");
+assert.match(formsCss, /z-index:\s*1100/, "keypad stacks above tab bar and action sheets");
+assert.match(formsCss, /body\.ldg-amount-keypad-open/, "open keypad reserves bottom space");
+assert.match(formsCss, /button\.ldg-amount-display/, "amount display button styles exist");
 
 // ---- 2. Amount formatting helpers still shared ----
 assert.match(formatSrc, /export function formatKrwInput/, "formatKrwInput helper exists");
