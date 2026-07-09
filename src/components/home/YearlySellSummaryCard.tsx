@@ -19,6 +19,20 @@ export default function YearlySellSummaryCard({ summary, unit, year }: Props) {
       <div className="ldg-balance-sub">
         {fmtKRW(summary.totalKrwCovered)} 충당 · {summary.count}건
       </div>
+      {(summary.avgEffectivePriceKrw != null || summary.avgPremiumPct != null) && (
+        <div className="ldg-balance-sub" style={{ marginTop: 4 }}>
+          {summary.avgEffectivePriceKrw != null && (
+            <span>실효 평균 {fmtKRW(Math.round(summary.avgEffectivePriceKrw))}</span>
+          )}
+          {summary.avgEffectivePriceKrw != null && summary.avgPremiumPct != null && " · "}
+          {summary.avgPremiumPct != null && (
+            <span>
+              시세 대비 {summary.avgPremiumPct >= 0 ? "+" : ""}
+              {summary.avgPremiumPct.toFixed(2)}%
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

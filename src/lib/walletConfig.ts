@@ -233,3 +233,13 @@ export function isDuplicateDescriptor(descriptor: WalletDescriptor, wallets: Wal
   const fp = descriptorFingerprint(descriptor);
   return wallets.some((w) => w.id !== excludeId && descriptorFingerprint(w.descriptor) === fp);
 }
+
+/** True if backup would include watch-only xpubs / address lists (privacy warning). */
+export function backupContainsWatchDescriptors(): boolean {
+  const config = loadWalletConfig();
+  return config.wallets.some(
+    (w) =>
+      (w.descriptor.kind === "xpub" && w.descriptor.xpub.length > 0) ||
+      (w.descriptor.kind === "addresses" && w.descriptor.addresses.length > 0)
+  );
+}

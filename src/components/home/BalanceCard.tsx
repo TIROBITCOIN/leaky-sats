@@ -19,6 +19,20 @@ export type BalanceSyncMeta = {
   wallets: BalanceWalletRow[];
 };
 
+/** Phase 4: compact unconfirmed badge — reuses kimchi/pending chip language */
+function UnconfirmedBadge({ sats }: { sats: number }) {
+  if (!(sats > 0)) return null;
+  return (
+    <span
+      className="ldg-kimchi pending"
+      style={{ marginLeft: 6, verticalAlign: "middle", fontSize: 10, padding: "2px 7px" }}
+      title="아직 블록에 포함되지 않은 잔고"
+    >
+      확정 대기 +{sats.toLocaleString("en-US")} sats
+    </span>
+  );
+}
+
 export default function BalanceCard({
   heldBtc,
   unit,
@@ -41,16 +55,17 @@ export default function BalanceCard({
       }}
       style={showSync ? { cursor: "pointer" } : undefined}
     >
-      <div className="ldg-label">보유 BTC</div>
+      <div className="ldg-label">
+        보유 BTC
+        {showSync && syncMeta.unconfirmedSats > 0 && <UnconfirmedBadge sats={syncMeta.unconfirmedSats} />}
+      </div>
       <div className="ldg-balance-main">{fmtBtcValue(heldBtc, unit)}</div>
       <div className="ldg-balance-sub">{fmtBtcValue(heldBtc, otherUnit)}</div>
       {showSync && (
         <div className="ldg-balance-sub" style={{ marginTop: 4 }}>
           지갑 {syncMeta.walletCount}개 · {syncMeta.lastSyncLabel}
-          {syncMeta.unconfirmedSats > 0
-            ? ` · 확정 대기 ⏳ ${syncMeta.unconfirmedSats.toLocaleString("en-US")} sats`
-            : ""}
           {syncMeta.warning ? ` · ${syncMeta.warning}` : ""}
+          {showSync ? " · 탭하여 상세" : ""}
         </div>
       )}
       {showSync && open && (
@@ -58,10 +73,24 @@ export default function BalanceCard({
           {syncMeta.wallets.map((w) => (
             <div
               key={w.id}
-              style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12, marginTop: 4 }}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                gap: 8,
+                fontSize: 12,
+                marginTop: 6,
+              }}
             >
-              <span style={{ color: "var(--ldg-fg-2)" }}>{w.label}</span>
-              <span className="ldg-balance-sub" style={{ margin: 0 }}>
+              <span style={{ color: "var(--ldg-fg-2)" }}>
+                {w.label}
+                {w.unconfirmedSats > 0 && (
+                  <span className="ldg-balance-sub" style={{ display: "block", margin: 0 }}>
+                    확정 대기 +{w.unconfirmedSats.toLocaleString("en-US")} sats
+                  </span>
+                )}
+              </span>
+              <span className="ldg-balance-sub" style={{ margin: 0, textAlign: "right" }}>
                 {fmtSats(w.totalSats)}
               </span>
             </div>

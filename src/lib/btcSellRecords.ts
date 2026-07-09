@@ -39,6 +39,10 @@ export interface MonthSellSummary {
   totalSatsSold: number;
   totalKrwCovered: number;
   count: number;
+  /** BTC 수량 가중 평균 실효 매도가 (원/BTC). 기록 없으면 null */
+  avgEffectivePriceKrw: number | null;
+  /** marketBtcKrwAtSell 대비 실효가 괴리 % 가중 평균. 스냅샷 있는 건만. null if none */
+  avgPremiumPct: number | null;
 }
 
 export interface YearSellSummary {
@@ -46,6 +50,41 @@ export interface YearSellSummary {
   totalSatsSold: number;
   totalKrwCovered: number;
   count: number;
+  avgEffectivePriceKrw: number | null;
+  avgPremiumPct: number | null;
+}
+
+/** Phase 4: 실효 매도가·시세 대비 괴리(≈김프+수수료) 통계 */
+export function summarizeSellPricing(records: BtcSellRecord[]): {
+  avgEffectivePriceKrw: number | null;
+  avgPremiumPct: number | null;
+} {
+  let btcWeight = 0;
+  let priceAcc = 0;
+  let premiumWeight = 0;
+  let premiumAcc = 0;
+
+  for (const r of records) {
+    const btc = r.btcSold;
+    const price = r.btcKrwAtSell;
+    if (!(btc > 0) || !(price > 0) || !Number.isFinite(btc) || !Number.isFinite(price)) continue;
+    btcWeight += btc;
+    priceAcc += price * btc;
+
+    const market = r.marketBtcKrwAtSell;
+    if (typeof market === "number" && Number.isFinite(market) && market > 0) {
+      const pct = ((price - market) / market) * 100;
+      if (Number.isFinite(pct)) {
+        premiumWeight += btc;
+        premiumAcc += pct * btc;
+      }
+    }
+  }
+
+  return {
+    avgEffectivePriceKrw: btcWeight > 0 ? priceAcc / btcWeight : null,
+    avgPremiumPct: premiumWeight > 0 ? premiumAcc / premiumWeight : null,
+  };
 }
 
 function safeNum(v: unknown): number {
@@ -235,7 +274,15 @@ export function summarizeBtcSellRecordsByMonth(month: string): MonthSellSummary 
     totalSatsSold += r.satsSold;
     totalKrwCovered += r.krwCovered;
   }
-  return { totalBtcSold, totalSatsSold, totalKrwCovered, count: records.length };
+  const pricing = summarizeSellPricing(records);
+  return {
+    totalBtcSold,
+    totalSatsSold,
+    totalKrwCovered,
+    count: records.length,
+    avgEffectivePriceKrw: pricing.avgEffectivePriceKrw,
+    avgPremiumPct: pricing.avgPremiumPct,
+  };
 }
 
 export function summarizeBtcSellRecordsByYear(year: string): YearSellSummary {
@@ -248,7 +295,15 @@ export function summarizeBtcSellRecordsByYear(year: string): YearSellSummary {
     totalSatsSold += r.satsSold;
     totalKrwCovered += r.krwCovered;
   }
-  return { totalBtcSold, totalSatsSold, totalKrwCovered, count: records.length };
+  const pricing = summarizeSellPricing(records);
+  return {
+    totalBtcSold,
+    totalSatsSold,
+    totalKrwCovered,
+    count: records.length,
+    avgEffectivePriceKrw: pricing.avgEffectivePriceKrw,
+    avgPremiumPct: pricing.avgPremiumPct,
+  };
 }
 
 export { STORAGE_KEY as BTC_SELL_RECORDS_KEY };
