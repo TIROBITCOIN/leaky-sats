@@ -59,6 +59,7 @@ const HELP_SECTIONS = [
     title: "지갑 동기화 (와치온리)",
     body: [
       "설정에서 자가호스팅 mempool API와 xpub/주소를 등록하면 온체인 잔고로 보유 BTC를 맞출 수 있습니다.",
+      "mempool URL은 HTTPS(Tailscale ts.net 권장)여야 하고, 브라우저 CORS를 허용해야 합니다. http:// 공인 IP는 Mixed Content로 막힙니다.",
       "지갑 추가 시 '카메라로 QR 스캔'으로 와치온리 xpub QR을 불러올 수 있습니다. (HTTPS 필요, 권한 허용)",
       "개인키·시드는 저장하지 않습니다. xpub이 유출되면 자금 탈취는 어렵지만 거래 내역 프라이버시는 깨질 수 있습니다.",
       "백업 파일에 와치온리 정보가 포함될 수 있으니 안전하게 보관하세요.",

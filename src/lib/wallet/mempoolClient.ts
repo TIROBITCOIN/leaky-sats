@@ -3,7 +3,8 @@
  * Pattern ported from Atlas apps/api/src/mempool/request.ts.
  */
 
-export const MEMPOOL_REQUEST_TIMEOUT_MS = 4_000;
+/** Tailscale / home-lab RTT can exceed a few seconds on mobile. */
+export const MEMPOOL_REQUEST_TIMEOUT_MS = 20_000;
 export const MEMPOOL_LOOKUP_CONCURRENCY = 4;
 export const MEMPOOL_RETRY_COUNT = 1;
 

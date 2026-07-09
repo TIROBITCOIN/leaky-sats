@@ -1,0 +1,25 @@
+# Umbrel / 리눅스 노드에서 실행하는 mempool CORS 프록시
+#
+# 1) MEMPOOL_UPSTREAM 을 실제 mempool 주소로 수정
+# 2) docker compose up -d
+# 3) Tailscale Serve 로 HTTPS 노출 (아래 README)
+#
+# 포트 8787 → CORS 헤더 붙은 mempool 프록시
+
+services:
+  mempool-cors-proxy:
+    image: caddy:2.8-alpine
+    container_name: mempool-cors-proxy
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    environment:
+      # Umbrel: 호스트의 mempool. 도커 브리지면 host-gateway 또는 실제 컨테이너 IP
+      MEMPOOL_UPSTREAM: ${MEMPOOL_UPSTREAM:-http://172.17.0.1:3006}
+      # My Ledger 배포 출처만 허용하려면 아래로 교체
+      # CORS_ORIGIN: https://leaky-sats.vercel.app
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
