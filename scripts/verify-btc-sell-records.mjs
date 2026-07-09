@@ -108,11 +108,11 @@ assert.match(
 assert.match(modalSrc, /disabled=\{[^}]*overHeld[^}]*\}/, "save button is disabled while a deducted sale exceeds held BTC");
 assert.match(
   modalSrc,
-  /const overHeld = useMemo\(\s*\(\) => Number\.isFinite\(btcSpentFromWallet\) && btcSpentFromWallet > availableHeldBtc/s,
-  "overheld blocking uses measured wallet BTC"
+  /const overHeld = useMemo\(\s*\(\) =>\s*!walletSyncMode &&\s*Number\.isFinite\(btcSpentFromWallet\) &&\s*btcSpentFromWallet > availableHeldBtc/s,
+  "overheld blocking uses measured wallet BTC in manual mode only"
 );
-assert.match(modalSrc, /deductedFromHeldBtc:\s*true/, "manual-mode records are marked deducted from held BTC");
-assert.match(modalSrc, /deductedBtcAmount:\s*btcSpentFromWallet/, "saved records snapshot the measured deducted BTC amount");
+assert.match(modalSrc, /deductedFromHeldBtc:\s*!walletSync/, "manual mode deducts held BTC; wallet-sync does not");
+assert.match(modalSrc, /walletSync \? undefined : btcSpentFromWallet/, "wallet-sync omits deductedBtcAmount");
 
 // 11. backup.ts includes btcSellRecords
 const backupSrc = readFileSync("src/lib/backup.ts", "utf8");

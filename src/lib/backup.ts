@@ -20,6 +20,9 @@ const CATEGORIES_KEY = "myledger.categories.v1";
 const HELD_BTC_KEY = "myledger.heldBtc.v1";
 const BTC_SELL_RECORDS_KEY = "myledger.btcSellRecords.v1";
 const SETTLEMENT_DAY_KEY = "myledger.settlementDay.v1";
+const WALLET_CONFIG_KEY = "myledger.wallet.config.v1";
+const WALLET_ADDRESS_CACHE_KEY = "myledger.wallet.addressCache.v1";
+const WALLET_LAST_BALANCE_KEY = "myledger.wallet.lastBalance.v1";
 export const PRE_RESTORE_BACKUP_KEY = "myledger.preRestoreBackup.v1";
 export const LAST_BACKUP_AT_KEY = "myledger.lastBackupAt.v1";
 
@@ -34,6 +37,9 @@ export const BACKUP_KEYS = {
   settlementDay: SETTLEMENT_DAY_KEY,
   recurringRules: RECURRING_RULES_KEY,
   recurringMaterialized: RECURRING_MATERIALIZED_KEY,
+  walletConfig: WALLET_CONFIG_KEY,
+  walletAddressCache: WALLET_ADDRESS_CACHE_KEY,
+  walletLastBalance: WALLET_LAST_BALANCE_KEY,
 } as const;
 
 export interface BackupPayload {
@@ -51,6 +57,9 @@ export interface BackupPayload {
     [SETTLEMENT_DAY_KEY]?: unknown;
     [RECURRING_RULES_KEY]?: unknown;
     [RECURRING_MATERIALIZED_KEY]?: unknown;
+    [WALLET_CONFIG_KEY]?: unknown;
+    [WALLET_ADDRESS_CACHE_KEY]?: unknown;
+    [WALLET_LAST_BALANCE_KEY]?: unknown;
   };
 }
 
@@ -297,6 +306,9 @@ export function createBackupPayload(): BackupPayload {
       [SETTLEMENT_DAY_KEY]: localStorage.getItem(SETTLEMENT_DAY_KEY) ?? "1",
       [RECURRING_RULES_KEY]: readParsedStorage(RECURRING_RULES_KEY, []),
       [RECURRING_MATERIALIZED_KEY]: readParsedStorage(RECURRING_MATERIALIZED_KEY, []),
+      [WALLET_CONFIG_KEY]: readParsedStorage(WALLET_CONFIG_KEY, null),
+      [WALLET_ADDRESS_CACHE_KEY]: readParsedStorage(WALLET_ADDRESS_CACHE_KEY, {}),
+      [WALLET_LAST_BALANCE_KEY]: readParsedStorage(WALLET_LAST_BALANCE_KEY, {}),
     },
   };
 }
@@ -480,6 +492,14 @@ export function prepareBackupRestore(payload: BackupPayload): PreparedBackupRest
     data[RECURRING_MATERIALIZED_KEY] = recurringMaterialized;
   }
 
+  // Wallet sync blobs — accept opaque JSON objects (validated loosely for restore).
+  for (const key of [WALLET_CONFIG_KEY, WALLET_ADDRESS_CACHE_KEY, WALLET_LAST_BALANCE_KEY] as const) {
+    const raw = optionalValue(payload.data, key);
+    if (raw === undefined || raw === null) continue;
+    if (typeof raw === "object") data[key] = raw;
+    else invalidItemsRemoved += 1;
+  }
+
   return {
     payload: {
       app: APP_ID,
@@ -564,6 +584,15 @@ function writeBackupData(data: BackupPayload["data"]) {
   }
   if (RECURRING_MATERIALIZED_KEY in data) {
     localStorage.setItem(RECURRING_MATERIALIZED_KEY, JSON.stringify(data[RECURRING_MATERIALIZED_KEY]));
+  }
+  if (WALLET_CONFIG_KEY in data && data[WALLET_CONFIG_KEY] != null) {
+    localStorage.setItem(WALLET_CONFIG_KEY, JSON.stringify(data[WALLET_CONFIG_KEY]));
+  }
+  if (WALLET_ADDRESS_CACHE_KEY in data) {
+    localStorage.setItem(WALLET_ADDRESS_CACHE_KEY, JSON.stringify(data[WALLET_ADDRESS_CACHE_KEY]));
+  }
+  if (WALLET_LAST_BALANCE_KEY in data) {
+    localStorage.setItem(WALLET_LAST_BALANCE_KEY, JSON.stringify(data[WALLET_LAST_BALANCE_KEY]));
   }
 }
 
