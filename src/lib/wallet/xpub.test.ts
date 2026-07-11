@@ -66,6 +66,26 @@ describe("deriveAddresses BIP84 zpub", () => {
     expect(change[0].address).toBe(BIP84_CHANGE_0);
     expect(change[0].path).toBe("m/84'/0'/0'/1/0");
   });
+
+  it("does not require the Node Buffer global", () => {
+    const globalWithBuffer = globalThis as typeof globalThis & { Buffer?: unknown };
+    const hadBuffer = "Buffer" in globalWithBuffer;
+    const originalBuffer = globalWithBuffer.Buffer;
+
+    Reflect.deleteProperty(globalWithBuffer, "Buffer");
+    try {
+      const receive = deriveAddresses({ xpub: ZPUB, chain: "receive", startIndex: 0, limit: 1 });
+      expect(receive[0].address).toBe(BIP84_RECEIVE_0);
+    } finally {
+      if (hadBuffer) {
+        Object.defineProperty(globalWithBuffer, "Buffer", {
+          configurable: true,
+          writable: true,
+          value: originalBuffer,
+        });
+      }
+    }
+  });
 });
 
 describe("deriveAddresses BIP49 ypub", () => {

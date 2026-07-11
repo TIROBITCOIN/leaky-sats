@@ -1,32 +1,24 @@
-# leaky-sats · mempool CORS 프록시
-# HTTPS My Ledger → 이 프록시(HTTPS 또는 Tailscale Serve) → 로컬 mempool HTTP
-#
-# 환경변수:
-#   MEMPOOL_UPSTREAM  기본 http://127.0.0.1:3006  (Umbrel mempool 포트에 맞게)
-#   CORS_ORIGIN       기본 *  (프로덕션: https://leaky-sats.vercel.app 권장)
+# leaky-sats self-hosted mempool bridge
+# Run inside the same network namespace as the Tailscale app container.
+# Tailscale Serve:
+#   docker exec tailscale_web_1 tailscale serve --bg --yes --https=443 http://127.0.0.1:18887
 
 {
 	auto_https off
+	admin off
 }
 
-:8787 {
+:18887 {
 	@options method OPTIONS
 	handle @options {
-		header Access-Control-Allow-Origin {$CORS_ORIGIN:*}
+		header Access-Control-Allow-Origin "*"
 		header Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
-		header Access-Control-Allow-Headers *
+		header Access-Control-Allow-Headers "*"
 		header Access-Control-Max-Age "86400"
-		header Vary Origin
-		respond 204
+		respond "" 204
 	}
 
 	handle {
-		reverse_proxy {$MEMPOOL_UPSTREAM:http://127.0.0.1:3006} {
-			header_up Host {host}
-		}
-		header Access-Control-Allow-Origin {$CORS_ORIGIN:*}
-		header Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
-		header Access-Control-Expose-Headers *
-		header Vary Origin
+		reverse_proxy {$MEMPOOL_UPSTREAM:http://127.0.0.1:3006}
 	}
 }

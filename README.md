@@ -31,6 +31,7 @@ My Ledger는 한국 비트코이너가 원화 수입/지출을 기록하고, 해
 - 카테고리 관리
 - 통계
 - 홈에서 보유 BTC 현재 가치(Total Balance) 확인
+- self-hosted mempool API 기반 와치온리 지갑 동기화
 - PWA 설치와 기본 오프라인 앱 shell
 - 수동 백업/복원
 - 로컬 앱 잠금
@@ -91,6 +92,18 @@ npm run verify:branding
 - 백업 파일에는 거래/카테고리, 보유 BTC 수량, BTC 판매 확정 기록, 표시 설정, 시세 갱신 주기와 정산 기준일이 포함되므로 개인 기기에 안전하게 보관하세요.
 - 복원은 현재 브라우저의 거래/카테고리 데이터를 덮어쓰므로 확인 후 진행하세요.
 - My Ledger는 비트코인 시드, 개인키, 거래소 API 키, 은행 인증 정보를 저장하거나 백업하지 않습니다.
+
+## Self-hosted 지갑 동기화
+
+Leaky Sats는 보유 BTC를 수동 입력하거나, 내 노드의 self-hosted mempool API와 와치온리 xpub/주소를 연결해 온체인 잔고로 동기화할 수 있습니다.
+
+- 앱에는 `https://<your-node>.ts.net/api` 같은 mempool base URL만 입력합니다.
+- `/blocks/tip/height` 같은 세부 경로는 앱이 자동으로 붙입니다.
+- HTTPS PWA라서 `http://` 공인 IP API는 Mixed Content로 차단됩니다.
+- 주소창에서는 숫자가 보이는데 앱만 실패하면 CORS 헤더를 확인해야 합니다.
+- xpub은 송금 권한은 없지만 거래 내역 프라이버시를 노출할 수 있으므로 백업 파일을 안전하게 보관해야 합니다.
+
+자세한 설정은 [MEMPOOL_HTTPS_CORS.md](docs/MEMPOOL_HTTPS_CORS.md)를 참고하세요.
 
 ## 로컬 앱 잠금
 

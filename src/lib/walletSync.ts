@@ -50,7 +50,7 @@ export async function testMempoolConnection(
     return {
       ok: false,
       error:
-        "Mixed Content: HTTPS 앱에서는 http:// API를 호출할 수 없습니다. Tailscale https://….ts.net URL을 쓰세요. (docs/MEMPOOL_HTTPS_CORS.md)",
+        "HTTPS 앱에서는 http:// 노드 API를 직접 호출할 수 없습니다. Tailscale https://….ts.net 같은 HTTPS mempool API 주소를 사용하세요.",
     };
   }
 
@@ -68,14 +68,14 @@ export async function testMempoolConnection(
     if (name === "AbortError" || name === "TimeoutError" || /aborted|timeout/i.test(message)) {
       return {
         ok: false,
-        error: "시간 초과. Tailscale 연결과 mempool 응답 속도를 확인하세요.",
+        error: "시간 초과. 기기의 Tailscale 연결, Umbrel mempool 앱, Tailscale Serve 상태를 확인하세요.",
       };
     }
     if (/Failed to fetch|NetworkError|CORS|Load failed/i.test(message)) {
       return {
         ok: false,
         error:
-          "CORS/네트워크 차단. 주소창에서 tip height는 되는데 앱만 실패하면 mempool 앞에 CORS 헤더가 필요합니다. deploy/mempool-cors-proxy 또는 docs/MEMPOOL_HTTPS_CORS.md",
+          "네트워크 또는 CORS 차단입니다. 주소창에서 tip height 숫자는 보이는데 앱만 실패하면 응답 헤더가 Access-Control-Allow-Origin=* 하나로 나오는지 확인하세요.",
       };
     }
     return { ok: false, error: message };

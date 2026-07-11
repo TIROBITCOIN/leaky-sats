@@ -58,9 +58,12 @@ const HELP_SECTIONS = [
   {
     title: "지갑 동기화 (와치온리)",
     body: [
-      "설정에서 자가호스팅 mempool API와 xpub/주소를 등록하면 온체인 잔고로 보유 BTC를 맞출 수 있습니다.",
-      "mempool URL은 HTTPS(Tailscale ts.net 권장)여야 하고, 브라우저 CORS를 허용해야 합니다. http:// 공인 IP는 Mixed Content로 막힙니다.",
-      "지갑 추가 시 '카메라로 QR 스캔'으로 와치온리 xpub QR을 불러올 수 있습니다. (HTTPS 필요, 권한 허용)",
+      "설정에서 내 노드의 self-hosted mempool API와 xpub/주소를 등록하면 온체인 잔고로 보유 BTC를 맞출 수 있습니다.",
+      "앱은 퍼블릭 mempool.space를 기본값으로 쓰지 않습니다. xpub에서 파생된 주소 조회가 외부 서버로 나가지 않게 하려는 방향입니다.",
+      "mempool URL은 https://…ts.net/api처럼 HTTPS base URL만 입력하세요. /blocks/tip/height는 앱이 자동으로 붙입니다.",
+      "주소창에서 tip height 숫자는 보이는데 앱만 실패하면 CORS 문제일 가능성이 큽니다. Access-Control-Allow-Origin 값이 * 하나여야 합니다.",
+      "Umbrel에서 Tailscale 앱으로 쓰는 경우, 호스트에 tailscale 명령이 없을 수 있고 Tailscale 컨테이너 안에서 Serve를 설정해야 할 수 있습니다.",
+      "지갑 추가 시 '카메라로 QR 스캔'으로 와치온리 xpub QR을 불러올 수 있습니다. HTTPS가 필요하고 카메라 권한을 허용해야 합니다.",
       "개인키·시드는 저장하지 않습니다. xpub이 유출되면 자금 탈취는 어렵지만 거래 내역 프라이버시는 깨질 수 있습니다.",
       "백업 파일에 와치온리 정보가 포함될 수 있으니 안전하게 보관하세요.",
       "미확정(mempool) 잔고는 '확정 대기' 뱃지로 표시됩니다.",
@@ -89,6 +92,8 @@ const HELP_SECTIONS = [
       "암호화 백업 비밀번호를 잊는 것",
       "정산 기준일을 바꾼 뒤 기존 달 범위를 착각하는 것",
       "BTC 판매 카드가 실제 거래소 매도 기능이라고 오해하는 것",
+      "mempool URL에 /blocks/tip/height 전체 주소를 넣는 것",
+      "주소창 테스트만 보고 앱 CORS 테스트도 통과했다고 착각하는 것",
       "와치온리 xpub이 들어 있는 백업 파일을 공유·유출하는 것",
     ],
   },
@@ -108,6 +113,7 @@ export default function HelpPage() {
           <ul className="ldg-help-list">
             <li>이 앱은 거래소 앱이 아닙니다.</li>
             <li>실제 비트코인을 사고팔지 않습니다.</li>
+            <li>지갑 동기화는 내 노드의 self-hosted mempool API가 필요합니다.</li>
             <li>데이터는 내 브라우저에 저장됩니다.</li>
             <li>백업하지 않으면 데이터가 사라질 수 있습니다.</li>
             <li>암호화 백업 비밀번호를 잊으면 복원이 어렵습니다.</li>
