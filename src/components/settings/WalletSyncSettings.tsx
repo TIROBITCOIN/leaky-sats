@@ -297,7 +297,8 @@ export default function WalletSyncSettings() {
     <div className="ldg-card">
       <div className="ldg-setting-label">지갑 동기화</div>
       <div className="ldg-setting-desc" style={{ marginBottom: 10 }}>
-        공개키를 불러와 자동으로 보유 잔액을 조회하거나 수동으로 보유 잔액을 입력할 수 있습니다.
+        내 노드의 self-hosted mempool API와 와치온리 공개키를 연결해 온체인 잔액을 조회합니다.
+        노드 연결이 번거로우면 수동으로 보유 BTC를 입력할 수 있습니다.
       </div>
 
       <div className="ldg-setting-row">
@@ -354,10 +355,11 @@ export default function WalletSyncSettings() {
         <>
           <div style={{ marginTop: 12 }}>
             <div className="ldg-label" style={{ marginBottom: 6 }}>
-              mempool API URL (HTTPS · CORS)
+              self-hosted mempool API URL
             </div>
             <div className="ldg-setting-desc" style={{ marginBottom: 6 }}>
-              예: https://umbrel-xxx.ts.net/api · Mixed Content/CORS 해결은 docs/MEMPOOL_HTTPS_CORS.md
+              예: https://umbrel-eletrum.tailcb1ed9.ts.net/api 처럼 /api까지만 입력하세요.
+              /blocks/tip/height는 앱이 자동으로 붙입니다. 주소창은 되는데 앱만 실패하면 HTTPS/CORS 설정을 확인하세요.
             </div>
             <div className="ldg-wallet-name-form">
               <input

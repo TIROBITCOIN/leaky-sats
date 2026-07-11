@@ -60,7 +60,8 @@ export default function OnboardingPrompt({ onDone }: { onDone: () => void }) {
         <div className="ldg-modal-title">사용방법</div>
 
         <ol className="ldg-onboarding-steps">
-          <li>설정 탭으로 이동하여 보유 BTC를 설정하세요.</li>
+          <li>설정 탭에서 보유 BTC를 수동 입력하거나 지갑 동기화를 설정하세요.</li>
+          <li>지갑 동기화는 내 노드의 self-hosted mempool API 주소가 필요합니다.</li>
           <li>정산 기준일을 설정하세요.</li>
           <li>수입과 지출을 입력하세요.</li>
           <li>매월 반복되는 항목은 반복 항목으로 등록하세요.</li>

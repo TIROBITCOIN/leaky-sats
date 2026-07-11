@@ -83,7 +83,9 @@ export default function SettingsPage() {
           <div className="ldg-setting-row">
             <div>
               <div className="ldg-setting-label">도움말 / 사용법</div>
-              <div className="ldg-setting-desc">거래 입력, 정산달, 백업, 시세 지연을 처음 쓰는 사람 기준으로 설명합니다.</div>
+              <div className="ldg-setting-desc">
+                거래 입력, 백업, self-hosted 지갑 동기화, mempool 연결 문제를 처음 쓰는 사람 기준으로 설명합니다.
+              </div>
             </div>
             <Link className="ldg-link" to="/help">
               열기
