@@ -3,6 +3,7 @@
  * Heavy crypto/scan code lives in src/lib/wallet/* and is loaded dynamically.
  */
 import type { WalletBalance } from "./wallet/balance";
+import { normalizeMempoolBaseUrl } from "./wallet/mempoolClient";
 import type { WalletDescriptor } from "./wallet/xpub";
 
 export const WALLET_CONFIG_KEY = "myledger.wallet.config.v1";
@@ -96,7 +97,7 @@ export function loadWalletConfig(): WalletSyncConfig {
     return {
       enabled: parsed.enabled === true,
       wallets,
-      mempoolApiUrl: typeof parsed.mempoolApiUrl === "string" ? parsed.mempoolApiUrl : "",
+      mempoolApiUrl: typeof parsed.mempoolApiUrl === "string" ? normalizeMempoolBaseUrl(parsed.mempoolApiUrl) : "",
       // UI removed: always use fixed product defaults (migrate older 20 → 200).
       gapLimit: WALLET_DEFAULT_GAP_LIMIT,
       includeUnconfirmed: true,
@@ -108,7 +109,10 @@ export function loadWalletConfig(): WalletSyncConfig {
 
 export function saveWalletConfig(config: WalletSyncConfig): boolean {
   try {
-    localStorage.setItem(WALLET_CONFIG_KEY, JSON.stringify(config));
+    localStorage.setItem(
+      WALLET_CONFIG_KEY,
+      JSON.stringify({ ...config, mempoolApiUrl: normalizeMempoolBaseUrl(config.mempoolApiUrl) })
+    );
     return true;
   } catch {
     return false;
