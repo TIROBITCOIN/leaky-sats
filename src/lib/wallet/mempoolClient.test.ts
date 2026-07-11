@@ -26,6 +26,24 @@ describe("url builders", () => {
     );
     expect(tipHeightUrl("https://x.example/api///")).toBe("https://x.example/api/blocks/tip/height");
   });
+
+  it("accepts a pasted tip-height endpoint as the base URL", () => {
+    expect(normalizeMempoolBaseUrl("https://x.example/api/blocks/tip/height")).toBe(
+      "https://x.example/api"
+    );
+    expect(tipHeightUrl("https://x.example/api/blocks/tip/height")).toBe(
+      "https://x.example/api/blocks/tip/height"
+    );
+    expect(addressUtxosUrl("https://x.example/api/blocks/tip/height", "bc1qabc")).toBe(
+      "https://x.example/api/address/bc1qabc/utxo"
+    );
+    expect(normalizeMempoolBaseUrl("https://x.example/api/address/bc1qabc")).toBe(
+      "https://x.example/api"
+    );
+    expect(normalizeMempoolBaseUrl("https://x.example/api/address/bc1qabc/utxo")).toBe(
+      "https://x.example/api"
+    );
+  });
 });
 
 describe("isRetryableMempoolError", () => {

@@ -17,7 +17,11 @@ export class MempoolHttpError extends Error {
 
 /** Normalize base URL: strip trailing slashes. */
 export function normalizeMempoolBaseUrl(base: string): string {
-  return base.trim().replace(/\/+$/, "");
+  return base
+    .trim()
+    .replace(/\/+$/, "")
+    .replace(/\/blocks\/tip\/height$/i, "")
+    .replace(/\/address\/[^/]+(?:\/utxo)?$/i, "");
 }
 
 export function addressUtxosUrl(base: string, addr: string): string {
