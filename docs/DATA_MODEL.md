@@ -21,11 +21,14 @@ new persisted field is added, update backup/restore validation and the related
 | `myledger.refreshInterval.v1` | `src/lib/preferences.ts` | Live price refresh interval. |
 | `myledger.btcSellRecords.v1` | `src/lib/btcSellRecords.ts` | Confirmed BTC sale records. |
 | `myledger.settlementDay.v1` | `src/lib/settlement.ts` | Monthly settlement start day, 1 through 31. |
-| `myledger.monthlyCash.v1` | `src/lib/monthlyCash.ts` | Monthly bank/cash amount used for settlement coverage. |
 | `myledger.recurringRules.v1` | `src/lib/recurringRules.ts` | Monthly recurring item rules. |
 | `myledger.recurringMaterialized.v1` | `src/lib/recurringRules.ts` | Rule/month pairs already handled. |
 | `myledger.preRestoreBackup.v1` | `src/lib/backup.ts` | Safety backup created immediately before restore. Not included in backups. |
 | `myledger.lastBackupAt.v1` | `src/lib/backup.ts` | UX-only timestamp of the last successful backup download. Not included in backups. |
+
+Legacy key: `myledger.monthlyCash.v1` belonged to the removed monthly-cash
+settlement flow. Current backup/restore code ignores it and does not write it
+back during restore.
 
 ## Transactions
 

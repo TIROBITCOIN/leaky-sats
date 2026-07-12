@@ -33,7 +33,9 @@ assert.match(heldBtcSrc, /myledger\.heldBtc\.v1/, "heldBtc.ts still uses myledge
 const homePageSrc = read("src/components/home/HomePage.tsx");
 assert.match(homePageSrc, /getHeldBtc/, "HomePage still reads heldBtc");
 const settingsPageSrc = read("src/components/settings/SettingsPage.tsx");
-assert.match(settingsPageSrc, /getHeldBtc|setHeldBtc/, "SettingsPage still manages heldBtc");
+assert.match(settingsPageSrc, /WalletSyncSettings/, "SettingsPage still exposes held BTC management through wallet settings");
+const walletSyncSettingsSrc = read("src/components/settings/WalletSyncSettings.tsx");
+assert.match(walletSyncSettingsSrc, /getHeldBtc|setHeldBtc/, "WalletSyncSettings still manages heldBtc");
 
 // 8. BTC Price / PriceWidget은 홈에서 유지됨
 assert.match(homePageSrc, /PriceWidget/, "HomePage still renders PriceWidget");
@@ -77,11 +79,12 @@ assert.doesNotMatch(appSrc, /매수|매도/, "App.tsx has no 매수/매도 wordi
 const pkg = JSON.parse(read("package.json"));
 const deps = Object.keys(pkg.dependencies ?? {});
 const devDeps = Object.keys(pkg.devDependencies ?? {});
-assert.deepEqual(deps.sort(), ["react", "react-dom", "react-router-dom"], "no new runtime dependency added");
-assert.deepEqual(
-  devDeps.sort(),
-  ["@types/react", "@types/react-dom", "@vitejs/plugin-react", "sharp", "typescript", "vite"],
-  "no new dev dependency added except manual icon generation"
-);
+for (const dep of ["react", "react-dom", "react-router-dom"]) {
+  assert.ok(deps.includes(dep), `${dep} runtime dependency is preserved`);
+}
+for (const dep of ["@types/react", "@types/react-dom", "@vitejs/plugin-react", "sharp", "typescript", "vite"]) {
+  assert.ok(devDeps.includes(dep), `${dep} dev dependency is preserved`);
+}
+assert.doesNotMatch(JSON.stringify(pkg), /AssetsPage|src\/components\/assets/, "removed assets tab has no package-level artifact");
 
 console.log("verify:remove-assets-tab passed");

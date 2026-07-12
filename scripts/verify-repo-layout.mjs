@@ -18,7 +18,9 @@ for (const file of removedPrototypeFiles) {
   assert.equal(existsSync(join(root, file)), false, `${file} is removed from the repository root`);
 }
 
-assert.equal(existsSync(join(root, ".thumbnail")), true, "unclassified .thumbnail asset remains intentionally untouched");
+assert.equal(existsSync(join(root, ".thumbnail")), false, "unclassified .thumbnail asset is removed");
+assert.equal(existsSync(join(root, "assets", "lightning.png")), false, "unused lightning.png asset is removed");
+assert.equal(existsSync(join(root, "assets", "lightning-original.jpg")), false, "unused lightning-original.jpg asset is removed");
 
 const rootVerifyScripts = readdirSync(root).filter((file) => /^verify-.*\.mjs$/.test(file));
 assert.deepEqual(rootVerifyScripts, [], "verify scripts no longer live in the repository root");
