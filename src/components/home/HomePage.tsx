@@ -47,22 +47,29 @@ export default function HomePage() {
       setBtcUnit(loadBtcUnit());
       setSettlementDay(loadSettlementDay());
     };
+    const refreshWalletSyncView = () => {
+      setHeldBtc(getHeldBtc());
+      setRefreshTick((k) => k + 1);
+    };
+    const syncWallets = (force = false) => {
+      if (getHeldBtcMode() !== "wallet-sync") return;
+      const agg = getAggregatedTotalSats();
+      const needsFirstSync = agg.walletCount > 0 && !agg.lastFetchedAt;
+      void syncAllWallets({ force: force || needsFirstSync }).then(refreshWalletSyncView);
+    };
     const onVisibility = () => {
       if (document.visibilityState === "visible") {
         refresh();
-        if (getHeldBtcMode() === "wallet-sync") {
-          void syncAllWallets({ force: false }).then(() => setHeldBtc(getHeldBtc()));
-        }
+        syncWallets();
       }
     };
-    const onWalletSync = () => setHeldBtc(getHeldBtc());
+    const onWalletSync = () => refreshWalletSyncView();
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("focus", refresh);
     window.addEventListener(WALLET_SYNC_EVENT, onWalletSync);
-    // Initial throttled sync when home mounts in wallet-sync mode
-    if (getHeldBtcMode() === "wallet-sync") {
-      void syncAllWallets({ force: false }).then(() => setHeldBtc(getHeldBtc()));
-    }
+    // Initial sync when home mounts in wallet-sync mode. The first successful balance
+    // should not be blocked by a previous failed/empty throttled attempt.
+    syncWallets();
     return () => {
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("focus", refresh);
