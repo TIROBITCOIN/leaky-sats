@@ -20,7 +20,7 @@ import type { ScriptType, WalletDescriptor } from "./wallet/xpub";
 
 const THROTTLE_MS = 5 * 60 * 1000;
 
-let syncInProgress = false;
+let activeSyncPromise: Promise<SyncOutcome> | null = null;
 let lastSyncAttemptAt = 0;
 
 export type SyncOutcome = {
@@ -38,7 +38,7 @@ export type SyncOutcome = {
 };
 
 export function isWalletSyncRunning(): boolean {
-  return syncInProgress;
+  return activeSyncPromise !== null;
 }
 
 export function calculateWalletScanHardCap(prev: AddressCacheEntry | undefined, gapLimit: number): number {
@@ -176,23 +176,21 @@ async function syncOneWallet(
     throw new Error("지갑 스캔 실패");
   }
 
-  // Persist online and partial balances. Partial is still a useful lower-bound balance
-  // and lets the home card reflect discovered UTXOs while warning the user.
-  if (result.balance.status !== "offline") {
-    const receive = result.chains.find((c) => c.chain === "receive");
-    const change = result.chains.find((c) => c.chain === "change");
-    const savedBalance = {
-      ...result.balance,
-      scannedAddressCount: result.scannedAddresses.length,
-      receiveLastUsed: receive?.lastUsedIndex ?? -1,
-      changeLastUsed: change?.lastUsedIndex ?? -1,
-      stoppedReason: [...new Set(result.chains.map((c) => c.stoppedReason))].join("/"),
-      scriptType: selectedDescriptor.kind === "xpub" ? selectedDescriptor.scriptType : undefined,
-    };
-    const balances = loadLastBalances();
-    balances[wallet.id] = savedBalance;
-    saveLastBalances(balances);
+  const receive = result.chains.find((c) => c.chain === "receive");
+  const change = result.chains.find((c) => c.chain === "change");
+  const savedBalance = {
+    ...result.balance,
+    scannedAddressCount: result.scannedAddresses.length,
+    receiveLastUsed: receive?.lastUsedIndex ?? -1,
+    changeLastUsed: change?.lastUsedIndex ?? -1,
+    stoppedReason: [...new Set(result.chains.map((c) => c.stoppedReason))].join("/"),
+    scriptType: selectedDescriptor.kind === "xpub" ? selectedDescriptor.scriptType : undefined,
+  };
+  const balances = loadLastBalances();
+  balances[wallet.id] = savedBalance;
+  saveLastBalances(balances);
 
+  if (result.balance.status !== "offline") {
     const nextCache = loadAddressCache();
     nextCache[wallet.id] = {
       receiveLastUsed: receive?.lastUsedIndex ?? -1,
@@ -200,15 +198,16 @@ async function syncOneWallet(
       updatedAt: new Date().toISOString(),
     };
     saveAddressCache(nextCache);
-    if (
-      selectedDescriptor.kind === "xpub" &&
-      wallet.descriptor.kind === "xpub" &&
-      selectedDescriptor.scriptType &&
-      selectedDescriptor.scriptType !== wallet.descriptor.scriptType &&
-      result.balance.totalSats > 0
-    ) {
-      rememberDetectedScriptType(wallet.id, selectedDescriptor.scriptType);
-    }
+  }
+
+  if (
+    selectedDescriptor.kind === "xpub" &&
+    wallet.descriptor.kind === "xpub" &&
+    selectedDescriptor.scriptType &&
+    selectedDescriptor.scriptType !== wallet.descriptor.scriptType &&
+    result.balance.totalSats > 0
+  ) {
+    rememberDetectedScriptType(wallet.id, selectedDescriptor.scriptType);
   }
 
   return {
@@ -226,16 +225,21 @@ async function syncOneWallet(
 /**
  * Sync all configured wallets. force=true bypasses 5-minute throttle (manual / post-sell).
  */
-export async function syncAllWallets(options: { force?: boolean } = {}): Promise<SyncOutcome> {
-  if (syncInProgress) {
-    return {
-      ok: false,
-      skipped: true,
-      reason: "already-running",
-      walletResults: [],
-      aggregatedSats: getAggregatedTotalSats().totalSats,
-    };
+export function syncAllWallets(options: { force?: boolean } = {}): Promise<SyncOutcome> {
+  if (activeSyncPromise) {
+    return activeSyncPromise;
   }
+
+  const promise = runWalletSync(options);
+  activeSyncPromise = promise;
+  return promise.finally(() => {
+    if (activeSyncPromise === promise) {
+      activeSyncPromise = null;
+    }
+  });
+}
+
+async function runWalletSync(options: { force?: boolean } = {}): Promise<SyncOutcome> {
 
   const now = Date.now();
   if (!options.force && lastSyncAttemptAt > 0 && now - lastSyncAttemptAt < THROTTLE_MS) {
@@ -266,49 +270,44 @@ export async function syncAllWallets(options: { force?: boolean } = {}): Promise
     };
   }
 
-  syncInProgress = true;
   lastSyncAttemptAt = now;
   const walletResults: SyncOutcome["walletResults"] = [];
 
-  try {
-    for (const wallet of config.wallets) {
-      try {
-        const one = await syncOneWallet(
-          wallet,
-          config.mempoolApiUrl,
-          config.gapLimit,
-          config.includeUnconfirmed
-        );
-        walletResults.push({
-          id: wallet.id,
-          label: wallet.label,
-          status: one.status,
-          totalSats: one.totalSats,
-          error: one.error,
-        });
-      } catch (error) {
-        walletResults.push({
-          id: wallet.id,
-          label: wallet.label,
-          status: "offline",
-          totalSats: 0,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
+  for (const wallet of config.wallets) {
+    try {
+      const one = await syncOneWallet(
+        wallet,
+        config.mempoolApiUrl,
+        config.gapLimit,
+        config.includeUnconfirmed
+      );
+      walletResults.push({
+        id: wallet.id,
+        label: wallet.label,
+        status: one.status,
+        totalSats: one.totalSats,
+        error: one.error,
+      });
+    } catch (error) {
+      walletResults.push({
+        id: wallet.id,
+        label: wallet.label,
+        status: "offline",
+        totalSats: 0,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
-
-    const agg = getAggregatedTotalSats();
-    // Mirror aggregate into heldBtc storage for consumers that only read the key after sync.
-    setHeldBtc(satsToBtc(agg.totalSats), { force: true });
-    notifyWalletSync();
-
-    const allOnline = walletResults.every((r) => r.status === "online");
-    return {
-      ok: allOnline,
-      walletResults,
-      aggregatedSats: agg.totalSats,
-    };
-  } finally {
-    syncInProgress = false;
   }
+
+  const agg = getAggregatedTotalSats();
+  // Mirror aggregate into heldBtc storage for consumers that only read the key after sync.
+  setHeldBtc(satsToBtc(agg.totalSats), { force: true });
+  notifyWalletSync();
+
+  const allOnline = walletResults.every((r) => r.status === "online");
+  return {
+    ok: allOnline,
+    walletResults,
+    aggregatedSats: agg.totalSats,
+  };
 }
