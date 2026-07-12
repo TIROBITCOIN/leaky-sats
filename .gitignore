@@ -1,6 +1,15 @@
 node_modules/
 dist/
 .verify-swipe/
+uploads/
+
+# Local env and secret material
+.env
+.env.*
+!.env.example
+*.local
+*.pem
+*.key
 
 # tsc -b / vite build incremental artifacts
 *.tsbuildinfo
