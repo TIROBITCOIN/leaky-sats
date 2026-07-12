@@ -2,6 +2,14 @@
  * Orchestrates watch-only wallet scans. Dynamically imports heavy wallet/* modules.
  */
 import {
+  buildMempoolApiChain,
+  clearMempoolApiHealth,
+  isMempoolApiDead,
+  markMempoolApiDead,
+  resolveHealthyMempoolApi,
+  type MempoolApiCandidate,
+} from "./wallet/mempoolClient";
+import {
   getAggregatedTotalSats,
   loadAddressCache,
   loadLastBalances,
@@ -16,7 +24,6 @@ import {
 } from "./walletConfig";
 import { setHeldBtc } from "./heldBtc";
 import type { ScanWalletResult } from "./wallet/scan";
-import type { MempoolApiCandidate } from "./wallet/mempoolClient";
 import type { ScriptType, WalletDescriptor } from "./wallet/xpub";
 
 const THROTTLE_MS = 25 * 1000;
@@ -108,7 +115,6 @@ export async function scanDescriptorWithFailover(
   includeUnconfirmed: boolean,
   scanFn: typeof scanDescriptor = scanDescriptor
 ): Promise<ScanWalletResult> {
-  const { isMempoolApiDead, markMempoolApiDead, clearMempoolApiHealth } = await import("./wallet/mempoolClient");
   const ordered = [...chain].sort(
     (a, b) => Number(isMempoolApiDead(a.baseUrl)) - Number(isMempoolApiDead(b.baseUrl))
   );
@@ -156,7 +162,6 @@ export async function testMempoolConnection(
     };
   }
 
-  const { buildMempoolApiChain, resolveHealthyMempoolApi } = await import("./wallet/mempoolClient");
   const chain = buildMempoolApiChain(trimmed);
   const resolved = await resolveHealthyMempoolApi(chain);
   if (!resolved) {
@@ -196,7 +201,6 @@ async function syncOneWallet(
   const prev = cache[wallet.id];
   const effectiveGapLimit = resolveEffectiveGapLimit(prev, gapLimit);
   const hardCap = calculateWalletScanHardCap(prev, effectiveGapLimit);
-  const { buildMempoolApiChain } = await import("./wallet/mempoolClient");
   const chain = buildMempoolApiChain(mempoolApiUrl);
 
   let result: ScanWalletResult | null = null;
