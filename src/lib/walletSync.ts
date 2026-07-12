@@ -16,9 +16,10 @@ import {
 } from "./walletConfig";
 import { setHeldBtc } from "./heldBtc";
 import type { ScanWalletResult } from "./wallet/scan";
+import type { MempoolApiCandidate } from "./wallet/mempoolClient";
 import type { ScriptType, WalletDescriptor } from "./wallet/xpub";
 
-const THROTTLE_MS = 5 * 60 * 1000;
+const THROTTLE_MS = 25 * 1000;
 
 let activeSyncPromise: Promise<SyncOutcome> | null = null;
 let lastSyncAttemptAt = 0;
@@ -50,6 +51,21 @@ export function calculateWalletScanHardCap(prev: AddressCacheEntry | undefined, 
   return maxHardCap;
 }
 
+/** BIP-44 convention gap limit, used to bound the address range re-checked on repeat syncs. */
+const STANDARD_RESYNC_GAP_LIMIT = 20;
+
+/**
+ * First-time discovery (no address cache yet) uses the full configured gap limit to find
+ * where a wallet's usage ends. Once that boundary is known, every later sync — now running
+ * every 30s in the background against public APIs instead of every 5 minutes — only needs to
+ * re-verify balances and watch a standard-size gap past that boundary, not redo the full
+ * discovery scan every cycle.
+ */
+export function resolveEffectiveGapLimit(prev: AddressCacheEntry | undefined, configuredGapLimit: number): number {
+  const alreadyDiscovered = !!prev && (prev.receiveLastUsed >= 0 || prev.changeLastUsed >= 0);
+  return alreadyDiscovered ? Math.min(configuredGapLimit, STANDARD_RESYNC_GAP_LIMIT) : configuredGapLimit;
+}
+
 function candidateDescriptors(descriptor: WalletDescriptor): WalletDescriptor[] {
   if (descriptor.kind !== "xpub" || descriptor.scriptType || !descriptor.xpub.startsWith("xpub")) {
     return [descriptor];
@@ -77,6 +93,38 @@ async function scanDescriptor(
   });
 }
 
+/**
+ * Scans one descriptor against the API chain: a saved self-hosted URL first (if any), then
+ * the built-in public APIs. Tries alive candidates before ones currently dead-marked, so a
+ * whole scan session keeps a single base URL (no mixing APIs across addresses) unless that
+ * candidate comes back fully offline, in which case it's dead-marked and the next candidate
+ * gets a one-shot retry of this same wallet scan.
+ */
+export async function scanDescriptorWithFailover(
+  descriptor: WalletDescriptor,
+  chain: MempoolApiCandidate[],
+  gapLimit: number,
+  hardCap: number,
+  includeUnconfirmed: boolean,
+  scanFn: typeof scanDescriptor = scanDescriptor
+): Promise<ScanWalletResult> {
+  const { isMempoolApiDead, markMempoolApiDead, clearMempoolApiHealth } = await import("./wallet/mempoolClient");
+  const ordered = [...chain].sort(
+    (a, b) => Number(isMempoolApiDead(a.baseUrl)) - Number(isMempoolApiDead(b.baseUrl))
+  );
+
+  let result: ScanWalletResult | null = null;
+  for (const candidate of ordered) {
+    result = await scanFn(descriptor, candidate.baseUrl, gapLimit, hardCap, includeUnconfirmed);
+    if (result.balance.status !== "offline") {
+      clearMempoolApiHealth(candidate.baseUrl);
+      return result;
+    }
+    markMempoolApiDead(candidate.baseUrl);
+  }
+  return result!;
+}
+
 function rememberDetectedScriptType(walletId: string, scriptType: ScriptType | undefined): void {
   if (!scriptType) return;
   const config = loadWalletConfig();
@@ -87,15 +135,19 @@ function rememberDetectedScriptType(walletId: string, scriptType: ScriptType | u
   saveWalletConfig({ ...config, wallets });
 }
 
+/**
+ * Tries the API chain in order (self-hosted URL first if set, then the public APIs) and
+ * reports which one answered. An empty customUrl means "public API only" — no self-hosted
+ * node required.
+ */
 export async function testMempoolConnection(
-  baseUrl: string
-): Promise<{ ok: boolean; height?: number; error?: string }> {
-  const url = baseUrl.trim();
-  if (!url) return { ok: false, error: "mempool API URL을 입력하세요." };
+  customUrl: string
+): Promise<{ ok: boolean; height?: number; apiName?: string; error?: string }> {
+  const trimmed = customUrl.trim();
 
   const isHttp =
-    /^http:\/\//i.test(url) &&
-    !/^http:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/i.test(url);
+    /^http:\/\//i.test(trimmed) &&
+    !/^http:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/i.test(trimmed);
   if (isHttp && typeof location !== "undefined" && location.protocol === "https:") {
     return {
       ok: false,
@@ -104,32 +156,16 @@ export async function testMempoolConnection(
     };
   }
 
-  try {
-    const { tipHeightUrl, fetchMempoolJson } = await import("./wallet/mempoolClient");
-    const raw = await fetchMempoolJson(tipHeightUrl(url));
-    const height = typeof raw === "number" ? raw : Number(raw);
-    if (!Number.isFinite(height)) {
-      return { ok: false, error: "응답 형식이 올바르지 않습니다." };
-    }
-    return { ok: true, height };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    const name = error instanceof Error ? error.name : "";
-    if (name === "AbortError" || name === "TimeoutError" || /aborted|timeout/i.test(message)) {
-      return {
-        ok: false,
-        error: "시간 초과. 기기의 Tailscale 연결, Umbrel mempool 앱, Tailscale Serve 상태를 확인하세요.",
-      };
-    }
-    if (/Failed to fetch|NetworkError|CORS|Load failed/i.test(message)) {
-      return {
-        ok: false,
-        error:
-          "네트워크 또는 CORS 차단입니다. 주소창에서 tip height 숫자는 보이는데 앱만 실패하면 응답 헤더가 Access-Control-Allow-Origin=* 하나로 나오는지 확인하세요.",
-      };
-    }
-    return { ok: false, error: message };
+  const { buildMempoolApiChain, resolveHealthyMempoolApi } = await import("./wallet/mempoolClient");
+  const chain = buildMempoolApiChain(trimmed);
+  const resolved = await resolveHealthyMempoolApi(chain);
+  if (!resolved) {
+    return {
+      ok: false,
+      error: "모든 API 연결에 실패했습니다. 네트워크 연결 또는 self-hosted 노드 상태를 확인하세요.",
+    };
   }
+  return { ok: true, height: resolved.height, apiName: resolved.candidate.name };
 }
 
 export async function previewXpubAddresses(xpub: string, scriptType?: ScriptType): Promise<string[]> {
@@ -152,18 +188,21 @@ export async function validateXpub(xpub: string, scriptType?: ScriptType): Promi
 
 async function syncOneWallet(
   wallet: WalletEntry,
-  baseUrl: string,
+  mempoolApiUrl: string,
   gapLimit: number,
   includeUnconfirmed: boolean
 ): Promise<{ status: string; totalSats: number; error?: string }> {
   const cache = loadAddressCache();
   const prev = cache[wallet.id];
-  const hardCap = calculateWalletScanHardCap(prev, gapLimit);
+  const effectiveGapLimit = resolveEffectiveGapLimit(prev, gapLimit);
+  const hardCap = calculateWalletScanHardCap(prev, effectiveGapLimit);
+  const { buildMempoolApiChain } = await import("./wallet/mempoolClient");
+  const chain = buildMempoolApiChain(mempoolApiUrl);
 
   let result: ScanWalletResult | null = null;
   let selectedDescriptor = wallet.descriptor;
   for (const descriptor of candidateDescriptors(wallet.descriptor)) {
-    const next = await scanDescriptor(descriptor, baseUrl, gapLimit, hardCap, includeUnconfirmed);
+    const next = await scanDescriptorWithFailover(descriptor, chain, effectiveGapLimit, hardCap, includeUnconfirmed);
     result = next;
     selectedDescriptor = descriptor;
     if (next.balance.status === "offline") break;
@@ -261,15 +300,6 @@ async function runWalletSync(options: { force?: boolean } = {}): Promise<SyncOut
       aggregatedSats: 0,
     };
   }
-  if (!config.mempoolApiUrl.trim()) {
-    return {
-      ok: false,
-      reason: "no-url",
-      walletResults: [],
-      aggregatedSats: getAggregatedTotalSats().totalSats,
-    };
-  }
-
   lastSyncAttemptAt = now;
   const walletResults: SyncOutcome["walletResults"] = [];
 
