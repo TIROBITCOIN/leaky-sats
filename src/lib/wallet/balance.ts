@@ -25,6 +25,11 @@ export type WalletBalance = {
   status: WalletBalanceStatus;
   failedAddresses: number;
   fetchedAt: string;
+  scannedAddressCount?: number;
+  receiveLastUsed?: number;
+  changeLastUsed?: number;
+  stoppedReason?: string;
+  scriptType?: string;
 };
 
 export type AddressLookupResult =

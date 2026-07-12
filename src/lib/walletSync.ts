@@ -47,7 +47,7 @@ export function calculateWalletScanHardCap(prev: AddressCacheEntry | undefined, 
     const lastUsed = Math.max(prev.receiveLastUsed, prev.changeLastUsed);
     return Math.min(maxHardCap, Math.max(gapLimit + 1, lastUsed + 1 + gapLimit));
   }
-  return Math.min(maxHardCap, Math.max(gapLimit + 1, gapLimit * 2));
+  return maxHardCap;
 }
 
 function candidateDescriptors(descriptor: WalletDescriptor): WalletDescriptor[] {
@@ -179,12 +179,20 @@ async function syncOneWallet(
   // Persist online and partial balances. Partial is still a useful lower-bound balance
   // and lets the home card reflect discovered UTXOs while warning the user.
   if (result.balance.status !== "offline") {
-    const balances = loadLastBalances();
-    balances[wallet.id] = result.balance;
-    saveLastBalances(balances);
-
     const receive = result.chains.find((c) => c.chain === "receive");
     const change = result.chains.find((c) => c.chain === "change");
+    const savedBalance = {
+      ...result.balance,
+      scannedAddressCount: result.scannedAddresses.length,
+      receiveLastUsed: receive?.lastUsedIndex ?? -1,
+      changeLastUsed: change?.lastUsedIndex ?? -1,
+      stoppedReason: [...new Set(result.chains.map((c) => c.stoppedReason))].join("/"),
+      scriptType: selectedDescriptor.kind === "xpub" ? selectedDescriptor.scriptType : undefined,
+    };
+    const balances = loadLastBalances();
+    balances[wallet.id] = savedBalance;
+    saveLastBalances(balances);
+
     const nextCache = loadAddressCache();
     nextCache[wallet.id] = {
       receiveLastUsed: receive?.lastUsedIndex ?? -1,

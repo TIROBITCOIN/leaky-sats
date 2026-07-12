@@ -3,7 +3,7 @@ import { calculateWalletScanHardCap } from "./walletSync";
 
 describe("calculateWalletScanHardCap", () => {
   it("scans past the default gap so a used first xpub address can settle online", () => {
-    expect(calculateWalletScanHardCap(undefined, 200)).toBe(400);
+    expect(calculateWalletScanHardCap(undefined, 200)).toBe(2000);
   });
 
   it("keeps scanning through the last known used address plus the gap", () => {
