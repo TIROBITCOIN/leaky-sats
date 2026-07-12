@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   defaultWalletLabel,
   generateWalletId,
@@ -69,6 +69,7 @@ export default function WalletSyncSettings() {
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [testing, setTesting] = useState(false);
+  const autoCheckedUrlRef = useRef<string | null>(null);
 
   const [heldBtcInput, setHeldBtcInput] = useState(() => {
     const v = getHeldBtc();
@@ -120,6 +121,34 @@ export default function WalletSyncSettings() {
     }
   }, [refresh]);
 
+  useEffect(() => {
+    const url = config.mempoolApiUrl.trim();
+    if (!config.enabled || !url || autoCheckedUrlRef.current === url) return;
+    let cancelled = false;
+    autoCheckedUrlRef.current = url;
+
+    setConnectOk(false);
+    setConnectMsg("연결 확인 중…");
+    void (async () => {
+      const result = await testMempoolConnection(url);
+      if (cancelled) return;
+      if (result.ok) {
+        setConnectOk(true);
+        setConnectMsg(`연결 성공 · 블록 높이 ${result.height?.toLocaleString("en-US")}`);
+        if (config.wallets.length > 0) {
+          await runSyncNow();
+        }
+      } else {
+        setConnectOk(false);
+        setConnectMsg(result.error ?? "연결 실패");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [config.enabled, config.mempoolApiUrl, config.wallets.length, runSyncNow]);
+
   const setMode = (enabled: boolean) => {
     const next = {
       ...config,
@@ -161,6 +190,7 @@ export default function WalletSyncSettings() {
         enabled: config.enabled || config.wallets.length > 0,
         mempoolApiUrl: urlInput.trim(),
       };
+      autoCheckedUrlRef.current = next.mempoolApiUrl;
       persist(next);
       if (next.enabled && next.wallets.length > 0 && next.mempoolApiUrl) {
         await runSyncNow();

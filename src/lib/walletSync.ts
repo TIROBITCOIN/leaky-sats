@@ -10,6 +10,7 @@ import {
   saveAddressCache,
   saveLastBalances,
   satsToBtc,
+  type AddressCacheEntry,
   type WalletEntry,
 } from "./walletConfig";
 import { setHeldBtc } from "./heldBtc";
@@ -35,6 +36,15 @@ export type SyncOutcome = {
 
 export function isWalletSyncRunning(): boolean {
   return syncInProgress;
+}
+
+export function calculateWalletScanHardCap(prev: AddressCacheEntry | undefined, gapLimit: number): number {
+  const maxHardCap = 2000;
+  if (prev && (prev.receiveLastUsed >= 0 || prev.changeLastUsed >= 0)) {
+    const lastUsed = Math.max(prev.receiveLastUsed, prev.changeLastUsed);
+    return Math.min(maxHardCap, Math.max(gapLimit + 1, lastUsed + 1 + gapLimit));
+  }
+  return Math.min(maxHardCap, Math.max(gapLimit + 1, gapLimit * 2));
 }
 
 export async function testMempoolConnection(
@@ -109,10 +119,7 @@ async function syncOneWallet(
   const { scanWallet } = await import("./wallet/scan");
   const cache = loadAddressCache();
   const prev = cache[wallet.id];
-  const hardCap =
-    prev && (prev.receiveLastUsed >= 0 || prev.changeLastUsed >= 0)
-      ? Math.min(200, Math.max(prev.receiveLastUsed, prev.changeLastUsed) + 1 + gapLimit)
-      : 200;
+  const hardCap = calculateWalletScanHardCap(prev, gapLimit);
 
   const result = await scanWallet(wallet.descriptor, baseUrl, {
     gapLimit,
@@ -121,9 +128,9 @@ async function syncOneWallet(
     includeUnconfirmed,
   });
 
-  // Only persist balance when online (full success for that wallet's lookups).
-  // partial/offline keep previous lastBalance for that wallet.
-  if (result.balance.status === "online") {
+  // Persist online and partial balances. Partial is still a useful lower-bound balance
+  // and lets the home card reflect discovered UTXOs while warning the user.
+  if (result.balance.status !== "offline") {
     const balances = loadLastBalances();
     balances[wallet.id] = result.balance;
     saveLastBalances(balances);
@@ -146,7 +153,7 @@ async function syncOneWallet(
       result.balance.status === "online"
         ? undefined
         : result.balance.status === "partial"
-          ? "일부 주소 조회 실패"
+          ? "일부 주소 조회 실패 또는 추가 스캔 필요"
           : "조회 실패",
   };
 }
