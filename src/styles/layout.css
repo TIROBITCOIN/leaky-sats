@@ -389,6 +389,62 @@
   margin-top: 4px;
 }
 
+/* ---- Full-screen settings sub-modal (recurring rules / category manager) ----
+ * Portaled into .app-frame with position:absolute (not fixed) — same convention as the
+ * amount keypad (forms.css) — so it's contained by the phone-frame box on desktop and shares
+ * .app-frame's own stacking context, putting it unambiguously above the tab bar (z-index 6)
+ * without depending on ancestor stacking-context quirks. Body scroll lock (bodyScrollLock.ts)
+ * freezes .ldg-content behind it; overscroll-behavior:contain stops this modal's own scroll
+ * from chaining anywhere once it hits a boundary. */
+.ldg-fs-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  background: rgba(17, 17, 22, 0.45);
+}
+
+.ldg-fs-modal-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #ffffff;
+}
+
+.ldg-fs-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+  padding: calc(var(--safe-top) + 18px) 16px 14px;
+  border-bottom: 1px solid var(--ldg-border);
+}
+
+.ldg-fs-modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px;
+}
+
+.ldg-fs-modal-footer {
+  flex-shrink: 0;
+  padding: 12px 16px calc(var(--safe-bottom) + 12px);
+  border-top: 1px solid var(--ldg-border);
+}
+
+.ldg-fs-modal-footer .ldg-submit-btn {
+  width: 100%;
+}
+
+body.ldg-modal-open .ldg-content {
+  overflow: hidden !important;
+  touch-action: none;
+}
+
 /* ---- QR scanner (xpub watch-only import) ---- */
 .ldg-qr-scanner {
   gap: 10px;
