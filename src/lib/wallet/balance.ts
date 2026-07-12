@@ -21,7 +21,7 @@ export type WalletBalance = {
   confirmedSats: number;
   unconfirmedSats: number;
   totalSats: number;
-  utxoCount: number;
+  utxoCount: number | undefined;
   status: WalletBalanceStatus;
   failedAddresses: number;
   fetchedAt: string;
@@ -33,7 +33,14 @@ export type WalletBalance = {
 };
 
 export type AddressLookupResult =
-  | { ok: true; address: string; utxos: AddressUtxo[] }
+  | {
+      ok: true;
+      address: string;
+      confirmedSats: number;
+      unconfirmedSats: number;
+      /** Filled only when an /utxo lookup succeeded (esplora backend); null on electrum backends. */
+      utxos: AddressUtxo[] | null;
+    }
   | { ok: false; address: string; error: string };
 
 export function parseAddressUtxo(raw: unknown): AddressUtxo | null {
@@ -63,16 +70,23 @@ export function parseAddressUtxoArray(raw: unknown): AddressUtxo[] | null {
   return result;
 }
 
-/** Aggregate UTXOs from per-address lookups with outpoint de-duplication. */
+/**
+ * Aggregate per-address lookup results into a wallet balance.
+ * Sats are summed directly from each address's stats (not from utxo arrays), so this
+ * works whether the backend is esplora (utxo arrays present) or electrum (utxos: null).
+ * utxoCount is only computed when every successful lookup carries a utxo array.
+ */
 export function buildWalletBalance(
   lookups: AddressLookupResult[],
   options: { includeUnconfirmed?: boolean; fetchedAt?: string } = {}
 ): WalletBalance {
   const includeUnconfirmed = options.includeUnconfirmed ?? true;
   const outpointSeen = new Set<string>();
-  const utxos: WalletUtxo[] = [];
   let failedAddresses = 0;
   let successCount = 0;
+  let confirmedSats = 0;
+  let unconfirmedSats = 0;
+  let allHaveUtxos = true;
 
   for (const lookup of lookups) {
     if (!lookup.ok) {
@@ -80,26 +94,29 @@ export function buildWalletBalance(
       continue;
     }
     successCount += 1;
+    confirmedSats += lookup.confirmedSats;
+    unconfirmedSats += lookup.unconfirmedSats;
+
+    if (lookup.utxos === null) {
+      allHaveUtxos = false;
+      continue;
+    }
     for (const utxo of lookup.utxos) {
       if (!includeUnconfirmed && !utxo.confirmed) continue;
       const outpoint = `${utxo.txid}:${utxo.vout}`;
-      if (outpointSeen.has(outpoint)) continue;
       outpointSeen.add(outpoint);
-      utxos.push({ ...utxo, outpoint, address: lookup.address });
     }
   }
 
-  const confirmedSats = utxos.filter((u) => u.confirmed).reduce((s, u) => s + u.valueSats, 0);
-  const unconfirmedSats = utxos.filter((u) => !u.confirmed).reduce((s, u) => s + u.valueSats, 0);
-
+  const totalSats = confirmedSats + (includeUnconfirmed ? unconfirmedSats : 0);
   const status: WalletBalanceStatus =
     failedAddresses === 0 ? "online" : successCount === 0 ? "offline" : "partial";
 
   return {
     confirmedSats,
     unconfirmedSats,
-    totalSats: confirmedSats + unconfirmedSats,
-    utxoCount: utxos.length,
+    totalSats,
+    utxoCount: allHaveUtxos ? outpointSeen.size : undefined,
     status,
     failedAddresses,
     fetchedAt: options.fetchedAt ?? new Date().toISOString(),

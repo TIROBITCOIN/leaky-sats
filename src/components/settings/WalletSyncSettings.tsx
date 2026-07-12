@@ -460,7 +460,7 @@ export default function WalletSyncSettings() {
               self-hosted mempool API URL
             </div>
             <div className="ldg-setting-desc" style={{ marginBottom: 6 }}>
-              예: https://umbrel-eletrum.tailcb1ed9.ts.net/api 처럼 /api까지만 입력하세요.
+              예: https://your-node.your-tailnet.ts.net/api 처럼 /api까지만 입력하세요.
               /blocks/tip/height는 앱이 자동으로 붙입니다. 주소창은 되는데 앱만 실패하면 HTTPS/CORS 설정을 확인하세요.
             </div>
             <div className="ldg-wallet-name-form">

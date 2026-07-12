@@ -5,12 +5,10 @@ import {
   type AddressLookupResult,
   type AddressUtxo,
   buildWalletBalance,
-  parseAddressUtxoArray,
   type WalletBalance,
 } from "./balance";
 import {
   addressStatsUrl,
-  addressUtxosUrl,
   fetchMempoolJson,
   mapWithConcurrency,
   MEMPOOL_LOOKUP_CONCURRENCY,
@@ -48,9 +46,17 @@ export type ScanWalletResult = {
 
 type AddressActivity = {
   used: boolean;
+  confirmedSats: number;
+  unconfirmedSats: number;
   utxos: AddressUtxo[] | null;
   failed: boolean;
   error?: string;
+};
+
+export type AddressStatsSummary = {
+  confirmedSats: number;
+  unconfirmedSats: number;
+  used: boolean;
 };
 
 function sanitizeGapLimit(value: number): number {
@@ -67,28 +73,42 @@ function sanitizeHardCap(value: number): number {
   return value;
 }
 
+/**
+ * Looks up an address's activity via the /address/{addr} stats endpoint.
+ * Stats work on both esplora and electrum (romanz/electrs) mempool backends, unlike
+ * /address/{addr}/utxo which electrum backends don't implement (404). We therefore never
+ * call /utxo during a scan; utxoCount is simply left undefined for such backends.
+ */
 export async function lookupAddressActivity(
   baseUrl: string,
   address: string,
   fetchJson: (url: string) => Promise<unknown> = fetchMempoolJson
 ): Promise<AddressActivity> {
   try {
-    const utxoRaw = await fetchJson(addressUtxosUrl(baseUrl, address));
-    const utxos = parseAddressUtxoArray(utxoRaw);
-    if (utxos === null) {
-      return { used: false, utxos: null, failed: true, error: "invalid utxo payload" };
-    }
-    if (utxos.length > 0) {
-      return { used: true, utxos, failed: false };
-    }
-
-    // Balance 0 but history may still reset the gap.
     const statsRaw = await fetchJson(addressStatsUrl(baseUrl, address));
-    const used = addressHasHistory(statsRaw);
-    return { used, utxos, failed: false };
+    const summary = parseAddressStats(statsRaw);
+    if (summary === null) {
+      return {
+        used: false,
+        confirmedSats: 0,
+        unconfirmedSats: 0,
+        utxos: null,
+        failed: true,
+        error: "invalid stats payload",
+      };
+    }
+    return {
+      used: summary.used,
+      confirmedSats: summary.confirmedSats,
+      unconfirmedSats: summary.unconfirmedSats,
+      utxos: null,
+      failed: false,
+    };
   } catch (error) {
     return {
       used: false,
+      confirmedSats: 0,
+      unconfirmedSats: 0,
       utxos: null,
       failed: true,
       error: error instanceof Error ? error.message : String(error),
@@ -96,20 +116,32 @@ export async function lookupAddressActivity(
   }
 }
 
-export function addressHasHistory(statsRaw: unknown): boolean {
-  if (typeof statsRaw !== "object" || statsRaw === null) return false;
+export function parseAddressStats(statsRaw: unknown): AddressStatsSummary | null {
+  if (typeof statsRaw !== "object" || statsRaw === null) return null;
   const r = statsRaw as Record<string, unknown>;
   const chain =
     typeof r.chain_stats === "object" && r.chain_stats !== null
       ? (r.chain_stats as Record<string, unknown>)
-      : {};
+      : null;
   const mempool =
     typeof r.mempool_stats === "object" && r.mempool_stats !== null
       ? (r.mempool_stats as Record<string, unknown>)
-      : {};
-  const chainTx = typeof chain.tx_count === "number" ? chain.tx_count : 0;
-  const memTx = typeof mempool.tx_count === "number" ? mempool.tx_count : 0;
-  return chainTx + memTx > 0;
+      : null;
+  if (!chain && !mempool) return null;
+
+  const num = (obj: Record<string, unknown> | null, key: string) =>
+    obj && typeof obj[key] === "number" ? (obj[key] as number) : 0;
+
+  const chainTx = num(chain, "tx_count");
+  const memTx = num(mempool, "tx_count");
+  const confirmedSats = Math.max(0, num(chain, "funded_txo_sum") - num(chain, "spent_txo_sum"));
+  const unconfirmedSats = Math.max(0, num(mempool, "funded_txo_sum") - num(mempool, "spent_txo_sum"));
+
+  return {
+    confirmedSats,
+    unconfirmedSats,
+    used: chainTx + memTx > 0,
+  };
 }
 
 async function scanXpubChain(
@@ -150,7 +182,9 @@ async function scanXpubChain(
       return {
         ok: true as const,
         address: item.address,
-        utxos: activity.utxos ?? [],
+        confirmedSats: activity.confirmedSats,
+        unconfirmedSats: activity.unconfirmedSats,
+        utxos: activity.utxos,
         used: activity.used,
         index: item.index,
       };
@@ -163,7 +197,13 @@ async function scanXpubChain(
         // balance layer marks partial separately).
         consecutiveUnused += 1;
       } else {
-        lookups.push({ ok: true, address: row.address, utxos: row.utxos });
+        lookups.push({
+          ok: true,
+          address: row.address,
+          confirmedSats: row.confirmedSats,
+          unconfirmedSats: row.unconfirmedSats,
+          utxos: row.utxos,
+        });
         if (row.used) {
           lastUsedIndex = row.index;
           consecutiveUnused = 0;
@@ -215,10 +255,16 @@ export async function scanWallet(
 
     const lookups = await mapWithConcurrency(scannedAddresses, concurrency, async (item) => {
       const activity = await lookupAddressActivity(baseUrl, item.address, fetchJson);
-      if (activity.failed || activity.utxos === null) {
+      if (activity.failed) {
         return { ok: false as const, address: item.address, error: activity.error ?? "lookup failed" };
       }
-      return { ok: true as const, address: item.address, utxos: activity.utxos };
+      return {
+        ok: true as const,
+        address: item.address,
+        confirmedSats: activity.confirmedSats,
+        unconfirmedSats: activity.unconfirmedSats,
+        utxos: activity.utxos,
+      };
     });
 
     return {
