@@ -4,6 +4,7 @@ import { useLedger } from "../../state/LedgerContext";
 import { GROUP_LABEL, BUILT_IN_CATEGORIES } from "../../lib/categories";
 import { ICONS, ICONS_BY_ID } from "../../lib/categoryIcons";
 import { hexToRgba } from "../../lib/colorUtils";
+import FullScreenModal from "../common/FullScreenModal";
 
 const GROUP_ORDER: CategoryGroup[] = ["income", "expense", "invest"];
 // "투자"보다 사용자에게 익숙한 "BTC"로 섹션 제목만 다르게 보여준다(GROUP_LABEL은 다른 곳에서 그대로 재사용).
@@ -123,16 +124,18 @@ function CategoryManagerModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="ldg-modal-backdrop" role="dialog" aria-modal="true" aria-label="카테고리 관리" onClick={onClose}>
-      <div className="ldg-modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="ldg-card-head">
-          <div className="ldg-label">카테고리 관리</div>
-          {formMode === null && (
-            <button type="button" className="ldg-link" onClick={openAdd}>
-              + 새 카테고리
-            </button>
-          )}
-        </div>
+    <FullScreenModal
+      title="카테고리 관리"
+      onClose={onClose}
+      ariaLabel="카테고리 관리"
+      headerAction={
+        formMode === null ? (
+          <button type="button" className="ldg-link" onClick={openAdd}>
+            + 새 카테고리
+          </button>
+        ) : undefined
+      }
+    >
 
       {formMode && (
         <div className="ldg-cat-form">
@@ -248,14 +251,7 @@ function CategoryManagerModal({ onClose }: { onClose: () => void }) {
           )}
         </div>
       )}
-
-      <div className="ldg-modal-actions">
-        <button type="button" className="ldg-submit-btn secondary" onClick={onClose} style={{ gridColumn: "1 / -1" }}>
-          닫기
-        </button>
-      </div>
-      </div>
-    </div>
+    </FullScreenModal>
   );
 }
 
