@@ -63,6 +63,24 @@ function formatSyncOutcome(outcome: SyncOutcomeLike): string {
   return failed?.error ?? "동기화 실패";
 }
 
+function formatWalletScanMeta(balance: ReturnType<typeof loadLastBalances>[string] | undefined): string {
+  if (!balance) return "";
+  const parts: string[] = [];
+  if (balance.status === "partial") parts.push("부분 동기화");
+  if (balance.status === "offline") parts.push("조회 실패");
+  if (typeof balance.scannedAddressCount === "number") {
+    parts.push(`${balance.scannedAddressCount.toLocaleString("en-US")}개 주소 확인`);
+  }
+  if (typeof balance.receiveLastUsed === "number" && balance.receiveLastUsed >= 0) {
+    parts.push(`수신 ${balance.receiveLastUsed}번까지 사용`);
+  }
+  if (typeof balance.changeLastUsed === "number" && balance.changeLastUsed >= 0) {
+    parts.push(`거스름 ${balance.changeLastUsed}번까지 사용`);
+  }
+  if (balance.scriptType) parts.push(balance.scriptType);
+  return parts.join(" · ");
+}
+
 const compactBtnStyle: CSSProperties = {
   padding: "10px 12px",
   fontSize: 13,
@@ -485,6 +503,7 @@ export default function WalletSyncSettings() {
             )}
             {config.wallets.map((wallet) => {
               const bal = balances[wallet.id];
+              const scanMeta = formatWalletScanMeta(bal);
               if (editId === wallet.id) {
                 return (
                   <div key={wallet.id} className="ldg-cat-form" style={{ marginBottom: 8 }}>
@@ -533,6 +552,11 @@ export default function WalletSyncSettings() {
                         : ""}
                       {!wallet.includeInTotal ? " · 합산에서 제외" : ""}
                     </div>
+                    {scanMeta && (
+                      <div className="ldg-balance-sub" style={{ marginTop: 2 }}>
+                        {scanMeta}
+                      </div>
+                    )}
                   </div>
                   <div className="ldg-cat-manage-actions">
                     <div className="ldg-radio-group" style={{ flexShrink: 0 }}>
