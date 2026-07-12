@@ -9,11 +9,14 @@ import {
   notifyWalletSync,
   saveAddressCache,
   saveLastBalances,
+  saveWalletConfig,
   satsToBtc,
   type AddressCacheEntry,
   type WalletEntry,
 } from "./walletConfig";
 import { setHeldBtc } from "./heldBtc";
+import type { ScanWalletResult } from "./wallet/scan";
+import type { ScriptType, WalletDescriptor } from "./wallet/xpub";
 
 const THROTTLE_MS = 5 * 60 * 1000;
 
@@ -45,6 +48,43 @@ export function calculateWalletScanHardCap(prev: AddressCacheEntry | undefined, 
     return Math.min(maxHardCap, Math.max(gapLimit + 1, lastUsed + 1 + gapLimit));
   }
   return Math.min(maxHardCap, Math.max(gapLimit + 1, gapLimit * 2));
+}
+
+function candidateDescriptors(descriptor: WalletDescriptor): WalletDescriptor[] {
+  if (descriptor.kind !== "xpub" || descriptor.scriptType || !descriptor.xpub.startsWith("xpub")) {
+    return [descriptor];
+  }
+  return [
+    descriptor,
+    { ...descriptor, scriptType: "native-segwit" },
+    { ...descriptor, scriptType: "nested-segwit" },
+  ];
+}
+
+async function scanDescriptor(
+  descriptor: WalletDescriptor,
+  baseUrl: string,
+  gapLimit: number,
+  hardCap: number,
+  includeUnconfirmed: boolean
+): Promise<ScanWalletResult> {
+  const { scanWallet } = await import("./wallet/scan");
+  return scanWallet(descriptor, baseUrl, {
+    gapLimit,
+    hardCap,
+    batchSize: gapLimit,
+    includeUnconfirmed,
+  });
+}
+
+function rememberDetectedScriptType(walletId: string, scriptType: ScriptType | undefined): void {
+  if (!scriptType) return;
+  const config = loadWalletConfig();
+  const wallets = config.wallets.map((wallet) => {
+    if (wallet.id !== walletId || wallet.descriptor.kind !== "xpub") return wallet;
+    return { ...wallet, descriptor: { ...wallet.descriptor, scriptType } };
+  });
+  saveWalletConfig({ ...config, wallets });
 }
 
 export async function testMempoolConnection(
@@ -92,18 +132,18 @@ export async function testMempoolConnection(
   }
 }
 
-export async function previewXpubAddresses(xpub: string): Promise<string[]> {
+export async function previewXpubAddresses(xpub: string, scriptType?: ScriptType): Promise<string[]> {
   const { deriveAddresses } = await import("./wallet/xpub");
-  return deriveAddresses({ xpub: xpub.trim(), chain: "receive", startIndex: 0, limit: 3 }).map(
+  return deriveAddresses({ xpub: xpub.trim(), chain: "receive", startIndex: 0, limit: 3, scriptType }).map(
     (a) => a.address
   );
 }
 
-export async function validateXpub(xpub: string): Promise<{ ok: boolean; error?: string }> {
+export async function validateXpub(xpub: string, scriptType?: ScriptType): Promise<{ ok: boolean; error?: string }> {
   try {
     const { detectExtendedPublicKeyKind, deriveAddresses } = await import("./wallet/xpub");
     detectExtendedPublicKeyKind(xpub.trim());
-    deriveAddresses({ xpub: xpub.trim(), chain: "receive", startIndex: 0, limit: 1 });
+    deriveAddresses({ xpub: xpub.trim(), chain: "receive", startIndex: 0, limit: 1, scriptType });
     return { ok: true };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
@@ -116,17 +156,25 @@ async function syncOneWallet(
   gapLimit: number,
   includeUnconfirmed: boolean
 ): Promise<{ status: string; totalSats: number; error?: string }> {
-  const { scanWallet } = await import("./wallet/scan");
   const cache = loadAddressCache();
   const prev = cache[wallet.id];
   const hardCap = calculateWalletScanHardCap(prev, gapLimit);
 
-  const result = await scanWallet(wallet.descriptor, baseUrl, {
-    gapLimit,
-    hardCap,
-    batchSize: gapLimit,
-    includeUnconfirmed,
-  });
+  let result: ScanWalletResult | null = null;
+  let selectedDescriptor = wallet.descriptor;
+  for (const descriptor of candidateDescriptors(wallet.descriptor)) {
+    const next = await scanDescriptor(descriptor, baseUrl, gapLimit, hardCap, includeUnconfirmed);
+    result = next;
+    selectedDescriptor = descriptor;
+    if (next.balance.status === "offline") break;
+    if (next.balance.totalSats > 0 || descriptor.kind !== "xpub") {
+      break;
+    }
+  }
+
+  if (!result) {
+    throw new Error("지갑 스캔 실패");
+  }
 
   // Persist online and partial balances. Partial is still a useful lower-bound balance
   // and lets the home card reflect discovered UTXOs while warning the user.
@@ -144,6 +192,15 @@ async function syncOneWallet(
       updatedAt: new Date().toISOString(),
     };
     saveAddressCache(nextCache);
+    if (
+      selectedDescriptor.kind === "xpub" &&
+      wallet.descriptor.kind === "xpub" &&
+      selectedDescriptor.scriptType &&
+      selectedDescriptor.scriptType !== wallet.descriptor.scriptType &&
+      result.balance.totalSats > 0
+    ) {
+      rememberDetectedScriptType(wallet.id, selectedDescriptor.scriptType);
+    }
   }
 
   return {

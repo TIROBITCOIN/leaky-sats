@@ -13,14 +13,22 @@ import {
   type WalletSyncConfig,
   WALLET_LABEL_MAX,
 } from "../../lib/walletConfig";
-import type { WalletDescriptor } from "../../lib/wallet/xpub";
+import type { ScriptType, WalletDescriptor } from "../../lib/wallet/xpub";
 import type { QrWatchPayload } from "../../lib/wallet/qrParse";
+import { parseExtendedPublicKeyText } from "../../lib/wallet/qrParse";
 import { previewXpubAddresses, syncAllWallets, testMempoolConnection, validateXpub } from "../../lib/walletSync";
 import { getHeldBtc, normalizeHeldBtcInput, setHeldBtc } from "../../lib/heldBtc";
 import { fmtSats } from "../../lib/format";
 import QrScannerModal from "./QrScannerModal";
 
 type SyncOutcomeLike = Awaited<ReturnType<typeof syncAllWallets>>;
+
+function scriptTypeOriginPrefix(scriptType: ScriptType | undefined): string {
+  if (scriptType === "native-segwit") return "[84'/0'/0']";
+  if (scriptType === "nested-segwit") return "[49'/0'/0']";
+  if (scriptType === "legacy") return "[44'/0'/0']";
+  return "";
+}
 
 function statusDotColor(status: string): string {
   if (status === "online") return "var(--ldg-pos)";
@@ -82,6 +90,7 @@ export default function WalletSyncSettings() {
   const [addMode, setAddMode] = useState<"xpub" | "addresses">("xpub");
   const [addLabel, setAddLabel] = useState("");
   const [addXpub, setAddXpub] = useState("");
+  const [addScriptType, setAddScriptType] = useState<ScriptType | undefined>(undefined);
   const [addAddresses, setAddAddresses] = useState("");
   const [addPreview, setAddPreview] = useState<string[]>([]);
   const [addError, setAddError] = useState<string | null>(null);
@@ -206,6 +215,7 @@ export default function WalletSyncSettings() {
     setAddMode("xpub");
     setAddLabel(defaultWalletLabel(config.wallets.length));
     setAddXpub("");
+    setAddScriptType(undefined);
     setAddAddresses("");
     setAddPreview([]);
     setAddError(null);
@@ -216,6 +226,7 @@ export default function WalletSyncSettings() {
     setAddError(null);
     setAddPreview([]);
     setAddAddresses("");
+    setAddScriptType(undefined);
     setAddMode("xpub");
     setQrOpen(false);
   };
@@ -224,17 +235,21 @@ export default function WalletSyncSettings() {
     setAddMode("xpub");
     setAddAddresses("");
     setAddXpub(value);
+    setAddScriptType(undefined);
     setAddError(null);
     setAddPreview([]);
     const trimmed = value.trim();
     if (trimmed.length < 10) return;
-    const v = await validateXpub(trimmed);
+    const parsed = parseExtendedPublicKeyText(trimmed);
+    const xpub = parsed?.xpub ?? trimmed;
+    setAddScriptType(parsed?.scriptType);
+    const v = await validateXpub(xpub, parsed?.scriptType);
     if (!v.ok) {
       setAddError(v.error ?? "유효하지 않은 xpub");
       return;
     }
     try {
-      const preview = await previewXpubAddresses(trimmed);
+      const preview = await previewXpubAddresses(xpub, parsed?.scriptType);
       setAddPreview(preview);
     } catch (error) {
       setAddError(error instanceof Error ? error.message : String(error));
@@ -244,11 +259,13 @@ export default function WalletSyncSettings() {
   const handleQrScan = (payload: QrWatchPayload) => {
     setAddError(null);
     if (payload.kind === "xpub") {
-      void handleXpubChange(payload.xpub);
+      setAddScriptType(payload.scriptType);
+      void handleXpubChange(`${scriptTypeOriginPrefix(payload.scriptType)}${payload.xpub}`);
       return;
     }
     setAddMode("addresses");
     setAddXpub("");
+    setAddScriptType(undefined);
     setAddPreview([]);
     setAddAddresses(payload.addresses.join("\n"));
   };
@@ -259,12 +276,15 @@ export default function WalletSyncSettings() {
     try {
       let descriptor: WalletDescriptor;
       if (addMode === "xpub") {
-        const v = await validateXpub(addXpub);
+        const parsed = parseExtendedPublicKeyText(addXpub);
+        const xpub = parsed?.xpub ?? addXpub.trim();
+        const scriptType = parsed?.scriptType ?? addScriptType;
+        const v = await validateXpub(xpub, scriptType);
         if (!v.ok) {
           setAddError(v.error ?? "유효하지 않은 xpub");
           return;
         }
-        descriptor = { kind: "xpub", xpub: addXpub.trim() };
+        descriptor = { kind: "xpub", xpub, ...(scriptType ? { scriptType } : {}) };
       } else {
         const addresses = addAddresses
           .split(/[\n,]+/)

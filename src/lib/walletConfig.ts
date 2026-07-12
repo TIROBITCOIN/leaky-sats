@@ -229,7 +229,7 @@ export function notifyWalletSync(): void {
 
 /** Descriptor fingerprint for duplicate detection (never shown in UI). */
 export function descriptorFingerprint(descriptor: WalletDescriptor): string {
-  if (descriptor.kind === "xpub") return `xpub:${descriptor.xpub.trim()}`;
+  if (descriptor.kind === "xpub") return `xpub:${descriptor.scriptType ?? "auto"}:${descriptor.xpub.trim()}`;
   return `addr:${[...descriptor.addresses].map((a) => a.trim()).sort().join(",")}`;
 }
 
