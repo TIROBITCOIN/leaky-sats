@@ -20,6 +20,8 @@ import { getHeldBtc, normalizeHeldBtcInput, setHeldBtc } from "../../lib/heldBtc
 import { fmtSats } from "../../lib/format";
 import QrScannerModal from "./QrScannerModal";
 
+type SyncOutcomeLike = Awaited<ReturnType<typeof syncAllWallets>>;
+
 function statusDotColor(status: string): string {
   if (status === "online") return "var(--ldg-pos)";
   if (status === "partial") return "var(--ldg-orange)";
@@ -39,6 +41,18 @@ function formatSyncTime(iso: string | null): string {
   } catch {
     return "동기화 기록 없음";
   }
+}
+
+function formatSyncOutcome(outcome: SyncOutcomeLike): string {
+  if (outcome.ok) {
+    return `동기화 완료 · ${outcome.aggregatedSats.toLocaleString("en-US")} sats`;
+  }
+  if (outcome.skipped && outcome.reason === "already-running") return "이미 동기화 중입니다.";
+  if (outcome.skipped && outcome.reason === "throttled") return "방금 동기화했습니다.";
+  if (outcome.reason === "no-url") return "mempool API URL을 먼저 입력하세요.";
+  if (outcome.reason === "disabled-or-empty") return "동기화할 지갑이 없습니다.";
+  const failed = outcome.walletResults.find((r) => r.error);
+  return failed?.error ?? "동기화 실패";
 }
 
 const compactBtnStyle: CSSProperties = {
@@ -95,6 +109,17 @@ export default function WalletSyncSettings() {
     setConfig(next);
   };
 
+  const runSyncNow = useCallback(async () => {
+    setSyncing(true);
+    try {
+      const outcome = await syncAllWallets({ force: true });
+      setSyncMsg(formatSyncOutcome(outcome));
+    } finally {
+      setSyncing(false);
+      refresh();
+    }
+  }, [refresh]);
+
   const setMode = (enabled: boolean) => {
     const next = {
       ...config,
@@ -106,18 +131,21 @@ export default function WalletSyncSettings() {
     const v = getHeldBtc();
     setHeldBtcInput(v === 0 ? "" : String(v));
     if (enabled && next.wallets.length > 0 && next.mempoolApiUrl) {
-      void (async () => {
-        setSyncing(true);
-        await syncAllWallets({ force: true });
-        setSyncing(false);
-        refresh();
-      })();
+      void runSyncNow();
     }
   };
 
-  const saveUrl = () => {
-    persist({ ...config, mempoolApiUrl: urlInput.trim() });
+  const saveUrl = async () => {
+    const next = {
+      ...config,
+      enabled: config.enabled || config.wallets.length > 0,
+      mempoolApiUrl: urlInput.trim(),
+    };
+    persist(next);
     setConnectMsg(null);
+    if (next.enabled && next.wallets.length > 0 && next.mempoolApiUrl) {
+      await runSyncNow();
+    }
   };
 
   const handleTest = async () => {
@@ -128,7 +156,15 @@ export default function WalletSyncSettings() {
     if (result.ok) {
       setConnectOk(true);
       setConnectMsg(`연결 성공 · 블록 높이 ${result.height?.toLocaleString("en-US")}`);
-      persist({ ...config, mempoolApiUrl: urlInput.trim() });
+      const next = {
+        ...config,
+        enabled: config.enabled || config.wallets.length > 0,
+        mempoolApiUrl: urlInput.trim(),
+      };
+      persist(next);
+      if (next.enabled && next.wallets.length > 0 && next.mempoolApiUrl) {
+        await runSyncNow();
+      }
     } else {
       setConnectOk(false);
       setConnectMsg(result.error ?? "연결 실패");
@@ -226,6 +262,7 @@ export default function WalletSyncSettings() {
       };
       const next = {
         ...config,
+        enabled: config.enabled || Boolean(urlInput.trim() || config.mempoolApiUrl),
         wallets: [...config.wallets, entry],
         mempoolApiUrl: urlInput.trim() || config.mempoolApiUrl,
       };
@@ -233,10 +270,7 @@ export default function WalletSyncSettings() {
       closeAdd();
 
       if (next.enabled && next.mempoolApiUrl) {
-        setSyncing(true);
-        await syncAllWallets({ force: true });
-        setSyncing(false);
-        refresh();
+        await runSyncNow();
       }
     } finally {
       setAddBusy(false);
@@ -371,7 +405,7 @@ export default function WalletSyncSettings() {
                 autoComplete="off"
               />
               <div className="ldg-wallet-name-btns">
-                <button type="button" className="ldg-submit-btn" style={compactBtnStyle} onClick={saveUrl}>
+                <button type="button" className="ldg-submit-btn" style={compactBtnStyle} onClick={() => void saveUrl()}>
                   URL 저장
                 </button>
                 <button
