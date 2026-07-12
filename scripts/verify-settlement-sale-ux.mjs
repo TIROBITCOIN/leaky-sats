@@ -115,7 +115,12 @@ assert.equal(
 const settingsSrc = read("src/components/settings/SettingsPage.tsx");
 assert.match(settingsSrc, /settlementDay/, "SettingsPage has settlement day setting");
 assert.match(settingsSrc, /Array\.from\(\{ length: 31 \}/, "SettingsPage offers settlement days through the 31st");
-assert.match(settingsSrc, /examplePeriod|formatFullDate/, "SettingsPage explains settlement date examples");
+assert.match(
+  settingsSrc,
+  /매월 선택한 날짜부터 다음 달 전날까지를 한 정산기간으로 계산합니다/,
+  "SettingsPage explains the settlement period rule"
+);
+assert.match(settingsSrc, /currentPeriod\.rangeLabel/, "SettingsPage shows the current settlement period range");
 
 // 6. HomePage媛 ?뺤궛湲곌컙 rangeLabel???쒖떆
 const homePageSrc = read("src/components/home/HomePage.tsx");

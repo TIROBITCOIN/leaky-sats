@@ -25,8 +25,8 @@ self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
 
-// Forcing an in-page client.navigate() here used to race the app's own React mount (e.g. the
-// PIN lock screen rendering its keypad) with a SW-driven top-level navigation, leaving a
+// A forced in-page client navigation here used to race the app's own React mount (e.g. the
+// PIN lock screen rendering its keypad) with an SW-driven top-level navigation, leaving a
 // painted-but-inert UI. The single reload path is now the controllerchange listener in
 // registerServiceWorker.ts, which is lock-aware via reloadGate.ts.
 self.addEventListener("activate", (event) => {

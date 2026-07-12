@@ -68,17 +68,19 @@ assert.match(register, /updateViaCache:\s*"none"/, "service worker registration 
 // Client auto-reloads when a new service worker takes control, and polls for updates so an
 // already-open (installed) session picks up new deploys.
 assert.match(register, /controllerchange/, "client reloads when a new service worker takes control");
-assert.match(register, /requestReloadAfterSellSave/, "client defers service worker reloads while a sell save is in progress");
+assert.match(register, /requestReload\(\)/, "client defers the reload via the lock/save-aware reload gate");
 assert.match(register, /registration\.update\(\)/, "client polls for service worker updates");
 
-const saveInProgressPath = join(root, "src", "lib", "sellSaveInProgress.ts");
-assert.equal(existsSync(saveInProgressPath), true, "sell save-in-progress helper exists");
-const saveInProgress = readFileSync(saveInProgressPath, "utf8");
-assert.match(saveInProgress, /__ldgSaveInProgress/, "save helper uses a global save-in-progress flag");
-assert.match(saveInProgress, /__ldgPendingReloadAfterSave/, "save helper tracks a deferred reload");
-assert.match(saveInProgress, /setSellSaveInProgress/, "save helper exports a setter");
-assert.match(saveInProgress, /requestReloadAfterSellSave/, "save helper exports a deferred reload requester");
-assert.match(saveInProgress, /window\.location\.reload\(\)/, "save helper performs the deferred reload");
+// requestReload() defers while a sell save is in-flight or the PIN lock screen is showing
+// (see AppLockGate.tsx / SellConfirmModal.tsx), instead of the old sell-save-only helper.
+const reloadGatePath = join(root, "src", "lib", "reloadGate.ts");
+assert.equal(existsSync(reloadGatePath), true, "reload gate helper exists");
+const reloadGate = readFileSync(reloadGatePath, "utf8");
+assert.match(reloadGate, /__ldgReloadBlockers/, "reload gate uses a global named-blocker set");
+assert.match(reloadGate, /__ldgPendingReload/, "reload gate tracks a deferred reload");
+assert.match(reloadGate, /export function setReloadBlocked/, "reload gate exports a blocker setter");
+assert.match(reloadGate, /export function requestReload/, "reload gate exports a deferred reload requester");
+assert.match(reloadGate, /window\.location\.reload\(\)/, "reload gate performs the deferred reload");
 
 assert.equal(existsSync(installPromptPath), true, "install prompt component exists");
 assert.equal(existsSync(offlineBadgePath), true, "offline badge component exists");

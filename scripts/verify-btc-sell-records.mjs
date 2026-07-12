@@ -89,8 +89,8 @@ assert.match(modalSrc, /btcSold:\s*btcSpentFromWallet/, "modal saves measured BT
 assert.match(modalSrc, /const \[isSaving,\s*setIsSaving\]\s*=\s*useState\(false\)/, "modal tracks an isSaving state");
 assert.match(modalSrc, /savingRef/, "modal uses a synchronous saving ref to block rapid duplicate submits");
 assert.match(modalSrc, /if \(savingRef\.current\) return;/, "handleSave returns immediately while a save is already running");
-assert.match(modalSrc, /setSellSaveInProgress\(true\)/, "handleSave raises the global save-in-progress flag");
-assert.match(modalSrc, /setSellSaveInProgress\(false\)/, "handleSave clears the global save-in-progress flag");
+assert.match(modalSrc, /setReloadBlocked\("sell-save",\s*true\)/, "handleSave raises the sell-save reload blocker");
+assert.match(modalSrc, /setReloadBlocked\("sell-save",\s*false\)/, "handleSave clears the sell-save reload blocker");
 assert.match(modalSrc, /disabled=\{overHeld \|\| isSaving\}/, "save button is disabled while saving");
 assert.match(modalSrc, /\{isSaving \? "저장 중\.\.\." : isEdit \? "수정 완료" : "판매 확정"\}/, "save button shows loading copy while saving");
 assert.match(modalSrc, /btcKrwAtSell:\s*effective/, "btcKrwAtSell stores the effective sell price");
