@@ -14,7 +14,7 @@ https://<your-node>.ts.net/api
 예:
 
 ```text
-https://umbrel-eletrum.tailcb1ed9.ts.net/api
+https://your-node.your-tailnet.ts.net/api
 ```
 
 넣지 않는 것:
