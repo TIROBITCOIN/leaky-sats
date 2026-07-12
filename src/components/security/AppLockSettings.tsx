@@ -161,10 +161,6 @@ export default function AppLockSettings() {
       )}
 
       {message ? <div className="ldg-security-status">{message}</div> : null}
-      <div className="ldg-lock-note">
-        PIN은 평문으로 저장하지 않고 salt/hash만 저장합니다. 다만 DevTools나 기기 탈취까지 막는 강한
-        인증은 아닙니다. PIN을 잊으면 백업 없이 데이터를 복구하기 어렵습니다.
-      </div>
     </div>
   );
 }

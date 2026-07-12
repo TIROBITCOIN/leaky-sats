@@ -67,7 +67,7 @@ function CategoryRow({ c, onEdit, onDelete }: { c: CategoryDef; onEdit: () => vo
   );
 }
 
-export default function CategoryManager() {
+function CategoryManagerModal({ onClose }: { onClose: () => void }) {
   const { categories, data, addCategory, updateCategory, deleteCategory } = useLedger();
   const [formMode, setFormMode] = useState<FormMode | null>(null);
   const [formLabel, setFormLabel] = useState("");
@@ -123,15 +123,16 @@ export default function CategoryManager() {
   };
 
   return (
-    <div className="ldg-card">
-      <div className="ldg-card-head">
-        <div className="ldg-label">카테고리 관리</div>
-        {formMode === null && (
-          <button type="button" className="ldg-link" onClick={openAdd}>
-            + 새 카테고리
-          </button>
-        )}
-      </div>
+    <div className="ldg-modal-backdrop" role="dialog" aria-modal="true" aria-label="카테고리 관리" onClick={onClose}>
+      <div className="ldg-modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="ldg-card-head">
+          <div className="ldg-label">카테고리 관리</div>
+          {formMode === null && (
+            <button type="button" className="ldg-link" onClick={openAdd}>
+              + 새 카테고리
+            </button>
+          )}
+        </div>
 
       {formMode && (
         <div className="ldg-cat-form">
@@ -247,6 +248,38 @@ export default function CategoryManager() {
           )}
         </div>
       )}
+
+      <div className="ldg-modal-actions">
+        <button type="button" className="ldg-submit-btn secondary" onClick={onClose} style={{ gridColumn: "1 / -1" }}>
+          닫기
+        </button>
+      </div>
+      </div>
+    </div>
+  );
+}
+
+export default function CategoryManager() {
+  const { categories } = useLedger();
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="ldg-card">
+      <button
+        type="button"
+        className="ldg-setting-row"
+        style={{ width: "100%", background: "transparent", border: 0, cursor: "pointer", textAlign: "left" }}
+        onClick={() => setOpen(true)}
+      >
+        <div className="ldg-setting-label">카테고리 관리</div>
+        <div className="ldg-setting-desc" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          {categories.length}개
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 18l6-6-6-6" />
+          </svg>
+        </div>
+      </button>
+      {open && <CategoryManagerModal onClose={() => setOpen(false)} />}
     </div>
   );
 }

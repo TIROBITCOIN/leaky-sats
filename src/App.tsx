@@ -14,6 +14,7 @@ import OfflineBadge from "./components/pwa/OfflineBadge";
 import InstallPrompt from "./components/pwa/InstallPrompt";
 import AppLockGate from "./components/security/AppLockGate";
 import OnboardingPrompt, { isOnboardingVisible } from "./components/onboarding/OnboardingPrompt";
+import { useWalletAutoSync } from "./lib/useWalletAutoSync";
 
 function AppRoutes() {
   const location = useLocation();
@@ -37,6 +38,7 @@ function AppRoutes() {
 
 export default function App() {
   const [showOnboarding, setShowOnboarding] = useState(isOnboardingVisible);
+  useWalletAutoSync();
 
   return (
     <LedgerProvider>

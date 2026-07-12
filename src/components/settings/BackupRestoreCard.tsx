@@ -156,8 +156,7 @@ export default function BackupRestoreCard() {
         백업 / 복원
       </div>
       <div className="ldg-page-sub" style={{ marginBottom: 12 }}>
-        localStorage 전용 앱이라 브라우저 데이터 삭제나 기기 변경 전에 백업이 필요합니다. 시드, 개인키, API
-        키는 저장하지 않습니다. 지갑 동기화를 쓰면 와치온리 xpub/주소가 백업에 포함될 수 있습니다.
+        백업 시 등록된 공개키가 포함될 수 있습니다.
       </div>
       <div className="ldg-backup-status idle" style={{ marginBottom: 12 }}>
         마지막 백업: {formatLastBackupAt(lastBackupAt)}
@@ -169,10 +168,10 @@ export default function BackupRestoreCard() {
       )}
       <div className="ldg-backup-actions">
         <button className="ldg-submit-btn" type="button" onClick={handleDownload}>
-          백업 파일 다운로드
+          백업
         </button>
         <button className="ldg-submit-btn secondary" type="button" onClick={() => inputRef.current?.click()}>
-          백업 파일에서 복원
+          복구
         </button>
       </div>
       <div className="ldg-setting-desc" style={{ marginTop: 12 }}>

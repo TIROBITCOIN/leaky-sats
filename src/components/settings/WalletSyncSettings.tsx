@@ -57,28 +57,9 @@ function formatSyncOutcome(outcome: SyncOutcomeLike): string {
   }
   if (outcome.skipped && outcome.reason === "already-running") return "이미 동기화 중입니다.";
   if (outcome.skipped && outcome.reason === "throttled") return "방금 동기화했습니다.";
-  if (outcome.reason === "no-url") return "mempool API URL을 먼저 입력하세요.";
   if (outcome.reason === "disabled-or-empty") return "동기화할 지갑이 없습니다.";
   const failed = outcome.walletResults.find((r) => r.error);
   return failed?.error ?? "동기화 실패";
-}
-
-function formatWalletScanMeta(balance: ReturnType<typeof loadLastBalances>[string] | undefined): string {
-  if (!balance) return "";
-  const parts: string[] = [];
-  if (balance.status === "partial") parts.push("부분 동기화");
-  if (balance.status === "offline") parts.push("조회 실패");
-  if (typeof balance.scannedAddressCount === "number") {
-    parts.push(`${balance.scannedAddressCount.toLocaleString("en-US")}개 주소 확인`);
-  }
-  if (typeof balance.receiveLastUsed === "number" && balance.receiveLastUsed >= 0) {
-    parts.push(`수신 ${balance.receiveLastUsed}번까지 사용`);
-  }
-  if (typeof balance.changeLastUsed === "number" && balance.changeLastUsed >= 0) {
-    parts.push(`거스름 ${balance.changeLastUsed}번까지 사용`);
-  }
-  if (balance.scriptType) parts.push(balance.scriptType);
-  return parts.join(" · ");
 }
 
 const compactBtnStyle: CSSProperties = {
@@ -150,7 +131,7 @@ export default function WalletSyncSettings() {
 
   useEffect(() => {
     const url = config.mempoolApiUrl.trim();
-    if (!config.enabled || !url || autoCheckedUrlRef.current === url) return;
+    if (!config.enabled || autoCheckedUrlRef.current === url) return;
     let cancelled = false;
     autoCheckedUrlRef.current = url;
 
@@ -161,7 +142,7 @@ export default function WalletSyncSettings() {
       if (cancelled) return;
       if (result.ok) {
         setConnectOk(true);
-        setConnectMsg(`연결 성공 · 블록 높이 ${result.height?.toLocaleString("en-US")}`);
+        setConnectMsg(`연결 성공 · ${result.apiName} · 블록 높이 ${result.height?.toLocaleString("en-US")}`);
         if (config.wallets.length > 0) {
           await runSyncNow();
         }
@@ -186,7 +167,7 @@ export default function WalletSyncSettings() {
     setSyncMsg(null);
     const v = getHeldBtc();
     setHeldBtcInput(v === 0 ? "" : String(v));
-    if (enabled && next.wallets.length > 0 && next.mempoolApiUrl) {
+    if (enabled && next.wallets.length > 0) {
       void runSyncNow();
     }
   };
@@ -199,7 +180,7 @@ export default function WalletSyncSettings() {
     };
     persist(next);
     setConnectMsg(null);
-    if (next.enabled && next.wallets.length > 0 && next.mempoolApiUrl) {
+    if (next.enabled && next.wallets.length > 0) {
       await runSyncNow();
     }
   };
@@ -211,7 +192,7 @@ export default function WalletSyncSettings() {
     setTesting(false);
     if (result.ok) {
       setConnectOk(true);
-      setConnectMsg(`연결 성공 · 블록 높이 ${result.height?.toLocaleString("en-US")}`);
+      setConnectMsg(`연결 성공 · ${result.apiName} · 블록 높이 ${result.height?.toLocaleString("en-US")}`);
       const next = {
         ...config,
         enabled: config.enabled || config.wallets.length > 0,
@@ -219,7 +200,7 @@ export default function WalletSyncSettings() {
       };
       autoCheckedUrlRef.current = next.mempoolApiUrl;
       persist(next);
-      if (next.enabled && next.wallets.length > 0 && next.mempoolApiUrl) {
+      if (next.enabled && next.wallets.length > 0) {
         await runSyncNow();
       }
     } else {
@@ -337,7 +318,7 @@ export default function WalletSyncSettings() {
       persist(next);
       closeAdd();
 
-      if (next.enabled && next.mempoolApiUrl) {
+      if (next.enabled) {
         await runSyncNow();
       }
     } finally {
@@ -398,10 +379,6 @@ export default function WalletSyncSettings() {
   return (
     <div className="ldg-card">
       <div className="ldg-setting-label">지갑 동기화</div>
-      <div className="ldg-setting-desc" style={{ marginBottom: 10 }}>
-        내 노드의 self-hosted mempool API와 와치온리 공개키를 연결해 온체인 잔액을 조회합니다.
-        노드 연결이 번거로우면 수동으로 보유 BTC를 입력할 수 있습니다.
-      </div>
 
       <div className="ldg-setting-row">
         <div>
@@ -457,11 +434,7 @@ export default function WalletSyncSettings() {
         <>
           <div style={{ marginTop: 12 }}>
             <div className="ldg-label" style={{ marginBottom: 6 }}>
-              self-hosted mempool API URL
-            </div>
-            <div className="ldg-setting-desc" style={{ marginBottom: 6 }}>
-              예: https://your-node.your-tailnet.ts.net/api 처럼 /api까지만 입력하세요.
-              /blocks/tip/height는 앱이 자동으로 붙입니다. 주소창은 되는데 앱만 실패하면 HTTPS/CORS 설정을 확인하세요.
+              고급: self-hosted mempool API URL (선택)
             </div>
             <div className="ldg-wallet-name-form">
               <input
@@ -469,7 +442,7 @@ export default function WalletSyncSettings() {
                 type="url"
                 value={urlInput}
                 onChange={(e) => setUrlInput(e.target.value)}
-                placeholder="https://…/api"
+                placeholder="비워두면 공개 API 자동 사용 (mempool.space → blockstream)"
                 autoComplete="off"
               />
               <div className="ldg-wallet-name-btns">
@@ -503,7 +476,6 @@ export default function WalletSyncSettings() {
             )}
             {config.wallets.map((wallet) => {
               const bal = balances[wallet.id];
-              const scanMeta = formatWalletScanMeta(bal);
               if (editId === wallet.id) {
                 return (
                   <div key={wallet.id} className="ldg-cat-form" style={{ marginBottom: 8 }}>
@@ -547,16 +519,7 @@ export default function WalletSyncSettings() {
                       {bal ? fmtSats(bal.totalSats) : "—"}
                       {" · "}
                       {formatSyncTime(bal?.fetchedAt ?? null)}
-                      {bal && bal.unconfirmedSats > 0
-                        ? ` · ⏳ +${bal.unconfirmedSats.toLocaleString("en-US")}`
-                        : ""}
-                      {!wallet.includeInTotal ? " · 합산에서 제외" : ""}
                     </div>
-                    {scanMeta && (
-                      <div className="ldg-balance-sub" style={{ marginTop: 2 }}>
-                        {scanMeta}
-                      </div>
-                    )}
                   </div>
                   <div className="ldg-cat-manage-actions">
                     <div className="ldg-radio-group" style={{ flexShrink: 0 }}>

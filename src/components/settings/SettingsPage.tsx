@@ -24,10 +24,6 @@ import { APP_META } from "../../constants/appMeta";
 const UNITS = ["BTC", "sats"] as const;
 const SETTLEMENT_DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 
-function formatFullDate(dateKeyStr: string): string {
-  const [y, m, d] = dateKeyStr.split("-").map(Number);
-  return `${y}년 ${m}월 ${d}일`;
-}
 export default function SettingsPage() {
   const {
     currency,
@@ -57,8 +53,6 @@ export default function SettingsPage() {
 
   const currentMonthKey = getCurrentMonthKey();
   const currentPeriod = getSettlementPeriod(currentMonthKey, settlementDay);
-  const examplePeriod = getSettlementPeriod(currentMonthKey, 17);
-  const [exampleY, exampleM] = currentMonthKey.split("-").map(Number);
 
   const priceTone = getPriceTone(priceStatus, isPriceFallback, isPriceStale);
   const updatedAtText = formatUpdatedAt(priceUpdatedAt);
@@ -77,15 +71,12 @@ export default function SettingsPage() {
     <div className="ldg-screen">
       <div className="ldg-content">
         <div className="ldg-page-title">설정</div>
-        <div className="ldg-page-sub">표시 방식, 시세, 카테고리, 백업, 로컬 잠금을 관리합니다.</div>
 
         <div className="ldg-card">
           <div className="ldg-setting-row">
             <div>
               <div className="ldg-setting-label">도움말 / 사용법</div>
-              <div className="ldg-setting-desc">
-                거래 입력, 백업, self-hosted 지갑 동기화, mempool 연결 문제를 처음 쓰는 사람 기준으로 설명합니다.
-              </div>
+              <div className="ldg-setting-desc">앱 사용법을 간단히 정리했습니다.</div>
             </div>
             <Link className="ldg-link" to="/help">
               열기
@@ -204,11 +195,6 @@ export default function SettingsPage() {
           <div className="ldg-setting-label">정산 기준일</div>
           <div className="ldg-setting-desc" style={{ marginBottom: 10 }}>
             매월 선택한 날짜부터 다음 달 전날까지를 한 정산기간으로 계산합니다.
-            <br />
-            29~31일은 해당 월에 그 날짜가 없으면 말일로 처리됩니다.
-            <br />
-            예: 정산 기준일이 17일이면, {exampleY}년 {exampleM}월 정산기간은 {formatFullDate(examplePeriod.startDate)} ~{" "}
-            {formatFullDate(examplePeriod.endDate)}입니다.
           </div>
           <select
             className="ldg-select"
@@ -225,7 +211,7 @@ export default function SettingsPage() {
             ))}
           </select>
           <div className="ldg-balance-sub" style={{ marginTop: 8 }}>
-            현재 정산기간: {currentPeriod.rangeLabel} ({currentPeriod.label})
+            현재 정산기간: {currentPeriod.rangeLabel}
           </div>
         </div>
 

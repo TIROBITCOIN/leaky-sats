@@ -98,3 +98,74 @@ export function isRetryableMempoolError(error: unknown): boolean {
   }
   return /timeout|network|fetch failed|ECONN|ENOTFOUND|EAI_AGAIN|ETIMEDOUT/i.test(error.message);
 }
+
+/**
+ * Public API failover chain: a saved self-hosted URL (if any) is always tried first, so
+ * existing self-hosted users keep their current behavior unchanged; mempool.space and
+ * blockstream.info are the built-in fallback for everyone else (no node required).
+ */
+export type MempoolApiCandidate = { name: string; baseUrl: string };
+
+export const PUBLIC_MEMPOOL_API_CANDIDATES: MempoolApiCandidate[] = [
+  { name: "mempool.space", baseUrl: "https://mempool.space/api" },
+  { name: "blockstream.info", baseUrl: "https://blockstream.info/api" },
+];
+
+export const MEMPOOL_API_DEAD_MARK_MS = 60_000;
+
+const deadUntilByBaseUrl = new Map<string, number>();
+
+/** Marks a base URL as dead for MEMPOOL_API_DEAD_MARK_MS so the chain skips it meanwhile. */
+export function markMempoolApiDead(baseUrl: string): void {
+  deadUntilByBaseUrl.set(baseUrl, Date.now() + MEMPOOL_API_DEAD_MARK_MS);
+}
+
+export function isMempoolApiDead(baseUrl: string): boolean {
+  const deadUntil = deadUntilByBaseUrl.get(baseUrl);
+  return typeof deadUntil === "number" && Date.now() < deadUntil;
+}
+
+/** Clears dead-marking for one URL, or every URL when called with no argument. */
+export function clearMempoolApiHealth(baseUrl?: string): void {
+  if (baseUrl) deadUntilByBaseUrl.delete(baseUrl);
+  else deadUntilByBaseUrl.clear();
+}
+
+export function buildMempoolApiChain(customBaseUrl: string | undefined | null): MempoolApiCandidate[] {
+  const trimmed = customBaseUrl?.trim();
+  const chain: MempoolApiCandidate[] = [];
+  if (trimmed) {
+    chain.push({ name: "self-hosted", baseUrl: normalizeMempoolBaseUrl(trimmed) });
+  }
+  for (const candidate of PUBLIC_MEMPOOL_API_CANDIDATES) {
+    if (!chain.some((c) => c.baseUrl === candidate.baseUrl)) chain.push(candidate);
+  }
+  return chain;
+}
+
+/**
+ * Tries each candidate in chain order (skipping ones currently marked dead), stopping at the
+ * first that answers a tip-height health check. Marks failing candidates dead. Returns null if
+ * every candidate fails.
+ */
+export async function resolveHealthyMempoolApi(
+  chain: MempoolApiCandidate[],
+  checkTipHeight: (baseUrl: string) => Promise<number> = async (baseUrl) => {
+    const raw = await fetchMempoolJson(tipHeightUrl(baseUrl));
+    const height = typeof raw === "number" ? raw : Number(raw);
+    if (!Number.isFinite(height)) throw new Error("invalid tip height response");
+    return height;
+  }
+): Promise<{ candidate: MempoolApiCandidate; height: number } | null> {
+  for (const candidate of chain) {
+    if (isMempoolApiDead(candidate.baseUrl)) continue;
+    try {
+      const height = await checkTipHeight(candidate.baseUrl);
+      clearMempoolApiHealth(candidate.baseUrl);
+      return { candidate, height };
+    } catch (error) {
+      markMempoolApiDead(candidate.baseUrl);
+    }
+  }
+  return null;
+}

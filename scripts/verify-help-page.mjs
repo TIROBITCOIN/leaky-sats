@@ -17,24 +17,26 @@ assert.match(settings, /to="\/help"/, "Settings links to /help");
 assert.match(settings, /도움말 \/ 사용법/, "Settings shows help entry");
 assert.doesNotMatch(tabbar, /\/help/, "bottom tab bar does not add a help tab");
 
+// Help page was condensed from 10 long sections to 3 short ones: a must-remember callout,
+// a numbered usage list, and a short reference list.
 const expectedHelpCopy = [
-  "이 앱은 거래소 앱이 아닙니다.",
-  "실제 비트코인을 사고팔지 않습니다.",
-  "데이터는 내 브라우저에 저장됩니다.",
-  "백업하지 않으면 데이터가 사라질 수 있습니다.",
-  "암호화 백업 비밀번호를 잊으면 복원이 어렵습니다.",
-  "은행이나 거래소와 자동으로 연결되는 앱이 아니며",
-  "서버 계정, 로그인, 클라우드 동기화가 아니기 때문에",
-  "기준일이 17일이면 6월 17일부터 7월 16일까지",
-  "시세 지연은 앱 고장이 아니라",
-  "임시 Vercel deployment URL로 QR 코드를 만드는 것",
+  "꼭 기억할 것",
+  "이 앱은 가계부입니다. 실제 비트코인을 사고팔지 않습니다.",
+  "데이터는 이 기기 브라우저에만 저장됩니다. 백업 없이 삭제하면 복구할 수 없습니다.",
+  "암호화 백업 비밀번호를 잊으면 복원할 수 없습니다.",
+  "설정에서 보유 BTC 입력 또는 공개키(xpub) 등록",
+  "정산 기준일 설정",
+  "수입/지출 입력, 반복 항목 등록",
+  "정기적으로 백업",
+  "정산기간: 기준일부터 다음 달 전날까지가 한 달입니다.",
+  "판매해야 하는 비트코인",
+  "시세가 지연되면 김프 계산이 잠시 보류될 수 있습니다.",
 ];
 
 for (const text of expectedHelpCopy) {
   assert.match(help, new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `Help copy includes: ${text}`);
 }
 
-assert.match(help, /HELP_SECTIONS/, "Help page keeps sections data-driven");
 assert.match(help, /설정으로 돌아가기/, "Help page links back to settings");
 assert.match(css, /\.ldg-help-important/, "Help page important callout style exists");
 assert.match(css, /\.ldg-help-section/, "Help page section style exists");

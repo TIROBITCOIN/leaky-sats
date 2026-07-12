@@ -53,7 +53,7 @@ export default function BalanceCard({
       onClick={() => {
         if (showSync) setOpen((v) => !v);
       }}
-      style={showSync ? { cursor: "pointer" } : undefined}
+      style={{ position: "relative", cursor: showSync ? "pointer" : undefined }}
     >
       <div className="ldg-label">
         보유 BTC
@@ -62,11 +62,17 @@ export default function BalanceCard({
       <div className="ldg-balance-main">{fmtBtcValue(heldBtc, unit)}</div>
       <div className="ldg-balance-sub">{fmtBtcValue(heldBtc, otherUnit)}</div>
       {showSync && (
-        <div className="ldg-balance-sub" style={{ marginTop: 4 }}>
-          지갑 {syncMeta.walletCount}개 · {syncMeta.lastSyncLabel}
-          {syncMeta.warning ? ` · ${syncMeta.warning}` : ""}
-          {showSync ? " · 탭하여 상세" : ""}
-        </div>
+        <span
+          style={{
+            position: "absolute",
+            right: 16,
+            bottom: 14,
+            fontSize: 11,
+            color: "var(--ldg-fg-4)",
+          }}
+        >
+          탭하여 상세
+        </span>
       )}
       {showSync && open && (
         <div style={{ marginTop: 10, borderTop: "0.5px solid var(--ldg-border)", paddingTop: 8 }}>

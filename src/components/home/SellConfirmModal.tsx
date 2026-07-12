@@ -16,7 +16,7 @@ import {
 } from "../../lib/btcSellRecords";
 import { getHeldBtc, getHeldBtcMode, setHeldBtc } from "../../lib/heldBtc";
 import type { SettlementPeriod } from "../../lib/settlement";
-import { setSellSaveInProgress } from "../../lib/sellSaveInProgress";
+import { setReloadBlocked } from "../../lib/reloadGate";
 
 const MAX_BTC = 21_000_000;
 const SATS_PER_BTC = 100_000_000;
@@ -97,7 +97,7 @@ export default function SellConfirmModal({
     return () => {
       if (savingRef.current) {
         savingRef.current = false;
-        setSellSaveInProgress(false);
+        setReloadBlocked("sell-save", false);
       }
     };
   }, []);
@@ -105,7 +105,7 @@ export default function SellConfirmModal({
   const releaseSaving = () => {
     savingRef.current = false;
     setIsSaving(false);
-    setSellSaveInProgress(false);
+    setReloadBlocked("sell-save", false);
   };
 
   const handleSave = () => {
@@ -113,7 +113,7 @@ export default function SellConfirmModal({
 
     savingRef.current = true;
     setIsSaving(true);
-    setSellSaveInProgress(true);
+    setReloadBlocked("sell-save", true);
     setError("");
 
     try {
