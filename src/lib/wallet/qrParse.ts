@@ -2,9 +2,10 @@
  * Extract watch-only xpub/ypub/zpub or Bitcoin addresses from QR payload text.
  * Hardware wallets / Sparrow / Electrum often encode plain keys, path-prefixed keys, or JSON.
  */
+import type { ScriptType } from "./xpub";
 
 export type QrWatchPayload =
-  | { kind: "xpub"; xpub: string }
+  | { kind: "xpub"; xpub: string; scriptType?: ScriptType }
   | { kind: "addresses"; addresses: string[] };
 
 export type QrParseResult =
@@ -18,23 +19,39 @@ const EXTENDED_KEY_RE = /\b([xyz]pub[1-9A-HJ-NP-Za-km-z]{80,130})\b/i;
 const ADDRESS_RE =
   /\b((?:bc1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{25,90})|(?:[13][a-km-zA-HJ-NP-Z1-9]{25,34}))\b/g;
 
-function tryJsonXpub(text: string): string | null {
+function scriptTypeFromText(text: string): ScriptType | undefined {
+  const normalized = text.replace(/[hH]/g, "'").replace(/m\//gi, "");
+  const match = normalized.match(/(?:^|[^0-9])(44|49|84)'?\s*\/\s*0'?\s*\/\s*0'?/);
+  if (!match?.[1]) return undefined;
+  if (match[1] === "84") return "native-segwit";
+  if (match[1] === "49") return "nested-segwit";
+  return "legacy";
+}
+
+function tryJsonXpub(text: string): { xpub: string; scriptType?: ScriptType } | null {
   const trimmed = text.trim();
   if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) return null;
   try {
     const data = JSON.parse(trimmed) as unknown;
     const candidates: unknown[] = [];
+    const pathHints: string[] = [];
     if (data && typeof data === "object" && !Array.isArray(data)) {
       const obj = data as Record<string, unknown>;
       candidates.push(obj.xpub, obj.ypub, obj.zpub, obj.ExtPubKey, obj.extPubKey, obj.publicKey);
+      for (const key of ["account", "derivation", "path", "bip32Path", "origin"] as const) {
+        if (typeof obj[key] === "string") pathHints.push(obj[key]);
+      }
       if (obj.descriptor && typeof obj.descriptor === "string") {
         candidates.push(obj.descriptor);
+        pathHints.push(obj.descriptor);
       }
     }
     for (const c of candidates) {
       if (typeof c === "string") {
         const found = c.match(EXTENDED_KEY_RE);
-        if (found?.[1]) return found[1];
+        if (found?.[1]) {
+          return { xpub: found[1], scriptType: scriptTypeFromText([c, ...pathHints].join(" ")) };
+        }
       }
     }
   } catch {
@@ -49,19 +66,24 @@ function stripOriginPrefix(text: string): string {
 }
 
 export function extractExtendedPublicKey(text: string): string | null {
+  return parseExtendedPublicKeyText(text)?.xpub ?? null;
+}
+
+export function parseExtendedPublicKeyText(text: string): { xpub: string; scriptType?: ScriptType } | null {
   if (!text || typeof text !== "string") return null;
 
   const fromJson = tryJsonXpub(text);
   if (fromJson) return fromJson;
 
+  const scriptType = scriptTypeFromText(text);
   const normalized = stripOriginPrefix(text).replace(/\s+/g, " ").trim();
   const match = normalized.match(EXTENDED_KEY_RE);
-  if (match?.[1]) return match[1];
+  if (match?.[1]) return { xpub: match[1], scriptType };
 
   // Whole string is the key (no word boundaries needed)
   const compact = text.trim().replace(/\s+/g, "");
   const whole = compact.match(/^([xyz]pub[1-9A-HJ-NP-Za-km-z]{80,130})$/i);
-  if (whole?.[1]) return whole[1];
+  if (whole?.[1]) return { xpub: whole[1], scriptType };
 
   return null;
 }
@@ -97,9 +119,9 @@ export function parseWatchOnlyQrText(raw: string): QrParseResult {
     };
   }
 
-  const xpub = extractExtendedPublicKey(text);
-  if (xpub) {
-    return { ok: true, payload: { kind: "xpub", xpub } };
+  const parsedXpub = parseExtendedPublicKeyText(text);
+  if (parsedXpub) {
+    return { ok: true, payload: { kind: "xpub", ...parsedXpub } };
   }
 
   const addresses = extractBitcoinAddresses(text);

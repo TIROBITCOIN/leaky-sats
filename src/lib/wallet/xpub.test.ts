@@ -67,6 +67,18 @@ describe("deriveAddresses BIP84 zpub", () => {
     expect(change[0].path).toBe("m/84'/0'/0'/1/0");
   });
 
+  it("derives native segwit when a Coldcard xpub has a BIP84 hint", () => {
+    const canonicalXpub = convertToCanonicalVersion(ZPUB, "zpub");
+    const receive = deriveAddresses({
+      xpub: canonicalXpub,
+      chain: "receive",
+      startIndex: 0,
+      limit: 1,
+      scriptType: "native-segwit",
+    });
+    expect(receive[0].address).toBe(BIP84_RECEIVE_0);
+  });
+
   it("does not require the Node Buffer global", () => {
     const globalWithBuffer = globalThis as typeof globalThis & { Buffer?: unknown };
     const hadBuffer = "Buffer" in globalWithBuffer;
