@@ -5,6 +5,7 @@ import {
   isAppLockSupported,
   verifyAppLockPin,
 } from "../../lib/appLock";
+import { setReloadBlocked } from "../../lib/reloadGate";
 
 export default function AppLockGate({ children }: { children: ReactNode }) {
   const [enabled, setEnabled] = useState(() => isAppLockEnabled());
@@ -52,6 +53,14 @@ export default function AppLockGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (enabled && !unlocked) inputRef.current?.focus();
+  }, [enabled, unlocked]);
+
+  // Defer any deploy-triggered reload (see reloadGate.ts) while the PIN screen is showing,
+  // so a new service worker taking over never yanks the page out from under the keypad.
+  useEffect(() => {
+    const locked = enabled && !unlocked;
+    setReloadBlocked("app-lock", locked);
+    return () => setReloadBlocked("app-lock", false);
   }, [enabled, unlocked]);
 
   const handleSubmit = async (event: FormEvent) => {

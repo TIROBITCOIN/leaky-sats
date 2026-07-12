@@ -1,4 +1,4 @@
-import { requestReloadAfterSellSave } from "./lib/sellSaveInProgress";
+import { requestReload } from "./lib/reloadGate";
 
 export function registerServiceWorker() {
   if (!("serviceWorker" in navigator) || !import.meta.env.PROD) return;
@@ -6,12 +6,13 @@ export function registerServiceWorker() {
   // 새 서비스워커가 제어권을 잡으면(= 새 배포가 활성화되면) 페이지를 한 번만 새로고침해서 최신
   // 번들을 로드한다. sw.js는 배포마다 CACHE_VERSION이 바뀌어 바이트가 달라지므로 브라우저가
   // 항상 업데이트를 감지하고, install의 skipWaiting + activate의 clients.claim 덕분에 새 워커가
-  // 즉시 활성화되어 아래 controllerchange가 트리거된다.
+  // 즉시 활성화되어 아래 controllerchange가 트리거된다. requestReload()는 저장 중이거나 앱
+  // 잠금 화면이 떠 있으면 새로고침을 그 상태가 끝날 때까지 미룬다(reloadGate.ts).
   let refreshing = false;
   navigator.serviceWorker.addEventListener("controllerchange", () => {
     if (refreshing) return;
     refreshing = true;
-    requestReloadAfterSellSave();
+    requestReload();
   });
 
   window.addEventListener("load", () => {
