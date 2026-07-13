@@ -527,7 +527,7 @@ export function downloadBackup() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `my-ledger-backup-${day}.json`;
+  a.download = `leaky-sats-backup-${day}.json`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -540,7 +540,7 @@ export async function downloadEncryptedBackup(password: string): Promise<void> {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `my-ledger-backup-${day}-encrypted.json`;
+  a.download = `leaky-sats-backup-${day}-encrypted.json`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -555,13 +555,13 @@ export async function readBackupFile(file: File): Promise<ReadBackupFileResult> 
 
   if (isEncryptedBackupFile(parsed)) return { kind: "encrypted", encrypted: parsed };
   if (validateBackupPayload(parsed)) return { kind: "plain", payload: parsed };
-  throw new Error("My Ledger 백업 파일이 아닙니다.");
+  throw new Error("Leaky Sats 백업 파일이 아닙니다.");
 }
 
 export async function parseBackupFile(file: File): Promise<BackupPayload> {
   const result = await readBackupFile(file);
   if (result.kind === "plain") return result.payload;
-  throw new Error("My Ledger 백업 파일이 아니거나 지원하지 않는 백업 버전입니다.");
+  throw new Error("Leaky Sats 백업 파일이 아니거나 지원하지 않는 백업 버전입니다.");
 }
 
 function writeBackupData(data: BackupPayload["data"]) {

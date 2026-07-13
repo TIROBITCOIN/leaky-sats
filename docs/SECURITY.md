@@ -1,62 +1,76 @@
 # Security And Privacy
 
-## localStorage-first privacy model
+## LocalStorage-First Privacy Model
 
-My Ledger는 서버 DB가 없는 localStorage-first PWA입니다. 배포 URL은 공개될 수 있지만, 사용자의 거래 데이터는 각자의 브라우저 localStorage에 저장됩니다.
+Leaky Sats has no server account database. User transaction data lives in the user's browser localStorage unless the user exports a backup file.
 
-다른 사람이 자신의 기기에서 같은 URL에 접속해도 이 기기의 거래 내역은 보이지 않습니다. 반대로 같은 기기와 같은 브라우저를 다른 사람이 열면 거래 내역을 볼 수 있으므로 앱 잠금 기능을 사용합니다.
+Opening the same production URL from another device does not reveal the original device's data. Opening the same browser profile on the same device can reveal the local data, so users should enable local app lock when needed.
+
+## Official Deployment
+
+The user-facing production URL is:
+
+```text
+https://leaky-sats.vercel.app
+```
+
+Do not share random Vercel deployment URLs as permanent links.
 
 ## Local App Lock
 
-앱 잠금은 4~6자리 PIN으로 앱 화면을 막는 로컬 기능입니다.
+The app lock is a local 4-6 digit PIN screen. It is not server authentication.
 
-- PIN은 평문으로 저장하지 않습니다.
-- Web Crypto API로 salt + PBKDF2 hash를 저장합니다.
-- 기본 자동 잠금 시간은 5분입니다.
-- 브라우저를 완전히 닫고 다시 열면 다시 잠금 화면을 표시합니다.
-- PIN 변경/해제에는 기존 PIN 확인이 필요합니다.
+- PINs are not stored in plaintext.
+- The app stores a salt and PBKDF2 hash using Web Crypto.
+- App lock is device/browser-local.
+- It helps reduce casual same-device viewing.
+- It does not protect against a compromised device, malicious extensions, DevTools/localStorage inspection, or leaked backup files.
 
-이 기능은 서버 인증이 아닙니다. 캐주얼한 같은 기기 접근을 막기 위한 장치이며, DevTools로 localStorage를 조작할 수 있는 고급 공격자, 기기 탈취, 악성 확장 프로그램, 백업 파일 유출까지 완벽하게 막지는 못합니다.
+If the PIN is forgotten, there is no server recovery. The practical recovery path is browser localStorage reset, which removes local data unless the user has a backup.
 
-## PIN recovery
+## Backup Policy
 
-PIN을 잊었을 때 서버 복구는 불가능합니다. 복구 방법은 브라우저 localStorage 초기화뿐이며, 백업이 없으면 거래 데이터가 사라질 수 있습니다.
+Plain and encrypted backups are handled by `src/lib/backup.ts`.
 
-## Backup policy
+Backups can include:
 
-백업 파일에는 `src/lib/backup.ts`의 `BACKUP_KEYS`에 정의된 다음 localStorage 데이터가 포함됩니다.
+- Transactions
+- Categories
+- Held BTC
+- Display preferences
+- Refresh interval
+- BTC sale records
+- Settlement day
+- Recurring rules and materialized recurring state
+- Watch-only wallet configuration when present
 
-- `myledger.txns.v1`: 거래 내역
-- `myledger.categories.v1`: 카테고리 설정
-- `myledger.heldBtc.v1`: 보유 BTC 수량
-- `myledger.displayUnit.v1`: BTC/sats 표시 단위
-- `myledger.currency.v1`: KRW/BTC 기본 통화
-- `myledger.refreshInterval.v1`: 시세 자동 갱신 주기
-- `myledger.btcSellRecords.v1`: BTC 판매 확정 기록
-- `myledger.settlementDay.v1`: 정산 기준일
-- `myledger.recurringRules.v1`: 매월 반복 항목 규칙
-- `myledger.recurringMaterialized.v1`: 정산월별 반복 항목 추가/건너뛰기 상태
+Backups do not include:
 
-다음 기기별·일시적 상태는 백업하지 않습니다.
+- Pending undo state
+- App lock PIN settings (`myledger.appLock.v1`)
+- Install prompt dismissal state
+- Pre-restore safety backup (`myledger.preRestoreBackup.v1`)
 
-- `myledger.pendingUndo.v1`: 삭제 취소 대기 상태
-- `myledger.appLock.v1`: PIN 기반 앱 잠금 설정
-- `myledger.installPrompt.dismissed.v1`: 설치 안내 닫기 상태
-- `myledger.preRestoreBackup.v1`: 복원 직전에 현재 데이터를 보관하는 로컬 안전백업
+Encrypted backups use AES-GCM with PBKDF2. The backup password is separate from the app PIN and is not saved by the app.
 
-- PIN/앱 잠금 설정은 기기별 로컬 잠금으로 보고 백업하지 않습니다.
-- 복원 전 안전백업은 다음 복원 시 교체되며, 다운로드 백업 파일 안에는 포함되지 않습니다.
+## Never Store Secrets
 
-백업 JSON 파일에는 거래와 카테고리뿐 아니라 보유 BTC 수량과 BTC 판매 이력도 포함됩니다. 일반 거래 내역만 있는 파일보다 민감할 수 있으므로 개인 기기에 안전하게 보관하고 외부에 공유하지 마세요.
+Leaky Sats is not a Bitcoin wallet. The app must never ask for or store:
 
-## Never store secrets
+- Seed phrases
+- Private keys
+- Exchange API keys
+- Bank login credentials
+- Personal identity documents
 
-이 앱은 비트코인 지갑이 아닙니다. 아래 정보는 절대 앱에 저장하지 마세요.
+Watch-only wallet sync may store xpubs or addresses. These cannot spend funds, but they can reveal wallet activity and should still be treated as private.
 
-- 비트코인 시드 문구
-- 개인키
-- 거래소 API 키
-- 은행 계정 인증 정보
-- 주민등록번호 등 민감한 신원 정보
+## Network And API Notes
 
-더 강한 보안이 필요하면 향후 localStorage 암호화, 서버 인증, 기기 보안 정책, 클라우드 동기화 설계를 별도 Phase로 검토해야 합니다.
+- Price and wallet data is fetched from public APIs or user-configured mempool/Esplora APIs.
+- Upbit BTC/KRW is accessed through the same-origin Vercel `/api/upbit` proxy to avoid browser CORS failures.
+- A user-configured mempool endpoint must be HTTPS in production PWA use, except for local development on `localhost`.
+
+## Security Headers
+
+Production headers are configured in `vercel.json`, including CSP, frame blocking, content type sniffing protection, referrer policy, and permissions policy.

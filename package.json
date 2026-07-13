@@ -1,5 +1,5 @@
 {
-  "name": "my-ledger",
+  "name": "leaky-sats",
   "private": true,
   "version": "0.1.0",
   "description": "Mobile-first PWA ledger for Korean Bitcoiners",

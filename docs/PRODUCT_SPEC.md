@@ -1,155 +1,110 @@
 # Product Spec
 
-## 제품 정의
+## Definition
 
-My Ledger는 **비트코이너를 위한 모바일 우선 PWA 가계부**입니다.
+Leaky Sats is a mobile-first PWA ledger for Korean Bitcoiners. It helps users record KRW cashflow, understand spending in BTC/sats terms, and manage monthly settlement decisions without turning the app into an exchange, broker, or custodial wallet.
 
-한국 비트코이너가 원화 수입/지출을 기록하고, 해당 금액을 현재 BTC 가격 기준으로 BTC/sats 단위로 환산해 소비 감각을 바꾸는 웹앱입니다. 업비트 KRW-BTC, 바이낸스 BTCUSDT, USD/KRW 환율, 김프 계산을 통해 한국 사용자에게 맞는 비트코인 가격 맥락을 제공합니다.
+## User Problem
 
-## 사용자의 문제
+- KRW-only ledgers hide the BTC/sats cost of daily spending.
+- Bitcoin price context is scattered across exchanges, FX sources, and block explorers.
+- Manual held-BTC tracking can drift unless confirmed sales and wallet balances are handled carefully.
+- Users need a simple local tool that works on mobile without creating another account.
 
-- 일반 가계부는 원화 지출만 보여줘 비트코인 적립 관점이 약합니다.
-- 사용자는 “이 지출이 몇 sats였는지”를 즉시 알기 어렵습니다.
-- 한국 사용자는 원화 가격, 글로벌 달러 가격, 환율, 김프를 함께 봐야 가격 맥락을 이해할 수 있습니다.
-- 은행/거래소 자동 연동은 초기 사용자에게 설정 부담과 보안 부담을 줍니다.
+## Core Value
 
-## 핵심 가치
+- Fast transaction entry.
+- KRW cashflow plus BTC/sats perspective.
+- Practical monthly settlement card.
+- Live price status with conservative stale/fallback handling.
+- Local-first data ownership with explicit backup/export.
+- Optional watch-only wallet sync without private-key custody.
 
-- 원화 소비를 sats 단위로 재해석합니다.
-- 수기 입력만으로 가볍게 사용할 수 있습니다.
-- 한국 비트코이너에게 필요한 가격 맥락을 한 화면에서 제공합니다.
-- 서버 없이 기기 안에 데이터를 저장해 MVP를 빠르게 검증합니다.
+## Screens
 
-## 사용자 시나리오
+### Home
 
-1. 사용자는 커피값 5,000원을 지출로 입력합니다.
-2. 앱은 현재 BTC 가격 기준으로 해당 금액이 몇 sats인지 보여줍니다.
-3. 사용자는 월별 지출과 카테고리별 지출을 확인합니다.
-4. 보유 BTC를 설정한 사용자는 홈에서 Total Balance(현재 원화 가치)와 BTC/sats 수량을 확인합니다.
-5. 사용자는 모바일 브라우저에서 홈 화면에 추가해 PWA처럼 사용합니다.
+- Wallet/header summary.
+- Held BTC and current value.
+- Monthly settlement period.
+- Income, expense, and net cashflow.
+- Recurring pending items.
+- Confirmed monthly/yearly BTC sale summaries.
+- Bitcoin price card.
+- Recent transactions.
 
-## 화면 구성
+### Input
 
-### 1. 홈/대시보드
+- Income/expense transaction entry.
+- Amount keypad on mobile.
+- Category, title, memo, and date.
+- Recurring item controls.
 
-- 월 요약
-- 잔액
-- 보유 BTC(heldBtc) 기준 Total Balance(현재 원화 가치, BTC/sats 수량)
-- 수입/지출 카드
-- 최근 거래
-- BTC 가격 위젯
-- 원화/BTC 표시 전환
+### Transactions
 
-### 2. 거래 입력
+- Transaction list.
+- Edit/delete row actions.
+- Undo after delete.
+- Date-only labels.
 
-- 수입/지출 구분
-- 금액
-- 카테고리
-- 제목
-- 메모
-- 날짜/시간
-- 현재 BTC 가격 기준 sats 미리보기
+### Stats
 
-### 3. 거래 목록
+- Monthly totals.
+- Category breakdown.
+- Calendar/month view.
+- Selected-day transaction detail.
 
-- 거래 목록
-- 거래 수정
-- 거래 삭제
-- 삭제 Undo
-- 카테고리와 금액 표시
+### Settings
 
-### 4. 통계
+- Help page entry.
+- Display currency and BTC/sats unit preference.
+- Price status and manual refresh.
+- Wallet name.
+- Manual held-BTC entry and watch-only wallet sync settings.
+- Settlement day.
+- Recurring rules.
+- Categories.
+- Backup/restore.
+- Local app lock.
+- App ownership/deployment metadata.
 
-- 월별 수입/지출 계산
-- 카테고리별 지출 계산
-- 지출 추이
-- BTC 가격과 소비 흐름 비교
+## Data Model
 
-자산 탭은 Phase 13.1에서 제거되었습니다. 보유 BTC 기준 Total Balance는 홈(1번)에서, 보유 BTC
-입력은 설정(아래)에서 관리합니다 — 홈 화면과 역할이 겹쳐 별도 탭을 두지 않습니다.
+The app is localStorage-first. Stable keys are documented in [DATA_MODEL.md](DATA_MODEL.md). Changes to durable storage must update backup/restore behavior and related verification scripts in the same change.
 
-### 5. 설정
+## Price Model
 
-- 기본 표시 통화
-- BTC/sats 표시 단위
-- 보유 BTC(heldBtc) 입력
-- 공개 API fallback 기반 시세 자동 갱신
-- 시세 갱신 주기
-- 카테고리 관리
-- 백업/내보내기
+- BTC/KRW: Vercel `/api/upbit` proxy first, direct Upbit fallback, then BTC/USD x USD/KRW fallback.
+- BTC/USD: public market data fallback chain.
+- USD/KRW: FX fallback chain.
+- Kimchi premium is shown only when sources are fresh and valid.
+- Fallback-derived BTC/KRW must not produce fake kimchi premium.
 
-## 주요 데이터
+## Wallet Sync Model
 
-### 거래 데이터
+Wallet sync is watch-only:
 
-- id
-- 제목
-- 카테고리 id
-- 카테고리 라벨
-- 날짜/시간
-- 원화 금액
-- 입력 시점 BTC 가격
-- 메모
+- Users may add xpubs or addresses.
+- The app derives or scans public addresses only.
+- The app queries mempool/Esplora APIs.
+- The app never handles seed phrases or private keys.
 
-### 카테고리 데이터
+## Deployment
 
-- id
-- 라벨
-- 그룹
-- 수입/지출 흐름
-- 아이콘
-- 색상
-- 기본 카테고리 보호 여부
+Production is Vercel:
 
-### 설정 데이터
+```text
+https://leaky-sats.vercel.app
+```
 
-- 기본 표시 통화
-- BTC/sats 표시 단위
-- 가격 소스
-- 시세 갱신 주기
-- 테마
+User-facing docs and QR codes must use the stable Vercel URL only.
 
-### 시세 데이터
+## Non-Goals
 
-- 업비트 KRW-BTC
-- 바이낸스 BTCUSDT
-- USD/KRW 환율
-- 김프
-- 마지막 갱신 시간
-- 시세 연동 상태
-
-## 저장 방식
-
-1차 MVP는 localStorage를 사용합니다.
-
-권장 key:
-
-- `myledger.txns.v1`
-- `myledger.categories.v1`
-- `myledger.settings.v1`
-- `myledger.pendingUndo.v1`
-
-localStorage는 단일 기기 MVP 검증에 충분합니다. 동기화, 로그인, 백업 요구가 검증되기 전에는 서버 저장소를 붙이지 않습니다.
-
-## 서버 사용 여부
-
-현재는 서버를 사용하지 않습니다.
-
-서버는 다음 요구가 명확해질 때만 검토합니다.
-
-- 여러 기기 간 동기화
-- 로그인
-- 클라우드 백업
-- 사용자별 장기 데이터 보관
-- 결제 또는 유료 기능
-
-## PWA 방향
-
-Phase 4에서 PWA 기능을 정리합니다.
-
-- 모바일 홈 화면 추가
-- Web App Manifest
-- Service Worker
-- 앱 아이콘
-- 오프라인 기본 화면
-- 모바일 터치 UX 정리
+- Server account system.
+- Custodial wallet.
+- Seed/private-key storage.
+- Exchange trading.
+- Bank account login.
+- Cloud backup or cross-device sync without a separate security design.
+- App Store or Play Store distribution.
