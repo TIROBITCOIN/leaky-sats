@@ -12,8 +12,8 @@ const offlineBadgePath = join(root, "src", "components", "pwa", "OfflineBadge.ts
 
 assert.equal(existsSync(manifestPath), true, "manifest.webmanifest exists");
 const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
-assert.equal(manifest.name, "My Ledger", "manifest name");
-assert.equal(manifest.short_name, "Ledger", "manifest short_name");
+assert.equal(manifest.name, "Leaky Sats", "manifest name");
+assert.equal(manifest.short_name, "Leaky Sats", "manifest short_name");
 assert.equal(manifest.start_url, "/", "manifest start_url");
 assert.equal(manifest.display, "standalone", "manifest display");
 assert.equal(manifest.theme_color, "#f4f3ef", "manifest theme_color");

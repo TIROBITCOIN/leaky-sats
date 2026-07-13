@@ -155,6 +155,9 @@ Plain backups are JSON wrappers:
 }
 ```
 
+The backup `app` value remains `"my-ledger"` for backward compatibility with
+existing exported backups. User-facing app naming should use Leaky Sats.
+
 Restore must pass through `prepareBackupRestore()` before writing to
 localStorage. That step sanitizes known arrays, preserves supported optional
 keys, rejects invalid required blocks, and creates a pre-restore safety backup.

@@ -1,6 +1,6 @@
 {
-  "name": "My Ledger",
-  "short_name": "Ledger",
+  "name": "Leaky Sats",
+  "short_name": "Leaky Sats",
   "description": "Mobile-first PWA ledger for Korean Bitcoiners",
   "start_url": "/",
   "scope": "/",

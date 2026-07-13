@@ -1,5 +1,5 @@
 const STORAGE_KEY = "myledger.walletName.v1";
-const DEFAULT_NAME = "My Ledger";
+const DEFAULT_NAME = "Leaky Sats";
 const MAX_LENGTH = 24;
 const MIN_LENGTH = 2;
 
