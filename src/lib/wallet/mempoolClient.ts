@@ -9,10 +9,27 @@ export const MEMPOOL_LOOKUP_CONCURRENCY = 4;
 export const MEMPOOL_RETRY_COUNT = 1;
 
 export class MempoolHttpError extends Error {
-  constructor(public readonly status: number) {
+  constructor(
+    public readonly status: number,
+    public readonly retryAfterMs?: number
+  ) {
     super(`HTTP ${status}`);
     this.name = "MempoolHttpError";
   }
+}
+
+/** Parses Retry-After delta-seconds or an HTTP date into a delay in milliseconds. */
+export function parseRetryAfterMs(value: string | null, now = Date.now()): number | undefined {
+  const trimmed = value?.trim();
+  if (!trimmed) return undefined;
+
+  if (/^\d+(?:\.\d+)?$/.test(trimmed)) {
+    const seconds = Number(trimmed);
+    return Number.isFinite(seconds) ? Math.max(0, Math.ceil(seconds * 1000)) : undefined;
+  }
+
+  const timestamp = Date.parse(trimmed);
+  return Number.isFinite(timestamp) ? Math.max(0, timestamp - now) : undefined;
 }
 
 /** Normalize base URL: strip trailing slashes. */
@@ -57,16 +74,19 @@ export async function mapWithConcurrency<T, R>(
   return results;
 }
 
-export async function fetchMempoolJson(url: string): Promise<unknown> {
-  return withMempoolRetry(async () => {
-    const response = await fetch(url, {
-      signal: AbortSignal.timeout(MEMPOOL_REQUEST_TIMEOUT_MS),
-    });
-    if (!response.ok) {
-      throw new MempoolHttpError(response.status);
-    }
-    return response.json();
+export async function fetchMempoolJsonOnce(url: string): Promise<unknown> {
+  const response = await fetch(url, {
+    signal: AbortSignal.timeout(MEMPOOL_REQUEST_TIMEOUT_MS),
   });
+  if (!response.ok) {
+    const retryAfterMs = parseRetryAfterMs(response.headers?.get?.("retry-after") ?? null);
+    throw new MempoolHttpError(response.status, retryAfterMs);
+  }
+  return response.json();
+}
+
+export async function fetchMempoolJson(url: string): Promise<unknown> {
+  return withMempoolRetry(() => fetchMempoolJsonOnce(url));
 }
 
 export async function withMempoolRetry<T>(
@@ -99,6 +119,26 @@ export function isRetryableMempoolError(error: unknown): boolean {
   return /timeout|network|fetch failed|ECONN|ENOTFOUND|EAI_AGAIN|ETIMEDOUT/i.test(error.message);
 }
 
+export function is429Error(error: unknown): error is MempoolHttpError {
+  return error instanceof MempoolHttpError && error.status === 429;
+}
+
+export function getRateLimitRetryAfterMs(error: unknown): number | undefined {
+  return is429Error(error) ? error.retryAfterMs : undefined;
+}
+
+/** Address lookups retry network/timeouts and server errors, but not 4xx/429 responses. */
+export function isTransientAddressError(error: unknown): boolean {
+  if (error instanceof MempoolHttpError) return error.status >= 500;
+  return isRetryableMempoolError(error);
+}
+
+export const ADDRESS_RETRY_DELAY_MS = 500;
+
+export function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /**
  * Public API failover chain: a saved self-hosted URL (if any) is always tried first, so
  * existing self-hosted users keep their current behavior unchanged; mempool.space and
@@ -116,8 +156,9 @@ export const MEMPOOL_API_DEAD_MARK_MS = 60_000;
 const deadUntilByBaseUrl = new Map<string, number>();
 
 /** Marks a base URL as dead for MEMPOOL_API_DEAD_MARK_MS so the chain skips it meanwhile. */
-export function markMempoolApiDead(baseUrl: string): void {
-  deadUntilByBaseUrl.set(baseUrl, Date.now() + MEMPOOL_API_DEAD_MARK_MS);
+export function markMempoolApiDead(baseUrl: string, ttlMs = MEMPOOL_API_DEAD_MARK_MS): void {
+  const deadUntil = Date.now() + ttlMs;
+  deadUntilByBaseUrl.set(baseUrl, Math.max(deadUntilByBaseUrl.get(baseUrl) ?? 0, deadUntil));
 }
 
 export function isMempoolApiDead(baseUrl: string): boolean {
@@ -164,7 +205,10 @@ export async function resolveHealthyMempoolApi(
       clearMempoolApiHealth(candidate.baseUrl);
       return { candidate, height };
     } catch (error) {
-      markMempoolApiDead(candidate.baseUrl);
+      markMempoolApiDead(
+        candidate.baseUrl,
+        getRateLimitRetryAfterMs(error) ?? MEMPOOL_API_DEAD_MARK_MS
+      );
     }
   }
   return null;

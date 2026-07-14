@@ -60,7 +60,7 @@ export default function HomePage() {
     const onVisibility = () => {
       if (document.visibilityState === "visible") {
         refresh();
-        syncWallets();
+        syncWallets(true);
       }
     };
     const onWalletSync = () => refreshWalletSyncView();
@@ -118,12 +118,15 @@ export default function HomePage() {
   const syncMeta = (() => {
     const mode = getHeldBtcMode();
     if (mode !== "wallet-sync") {
-      return { mode, walletCount: 0, lastSyncLabel: "", unconfirmedSats: 0, wallets: [] };
+      return { mode, walletCount: 0, lastSyncLabel: "", unconfirmedSats: 0, stale: false, wallets: [] };
     }
     const agg = getAggregatedTotalSats();
+    const freshnessAt = agg.anyPartialOrOffline
+      ? agg.oldestIncludedFetchedAt
+      : agg.lastFetchedAt;
     let lastSyncLabel = "동기화 기록 없음";
-    if (agg.lastFetchedAt) {
-      const diffMs = Date.now() - new Date(agg.lastFetchedAt).getTime();
+    if (freshnessAt) {
+      const diffMs = Date.now() - new Date(freshnessAt).getTime();
       if (Number.isFinite(diffMs) && diffMs < 60_000) lastSyncLabel = "방금 전 동기화";
       else if (diffMs < 3_600_000) lastSyncLabel = `${Math.floor(diffMs / 60_000)}분 전 동기화`;
       else if (diffMs < 86_400_000) lastSyncLabel = `${Math.floor(diffMs / 3_600_000)}시간 전 동기화`;
@@ -135,6 +138,7 @@ export default function HomePage() {
       lastSyncLabel,
       unconfirmedSats: agg.unconfirmedSats,
       warning: agg.anyPartialOrOffline ? "일부 지갑 조회 실패 · 마지막 값 포함" : undefined,
+      stale: agg.wallets.some((wallet) => wallet.stale === true),
       wallets: agg.wallets.map((w) => ({
         id: w.id,
         label: w.label,

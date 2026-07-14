@@ -20,16 +20,20 @@ import {
   saveWalletConfig,
   satsToBtc,
   type AddressCacheEntry,
+  type StoredWalletBalance,
   type WalletEntry,
 } from "./walletConfig";
 import { setHeldBtc } from "./heldBtc";
+import type { WalletBalance } from "./wallet/balance";
 import type { ScanWalletResult } from "./wallet/scan";
 import type { ScriptType, WalletDescriptor } from "./wallet/xpub";
 
-const THROTTLE_MS = 25 * 1000;
+const DEFAULT_THROTTLE_MS = 100_000;
+const MAX_THROTTLE_MS = 10 * 60 * 1000;
 
 let activeSyncPromise: Promise<SyncOutcome> | null = null;
 let lastSyncAttemptAt = 0;
+let currentThrottleMs = DEFAULT_THROTTLE_MS;
 
 export type SyncOutcome = {
   ok: boolean;
@@ -58,13 +62,27 @@ export function calculateWalletScanHardCap(prev: AddressCacheEntry | undefined, 
   return maxHardCap;
 }
 
+/** Advances discovery boundaries after a usable scan without ever moving a known boundary back. */
+export function mergeAddressCacheAfterScan(
+  prev: AddressCacheEntry | undefined,
+  receiveLastUsed: number,
+  changeLastUsed: number,
+  updatedAt: string
+): AddressCacheEntry {
+  return {
+    receiveLastUsed: Math.max(prev?.receiveLastUsed ?? -1, receiveLastUsed),
+    changeLastUsed: Math.max(prev?.changeLastUsed ?? -1, changeLastUsed),
+    updatedAt,
+  };
+}
+
 /** BIP-44 convention gap limit, used to bound the address range re-checked on repeat syncs. */
 const STANDARD_RESYNC_GAP_LIMIT = 20;
 
 /**
  * First-time discovery (no address cache yet) uses the full configured gap limit to find
  * where a wallet's usage ends. Once that boundary is known, every later sync — now running
- * every 30s in the background against public APIs instead of every 5 minutes — only needs to
+ * every 2 minutes in the background against public APIs — only needs to
  * re-verify balances and watch a standard-size gap past that boundary, not redo the full
  * discovery scan every cycle.
  */
@@ -115,20 +133,123 @@ export async function scanDescriptorWithFailover(
   includeUnconfirmed: boolean,
   scanFn: typeof scanDescriptor = scanDescriptor
 ): Promise<ScanWalletResult> {
-  const ordered = [...chain].sort(
-    (a, b) => Number(isMempoolApiDead(a.baseUrl)) - Number(isMempoolApiDead(b.baseUrl))
-  );
+  const ordered = chain.filter((candidate) => !isMempoolApiDead(candidate.baseUrl));
+  if (ordered.length === 0) {
+    throw new Error("모든 API가 일시적으로 대기 중입니다.");
+  }
 
   let result: ScanWalletResult | null = null;
+  let rateLimitSeen = false;
+  let rateLimitRetryAfterMs: number | undefined;
   for (const candidate of ordered) {
     result = await scanFn(descriptor, candidate.baseUrl, gapLimit, hardCap, includeUnconfirmed);
+    if (result.rateLimited) {
+      rateLimitSeen = true;
+      if (result.rateLimitRetryAfterMs !== undefined) {
+        rateLimitRetryAfterMs = Math.max(rateLimitRetryAfterMs ?? 0, result.rateLimitRetryAfterMs);
+      }
+      markMempoolApiDead(candidate.baseUrl, result.rateLimitRetryAfterMs);
+      continue;
+    }
     if (result.balance.status !== "offline") {
       clearMempoolApiHealth(candidate.baseUrl);
-      return result;
+      return rateLimitSeen
+        ? { ...result, rateLimited: true, rateLimitRetryAfterMs }
+        : result;
     }
     markMempoolApiDead(candidate.baseUrl);
   }
-  return result!;
+  if (!result) throw new Error("mempool API chain is empty");
+  return rateLimitSeen
+    ? { ...result, rateLimited: true, rateLimitRetryAfterMs }
+    : result;
+}
+
+function walletAttemptError(status: WalletBalance["status"], rateLimited: boolean): string {
+  if (rateLimited) return "요청 한도 초과로 동기화 지연";
+  return status === "offline" ? "조회 실패" : "일부 주소 조회 실패 또는 추가 스캔 필요";
+}
+
+function isAcceptedStoredBalance(balance: StoredWalletBalance): boolean {
+  return balance.status === "online" || balance.status === "partial";
+}
+
+/** Applies one scan attempt without ever replacing a known amount with partial/offline data. */
+export function mergeWalletBalanceAttempt(
+  existing: StoredWalletBalance | undefined,
+  fresh: WalletBalance,
+  attemptedAt: string,
+  rateLimited = false
+): StoredWalletBalance | null {
+  if (fresh.status === "online") {
+    return {
+      ...fresh,
+      lastAttemptAt: attemptedAt,
+      lastAttemptStatus: "online",
+      lastError: undefined,
+      lastOnlineAt: fresh.fetchedAt,
+      stale: false,
+    };
+  }
+
+  const lastError = walletAttemptError(fresh.status, rateLimited);
+  if (existing && isAcceptedStoredBalance(existing)) {
+    return {
+      ...existing,
+      lastAttemptAt: attemptedAt,
+      lastAttemptStatus: fresh.status,
+      lastError,
+    };
+  }
+
+  if (fresh.status === "partial") {
+    return {
+      ...fresh,
+      lastAttemptAt: attemptedAt,
+      lastAttemptStatus: "partial",
+      lastError,
+      stale: true,
+    };
+  }
+
+  if (existing) {
+    return {
+      ...existing,
+      lastAttemptAt: attemptedAt,
+      lastAttemptStatus: "offline",
+      lastError,
+    };
+  }
+
+  return null;
+}
+
+function persistThrownWalletAttempt(
+  walletId: string,
+  attemptedAt: string,
+  error: string
+): StoredWalletBalance | null {
+  const balances = loadLastBalances();
+  const existing = balances[walletId];
+  const failed = mergeWalletBalanceAttempt(
+    existing,
+    {
+      confirmedSats: 0,
+      unconfirmedSats: 0,
+      totalSats: 0,
+      utxoCount: 0,
+      status: "offline",
+      failedAddresses: 0,
+      fetchedAt: attemptedAt,
+    },
+    attemptedAt
+  );
+  if (!failed) return null;
+
+  const next = { ...failed, lastError: error };
+  balances[walletId] = next;
+  saveLastBalances(balances);
+  return next;
 }
 
 function rememberDetectedScriptType(walletId: string, scriptType: ScriptType | undefined): void {
@@ -196,7 +317,7 @@ async function syncOneWallet(
   mempoolApiUrl: string,
   gapLimit: number,
   includeUnconfirmed: boolean
-): Promise<{ status: string; totalSats: number; error?: string }> {
+): Promise<{ status: string; totalSats: number; error?: string; rateLimited?: boolean }> {
   const cache = loadAddressCache();
   const prev = cache[wallet.id];
   const effectiveGapLimit = resolveEffectiveGapLimit(prev, gapLimit);
@@ -204,9 +325,11 @@ async function syncOneWallet(
   const chain = buildMempoolApiChain(mempoolApiUrl);
 
   let result: ScanWalletResult | null = null;
+  let rateLimitSeen = false;
   let selectedDescriptor = wallet.descriptor;
   for (const descriptor of candidateDescriptors(wallet.descriptor)) {
     const next = await scanDescriptorWithFailover(descriptor, chain, effectiveGapLimit, hardCap, includeUnconfirmed);
+    rateLimitSeen ||= next.rateLimited;
     result = next;
     selectedDescriptor = descriptor;
     if (next.balance.status === "offline") break;
@@ -221,7 +344,8 @@ async function syncOneWallet(
 
   const receive = result.chains.find((c) => c.chain === "receive");
   const change = result.chains.find((c) => c.chain === "change");
-  const savedBalance = {
+  const nowIso = new Date().toISOString();
+  const freshBalance = {
     ...result.balance,
     scannedAddressCount: result.scannedAddresses.length,
     receiveLastUsed: receive?.lastUsedIndex ?? -1,
@@ -229,17 +353,23 @@ async function syncOneWallet(
     stoppedReason: [...new Set(result.chains.map((c) => c.stoppedReason))].join("/"),
     scriptType: selectedDescriptor.kind === "xpub" ? selectedDescriptor.scriptType : undefined,
   };
+
   const balances = loadLastBalances();
-  balances[wallet.id] = savedBalance;
-  saveLastBalances(balances);
+  const existing = balances[wallet.id];
+  const nextBalance = mergeWalletBalanceAttempt(existing, freshBalance, nowIso, rateLimitSeen);
+  if (nextBalance) {
+    balances[wallet.id] = nextBalance;
+    saveLastBalances(balances);
+  }
 
   if (result.balance.status !== "offline") {
     const nextCache = loadAddressCache();
-    nextCache[wallet.id] = {
-      receiveLastUsed: receive?.lastUsedIndex ?? -1,
-      changeLastUsed: change?.lastUsedIndex ?? -1,
-      updatedAt: new Date().toISOString(),
-    };
+    nextCache[wallet.id] = mergeAddressCacheAfterScan(
+      prev,
+      receive?.lastUsedIndex ?? -1,
+      change?.lastUsedIndex ?? -1,
+      nowIso
+    );
     saveAddressCache(nextCache);
   }
 
@@ -248,6 +378,7 @@ async function syncOneWallet(
     wallet.descriptor.kind === "xpub" &&
     selectedDescriptor.scriptType &&
     selectedDescriptor.scriptType !== wallet.descriptor.scriptType &&
+    result.balance.status === "online" &&
     result.balance.totalSats > 0
   ) {
     rememberDetectedScriptType(wallet.id, selectedDescriptor.scriptType);
@@ -255,18 +386,22 @@ async function syncOneWallet(
 
   return {
     status: result.balance.status,
-    totalSats: result.balance.totalSats,
+    totalSats:
+      result.balance.status === "online"
+        ? result.balance.totalSats
+        : (nextBalance?.totalSats ?? result.balance.totalSats),
     error:
       result.balance.status === "online"
         ? undefined
         : result.balance.status === "partial"
           ? "일부 주소 조회 실패 또는 추가 스캔 필요"
           : "조회 실패",
+    rateLimited: rateLimitSeen,
   };
 }
 
 /**
- * Sync all configured wallets. force=true bypasses 5-minute throttle (manual / post-sell).
+ * Sync all configured wallets. force=true bypasses adaptive throttling (manual / foreground / post-sell).
  */
 export function syncAllWallets(options: { force?: boolean } = {}): Promise<SyncOutcome> {
   if (activeSyncPromise) {
@@ -285,7 +420,7 @@ export function syncAllWallets(options: { force?: boolean } = {}): Promise<SyncO
 async function runWalletSync(options: { force?: boolean } = {}): Promise<SyncOutcome> {
 
   const now = Date.now();
-  if (!options.force && lastSyncAttemptAt > 0 && now - lastSyncAttemptAt < THROTTLE_MS) {
+  if (!options.force && isWithinSyncThrottle(now)) {
     return {
       ok: false,
       skipped: true,
@@ -306,6 +441,7 @@ async function runWalletSync(options: { force?: boolean } = {}): Promise<SyncOut
   }
   lastSyncAttemptAt = now;
   const walletResults: SyncOutcome["walletResults"] = [];
+  let anyRateLimited = false;
 
   for (const wallet of config.wallets) {
     try {
@@ -315,6 +451,7 @@ async function runWalletSync(options: { force?: boolean } = {}): Promise<SyncOut
         config.gapLimit,
         config.includeUnconfirmed
       );
+      if (one.rateLimited) anyRateLimited = true;
       walletResults.push({
         id: wallet.id,
         label: wallet.label,
@@ -323,25 +460,66 @@ async function runWalletSync(options: { force?: boolean } = {}): Promise<SyncOut
         error: one.error,
       });
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const saved = persistThrownWalletAttempt(wallet.id, new Date().toISOString(), message);
       walletResults.push({
         id: wallet.id,
         label: wallet.label,
         status: "offline",
-        totalSats: 0,
-        error: error instanceof Error ? error.message : String(error),
+        totalSats: saved?.totalSats ?? 0,
+        error: message,
       });
     }
   }
+
+  const allOnline = walletResults.every((r) => r.status === "online");
+  applyAdaptiveBackoff(anyRateLimited, allOnline);
 
   const agg = getAggregatedTotalSats();
   // Mirror aggregate into heldBtc storage for consumers that only read the key after sync.
   setHeldBtc(satsToBtc(agg.totalSats), { force: true });
   notifyWalletSync();
 
-  const allOnline = walletResults.every((r) => r.status === "online");
   return {
     ok: allOnline,
     walletResults,
     aggregatedSats: agg.totalSats,
   };
 }
+
+function isWithinSyncThrottle(now: number): boolean {
+  return lastSyncAttemptAt > 0 && now - lastSyncAttemptAt < currentThrottleMs;
+}
+
+function applyAdaptiveBackoff(rateLimited: boolean, allOnline: boolean): void {
+  if (rateLimited) {
+    currentThrottleMs = Math.min(currentThrottleMs * 2, MAX_THROTTLE_MS);
+  } else if (allOnline) {
+    currentThrottleMs = DEFAULT_THROTTLE_MS;
+  }
+}
+
+/** Exposed for tests only — not part of public API. */
+export const _testInternals = {
+  get currentThrottleMs() {
+    return currentThrottleMs;
+  },
+  set currentThrottleMs(v: number) {
+    currentThrottleMs = v;
+  },
+  resetThrottle() {
+    currentThrottleMs = DEFAULT_THROTTLE_MS;
+    lastSyncAttemptAt = 0;
+  },
+  recordAttempt(now = Date.now()) {
+    lastSyncAttemptAt = now;
+  },
+  isWithinSyncThrottle(now = Date.now()) {
+    return isWithinSyncThrottle(now);
+  },
+  applyAdaptiveBackoff(rateLimited: boolean, allOnline: boolean) {
+    applyAdaptiveBackoff(rateLimited, allOnline);
+  },
+  DEFAULT_THROTTLE_MS,
+  MAX_THROTTLE_MS,
+};
