@@ -122,12 +122,12 @@ export interface ScanOptions {
 1. `startIndex`부터 `batchSize`개 파생 → 각 주소 UTXO 조회
 2. "사용됨" 판정: UTXO가 있거나 `/address/{addr}` 의 `chain_stats.tx_count > 0`
    (잔고 0이지만 과거에 쓴 주소도 gap을 리셋해야 하므로 tx_count 확인 필요)
-3. 마지막 사용 주소 이후 연속 미사용이 `gapLimit`에 도달하면 종료, 아니면 다음 배치
+3. 캐시된 마지막 사용 인덱스까지는 gap 종료를 금지하고, 그 경계를 지난 뒤 연속 미사용이 `gapLimit`에 도달하면 종료
 4. `hardCap` 도달 시 `partial` 상태로 종료 (Atlas의 "reached the safety cap" 메시지 참고)
 
 캐시: 파생 주소 목록과 마지막 사용 인덱스를 localStorage에 저장
 (`myledger.wallet.addressCache.v1`). 재동기화 시 파생을 다시 하지 않고
-"마지막 사용 인덱스 + gapLimit"까지만 조회 → 일상 동기화는 조회 수십 건 수준.
+receive/change별 캐시 경계를 먼저 보장한 뒤 "마지막 사용 인덱스 + gapLimit"까지만 조회한다. 주소 캐시가 유실된 경우 마지막 성공 잔고의 인덱스 메타데이터로 경계를 복구한다.
 
 ### 2-4. `balance.ts` — 합산 (Atlas `mempool/utxos.ts`의 `buildSummary` 포팅)
 

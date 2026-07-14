@@ -69,6 +69,27 @@ type ActiveSyncProgress = {
 
 let activeSyncProgress: ActiveSyncProgress | null = null;
 
+export type KnownLastUsed = {
+  receive: number;
+  change: number;
+};
+
+type LastUsedMetadata = {
+  receiveLastUsed?: number;
+  changeLastUsed?: number;
+  fetchedAt?: string;
+};
+
+function sanitizeLastUsedBoundary(value: unknown): number {
+  return typeof value === "number" &&
+    Number.isFinite(value) &&
+    Number.isInteger(value) &&
+    value >= -1 &&
+    value <= 1999
+    ? value
+    : -1;
+}
+
 function throwIfAborted(signal?: AbortSignal): void {
   if (!signal?.aborted) return;
   throw signal.reason instanceof Error ? signal.reason : new Error("wallet sync aborted");
@@ -81,6 +102,36 @@ export function calculateWalletScanHardCap(prev: AddressCacheEntry | undefined, 
     return Math.min(maxHardCap, Math.max(gapLimit + 1, lastUsed + 1 + gapLimit));
   }
   return maxHardCap;
+}
+
+/** Restores the strongest known per-chain discovery boundary from cache and balance metadata. */
+export function resolveKnownLastUsed(
+  prev: AddressCacheEntry | undefined,
+  stored: LastUsedMetadata | undefined
+): KnownLastUsed {
+  return {
+    receive: Math.max(
+      sanitizeLastUsedBoundary(prev?.receiveLastUsed),
+      sanitizeLastUsedBoundary(stored?.receiveLastUsed)
+    ),
+    change: Math.max(
+      sanitizeLastUsedBoundary(prev?.changeLastUsed),
+      sanitizeLastUsedBoundary(stored?.changeLastUsed)
+    ),
+  };
+}
+
+function addressCacheBoundaryFromKnownLastUsed(
+  knownLastUsed: KnownLastUsed,
+  prev: AddressCacheEntry | undefined,
+  stored: LastUsedMetadata | undefined
+): AddressCacheEntry | undefined {
+  if (knownLastUsed.receive < 0 && knownLastUsed.change < 0) return undefined;
+  return {
+    receiveLastUsed: knownLastUsed.receive,
+    changeLastUsed: knownLastUsed.change,
+    updatedAt: prev?.updatedAt ?? stored?.fetchedAt ?? "",
+  };
 }
 
 /** Advances discovery boundaries after a usable scan without ever moving a known boundary back. */
@@ -129,6 +180,7 @@ async function scanDescriptor(
   gapLimit: number,
   hardCap: number,
   includeUnconfirmed: boolean,
+  knownLastUsed: KnownLastUsed,
   signal?: AbortSignal
 ): Promise<ScanWalletResult> {
   const { scanWallet } = await import("./wallet/scan");
@@ -137,6 +189,7 @@ async function scanDescriptor(
     hardCap,
     batchSize: gapLimit,
     includeUnconfirmed,
+    knownLastUsed,
     signal,
   });
 }
@@ -154,6 +207,7 @@ export async function scanDescriptorWithFailover(
   gapLimit: number,
   hardCap: number,
   includeUnconfirmed: boolean,
+  knownLastUsed: KnownLastUsed,
   scanFn: typeof scanDescriptor = scanDescriptor,
   signal?: AbortSignal
 ): Promise<ScanWalletResult> {
@@ -174,6 +228,7 @@ export async function scanDescriptorWithFailover(
       gapLimit,
       hardCap,
       includeUnconfirmed,
+      knownLastUsed,
       signal
     );
 
@@ -371,8 +426,11 @@ async function syncOneWallet(
   throwIfAborted(signal);
   const cache = loadAddressCache();
   const prev = cache[wallet.id];
-  const effectiveGapLimit = resolveEffectiveGapLimit(prev, gapLimit);
-  const hardCap = calculateWalletScanHardCap(prev, effectiveGapLimit);
+  const storedBeforeScan = loadLastBalances()[wallet.id];
+  const knownLastUsed = resolveKnownLastUsed(prev, storedBeforeScan);
+  const scanBoundary = addressCacheBoundaryFromKnownLastUsed(knownLastUsed, prev, storedBeforeScan);
+  const effectiveGapLimit = resolveEffectiveGapLimit(scanBoundary, gapLimit);
+  const hardCap = calculateWalletScanHardCap(scanBoundary, effectiveGapLimit);
   const chain = buildMempoolApiChain(mempoolApiUrl);
 
   let result: ScanWalletResult | null = null;
@@ -385,6 +443,7 @@ async function syncOneWallet(
       effectiveGapLimit,
       hardCap,
       includeUnconfirmed,
+      knownLastUsed,
       scanDescriptor,
       signal
     );
@@ -427,7 +486,7 @@ async function syncOneWallet(
     throwIfAborted(signal);
     const nextCache = loadAddressCache();
     nextCache[wallet.id] = mergeAddressCacheAfterScan(
-      prev,
+      scanBoundary,
       receive?.lastUsedIndex ?? -1,
       change?.lastUsedIndex ?? -1,
       nowIso
