@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import {
   defaultWalletLabel,
   generateWalletId,
@@ -12,6 +12,7 @@ import {
   type WalletEntry,
   type WalletSyncConfig,
   WALLET_LABEL_MAX,
+  WALLET_SYNC_EVENT,
 } from "../../lib/walletConfig";
 import type { ScriptType, WalletDescriptor } from "../../lib/wallet/xpub";
 import type { QrWatchPayload } from "../../lib/wallet/qrParse";
@@ -36,20 +37,11 @@ function statusDotColor(status: string): string {
   return "var(--ldg-fg-4)";
 }
 
-function SyncDelayBadge({ stale = false }: { stale?: boolean }) {
-  return (
-    <span
-      className="ldg-kimchi pending"
-      style={{ marginLeft: 6, verticalAlign: "middle", fontSize: 10, padding: "2px 7px" }}
-      title={
-        stale
-          ? "완전한 동기화 전 임시 잔고를 표시하고 있습니다"
-          : "마지막 성공 잔고를 표시하고 있습니다"
-      }
-    >
-      동기화 지연
-    </span>
-  );
+function accessibleSyncStatus(status: string | undefined): string {
+  if (!status) return "기록 없음";
+  if (status === "online") return "완료";
+  if (status === "partial") return "일부 완료";
+  return "확인 실패";
 }
 
 function formatSyncTime(iso: string | null): string {
@@ -92,7 +84,6 @@ export default function WalletSyncSettings() {
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [testing, setTesting] = useState(false);
-  const autoCheckedUrlRef = useRef<string | null>(null);
 
   const [heldBtcInput, setHeldBtcInput] = useState(() => {
     const v = getHeldBtc();
@@ -129,6 +120,16 @@ export default function WalletSyncSettings() {
     refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    const onWalletSync = () => {
+      refresh();
+      setSyncing(false);
+      setSyncMsg(null);
+    };
+    window.addEventListener(WALLET_SYNC_EVENT, onWalletSync);
+    return () => window.removeEventListener(WALLET_SYNC_EVENT, onWalletSync);
+  }, [refresh]);
+
   const persist = (next: WalletSyncConfig) => {
     saveWalletConfig(next);
     setConfig(next);
@@ -137,41 +138,15 @@ export default function WalletSyncSettings() {
   const runSyncNow = useCallback(async () => {
     setSyncing(true);
     try {
-      const outcome = await syncAllWallets({ force: true });
+      const outcome = await syncAllWallets({ force: true, retryAfterRunning: true });
       setSyncMsg(formatSyncOutcome(outcome));
+    } catch (error) {
+      setSyncMsg(error instanceof Error ? error.message : "동기화 실패");
     } finally {
       setSyncing(false);
       refresh();
     }
   }, [refresh]);
-
-  useEffect(() => {
-    const url = config.mempoolApiUrl.trim();
-    if (!config.enabled || autoCheckedUrlRef.current === url) return;
-    let cancelled = false;
-    autoCheckedUrlRef.current = url;
-
-    setConnectOk(false);
-    setConnectMsg("연결 확인 중…");
-    void (async () => {
-      const result = await testMempoolConnection(url);
-      if (cancelled) return;
-      if (result.ok) {
-        setConnectOk(true);
-        setConnectMsg(`연결 성공 · ${result.apiName} · 블록 높이 ${result.height?.toLocaleString("en-US")}`);
-        if (config.wallets.length > 0) {
-          await runSyncNow();
-        }
-      } else {
-        setConnectOk(false);
-        setConnectMsg(result.error ?? "연결 실패");
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [config.enabled, config.mempoolApiUrl, config.wallets.length, runSyncNow]);
 
   const setMode = (enabled: boolean) => {
     const next = {
@@ -214,7 +189,6 @@ export default function WalletSyncSettings() {
         enabled: config.enabled || config.wallets.length > 0,
         mempoolApiUrl: urlInput.trim(),
       };
-      autoCheckedUrlRef.current = next.mempoolApiUrl;
       persist(next);
       if (next.enabled && next.wallets.length > 0) {
         await runSyncNow();
@@ -493,7 +467,6 @@ export default function WalletSyncSettings() {
             {config.wallets.map((wallet) => {
               const bal = balances[wallet.id];
               const attemptStatus = bal?.lastAttemptStatus ?? bal?.status;
-              const syncDelayed = Boolean(attemptStatus && attemptStatus !== "online");
               if (editId === wallet.id) {
                 return (
                   <div key={wallet.id} className="ldg-cat-form" style={{ marginBottom: 8 }}>
@@ -522,7 +495,8 @@ export default function WalletSyncSettings() {
               return (
                 <div key={wallet.id} className="ldg-cat-row">
                   <span
-                    aria-hidden
+                    role="img"
+                    aria-label={`동기화 상태: ${accessibleSyncStatus(attemptStatus)}`}
                     style={{
                       width: 10,
                       height: 10,
@@ -537,7 +511,6 @@ export default function WalletSyncSettings() {
                       {bal ? fmtSats(bal.totalSats) : "—"}
                       {" · "}
                       {formatSyncTime(bal?.lastOnlineAt ?? bal?.fetchedAt ?? null)}
-                      {syncDelayed && <SyncDelayBadge stale={bal?.stale} />}
                     </div>
                   </div>
                   <div className="ldg-cat-manage-actions">

@@ -15,8 +15,6 @@ export type BalanceSyncMeta = {
   walletCount: number;
   lastSyncLabel: string;
   unconfirmedSats: number;
-  warning?: string;
-  stale?: boolean;
   wallets: BalanceWalletRow[];
 };
 
@@ -30,22 +28,6 @@ function UnconfirmedBadge({ sats }: { sats: number }) {
       title="아직 블록에 포함되지 않은 잔고"
     >
       확정 대기 +{sats.toLocaleString("en-US")} sats
-    </span>
-  );
-}
-
-function SyncDelayBadge({ stale = false }: { stale?: boolean }) {
-  return (
-    <span
-      className="ldg-kimchi pending"
-      style={{ marginLeft: 6, verticalAlign: "middle", fontSize: 10, padding: "2px 7px" }}
-      title={
-        stale
-          ? "완전한 동기화 전 임시 잔고를 표시하고 있습니다"
-          : "일부 API 조회 지연 — 마지막 성공 잔고 표시 중"
-      }
-    >
-      동기화 지연
     </span>
   );
 }
@@ -90,7 +72,6 @@ export default function BalanceCard({
       {showSync && (
         <div className="ldg-balance-sub" style={{ marginTop: 4, paddingRight: 92 }}>
           {syncMeta.lastSyncLabel}
-          {syncMeta.warning && <SyncDelayBadge stale={syncMeta.stale} />}
         </div>
       )}
       {showSync && (

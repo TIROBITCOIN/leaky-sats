@@ -151,7 +151,7 @@ Access-Control-Allow-Origin: *
 ## 앱 쪽 동작
 
 - 요청 타임아웃: 20초
-- 퍼블릭 mempool.space 기본 사용 없음
+- self-hosted URL 우선, 실패하거나 비어 있으면 mempool.space와 blockstream.info로 자동 전환
 - `http://` 공인 IP는 HTTPS PWA에서 차단
 - `localhost`/`127.0.0.1`만 개발 예외
 - 연결 테스트는 tip height를 호출해서 base URL, HTTPS, CORS, timeout을 구분한다.

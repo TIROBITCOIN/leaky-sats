@@ -51,25 +51,15 @@ export default function HomePage() {
       setHeldBtc(getHeldBtc());
       setRefreshTick((k) => k + 1);
     };
-    const syncWallets = (force = false) => {
-      if (getHeldBtcMode() !== "wallet-sync") return;
-      const agg = getAggregatedTotalSats();
-      const needsFirstSync = agg.walletCount > 0 && !agg.lastFetchedAt;
-      void syncAllWallets({ force: force || needsFirstSync }).then(refreshWalletSyncView);
-    };
     const onVisibility = () => {
       if (document.visibilityState === "visible") {
         refresh();
-        syncWallets(true);
       }
     };
     const onWalletSync = () => refreshWalletSyncView();
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("focus", refresh);
     window.addEventListener(WALLET_SYNC_EVENT, onWalletSync);
-    // Initial sync when home mounts in wallet-sync mode. The first successful balance
-    // should not be blocked by a previous failed/empty throttled attempt.
-    syncWallets();
     return () => {
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("focus", refresh);
@@ -105,7 +95,9 @@ export default function HomePage() {
     refreshAfterSellChange();
     setSellSavedMessage("BTC 판매가 확정되었습니다. 보유 BTC가 업데이트되었습니다.");
     if (getHeldBtcMode() === "wallet-sync") {
-      void syncAllWallets({ force: true }).then(() => setHeldBtc(getHeldBtc()));
+      void syncAllWallets({ force: true, retryAfterRunning: true })
+        .then(() => setHeldBtc(getHeldBtc()))
+        .catch(() => undefined);
     }
   }, [refreshAfterSellChange]);
 
@@ -118,7 +110,7 @@ export default function HomePage() {
   const syncMeta = (() => {
     const mode = getHeldBtcMode();
     if (mode !== "wallet-sync") {
-      return { mode, walletCount: 0, lastSyncLabel: "", unconfirmedSats: 0, stale: false, wallets: [] };
+      return { mode, walletCount: 0, lastSyncLabel: "", unconfirmedSats: 0, wallets: [] };
     }
     const agg = getAggregatedTotalSats();
     const freshnessAt = agg.anyPartialOrOffline
@@ -137,8 +129,6 @@ export default function HomePage() {
       walletCount: agg.walletCount,
       lastSyncLabel,
       unconfirmedSats: agg.unconfirmedSats,
-      warning: agg.anyPartialOrOffline ? "일부 지갑 조회 실패 · 마지막 값 포함" : undefined,
-      stale: agg.wallets.some((wallet) => wallet.stale === true),
       wallets: agg.wallets.map((w) => ({
         id: w.id,
         label: w.label,
