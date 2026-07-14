@@ -2,7 +2,7 @@
  * Watch-only wallet sync config/state in localStorage.
  * Heavy crypto/scan code lives in src/lib/wallet/* and is loaded dynamically.
  */
-import type { WalletBalance } from "./wallet/balance";
+import type { WalletBalance, WalletBalanceStatus } from "./wallet/balance";
 import { normalizeMempoolBaseUrl } from "./wallet/mempoolClient";
 import type { WalletDescriptor } from "./wallet/xpub";
 
@@ -39,8 +39,19 @@ export type AddressCacheEntry = {
   updatedAt: string;
 };
 
+export type StoredWalletBalance = WalletBalance & {
+  /** Most recent attempt, including partial/offline attempts. */
+  lastAttemptAt?: string;
+  lastAttemptStatus?: WalletBalanceStatus;
+  lastError?: string;
+  /** Most recent fully successful balance timestamp. */
+  lastOnlineAt?: string;
+  /** True only when no online balance existed and a first partial result was retained. */
+  stale?: boolean;
+};
+
 export type AddressCacheMap = Record<string, AddressCacheEntry>;
-export type LastBalanceMap = Record<string, WalletBalance>;
+export type LastBalanceMap = Record<string, StoredWalletBalance>;
 
 /** Fixed defaults (no settings UI): wide gap scan + always count unconfirmed. */
 export const WALLET_DEFAULT_GAP_LIMIT = 200;
@@ -165,38 +176,62 @@ export function getHeldBtcMode(): HeldBtcMode {
   return loadWalletConfig().enabled ? "wallet-sync" : "manual";
 }
 
-/** Sum sats from wallets included in home total (last successful balances). */
+/** Sum the accepted display balances (last online, or a first partial marked stale). */
 export function getAggregatedTotalSats(): {
   totalSats: number;
   unconfirmedSats: number;
   walletCount: number;
   includedCount: number;
   lastFetchedAt: string | null;
+  oldestIncludedFetchedAt: string | null;
   anyPartialOrOffline: boolean;
-  wallets: Array<{ id: string; label: string; totalSats: number; unconfirmedSats: number; status: string; fetchedAt: string | null }>;
+  wallets: Array<{
+    id: string;
+    label: string;
+    totalSats: number;
+    unconfirmedSats: number;
+    status: string;
+    fetchedAt: string | null;
+    lastAttemptStatus?: string;
+    lastAttemptAt?: string;
+    stale?: boolean;
+  }>;
 } {
   const config = loadWalletConfig();
   const balances = loadLastBalances();
   let totalSats = 0;
   let unconfirmedSats = 0;
   let lastFetchedAt: string | null = null;
+  let oldestIncludedFetchedAt: string | null = null;
   let anyPartialOrOffline = false;
   const wallets = config.wallets.map((w) => {
     const bal = balances[w.id];
-    if (bal && (bal.status === "partial" || bal.status === "offline")) anyPartialOrOffline = true;
-    if (w.includeInTotal && bal) {
+    // Legacy versions persisted offline zeroes. Only a complete online balance or a
+    // first-partial snapshot is accepted for display and aggregation.
+    const accepted = bal?.status === "online" || bal?.status === "partial";
+    const attemptFailed = bal?.lastAttemptStatus !== undefined && bal.lastAttemptStatus !== "online";
+    if (bal && (bal.status === "partial" || bal.status === "offline" || attemptFailed)) {
+      anyPartialOrOffline = true;
+    }
+    if (w.includeInTotal && bal && accepted) {
       const sats = config.includeUnconfirmed ? bal.totalSats : bal.confirmedSats;
       totalSats += sats;
       unconfirmedSats += bal.unconfirmedSats;
       if (!lastFetchedAt || bal.fetchedAt > lastFetchedAt) lastFetchedAt = bal.fetchedAt;
+      if (!oldestIncludedFetchedAt || bal.fetchedAt < oldestIncludedFetchedAt) {
+        oldestIncludedFetchedAt = bal.fetchedAt;
+      }
     }
     return {
       id: w.id,
       label: w.label,
-      totalSats: bal ? (config.includeUnconfirmed ? bal.totalSats : bal.confirmedSats) : 0,
-      unconfirmedSats: bal?.unconfirmedSats ?? 0,
+      totalSats: bal && accepted ? (config.includeUnconfirmed ? bal.totalSats : bal.confirmedSats) : 0,
+      unconfirmedSats: bal && accepted ? bal.unconfirmedSats : 0,
       status: bal?.status ?? "offline",
-      fetchedAt: bal?.fetchedAt ?? null,
+      fetchedAt: bal && accepted ? bal.fetchedAt : null,
+      lastAttemptStatus: bal?.lastAttemptStatus,
+      lastAttemptAt: bal?.lastAttemptAt,
+      stale: bal?.stale,
     };
   });
   return {
@@ -205,6 +240,7 @@ export function getAggregatedTotalSats(): {
     walletCount: config.wallets.length,
     includedCount: config.wallets.filter((w) => w.includeInTotal).length,
     lastFetchedAt,
+    oldestIncludedFetchedAt,
     anyPartialOrOffline,
     wallets,
   };

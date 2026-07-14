@@ -36,6 +36,22 @@ function statusDotColor(status: string): string {
   return "var(--ldg-fg-4)";
 }
 
+function SyncDelayBadge({ stale = false }: { stale?: boolean }) {
+  return (
+    <span
+      className="ldg-kimchi pending"
+      style={{ marginLeft: 6, verticalAlign: "middle", fontSize: 10, padding: "2px 7px" }}
+      title={
+        stale
+          ? "완전한 동기화 전 임시 잔고를 표시하고 있습니다"
+          : "마지막 성공 잔고를 표시하고 있습니다"
+      }
+    >
+      동기화 지연
+    </span>
+  );
+}
+
 function formatSyncTime(iso: string | null): string {
   if (!iso) return "동기화 기록 없음";
   try {
@@ -476,6 +492,8 @@ export default function WalletSyncSettings() {
             )}
             {config.wallets.map((wallet) => {
               const bal = balances[wallet.id];
+              const attemptStatus = bal?.lastAttemptStatus ?? bal?.status;
+              const syncDelayed = Boolean(attemptStatus && attemptStatus !== "online");
               if (editId === wallet.id) {
                 return (
                   <div key={wallet.id} className="ldg-cat-form" style={{ marginBottom: 8 }}>
@@ -509,7 +527,7 @@ export default function WalletSyncSettings() {
                       width: 10,
                       height: 10,
                       borderRadius: 99,
-                      background: statusDotColor(bal?.status ?? "offline"),
+                      background: statusDotColor(attemptStatus ?? "offline"),
                       flexShrink: 0,
                     }}
                   />
@@ -518,7 +536,8 @@ export default function WalletSyncSettings() {
                     <div className="ldg-balance-sub">
                       {bal ? fmtSats(bal.totalSats) : "—"}
                       {" · "}
-                      {formatSyncTime(bal?.fetchedAt ?? null)}
+                      {formatSyncTime(bal?.lastOnlineAt ?? bal?.fetchedAt ?? null)}
+                      {syncDelayed && <SyncDelayBadge stale={bal?.stale} />}
                     </div>
                   </div>
                   <div className="ldg-cat-manage-actions">
@@ -666,11 +685,15 @@ export default function WalletSyncSettings() {
             </div>
           )}
 
-          {syncing && (
-            <div className="ldg-balance-sub" style={{ marginTop: 10 }}>
-              동기화 중…
-            </div>
-          )}
+          <button
+            type="button"
+            className="ldg-secondary-btn"
+            style={{ marginTop: 12 }}
+            onClick={() => void runSyncNow()}
+            disabled={syncing || config.wallets.length === 0}
+          >
+            {syncing ? "동기화 중…" : "지금 동기화"}
+          </button>
           {syncMsg && (
             <div className="ldg-backup-status ok" style={{ marginTop: 8 }}>
               {syncMsg}
