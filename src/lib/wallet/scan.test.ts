@@ -45,6 +45,96 @@ describe("scanWallet", () => {
     expect(fetchJson).toHaveBeenCalledTimes(40);
   });
 
+  it.each(["receive", "change"] as const)(
+    "includes a cached %s address beyond an earlier 20-address empty gap",
+    async (chain) => {
+      const { deriveAddresses } = await import("./xpub");
+      const firstUsed = deriveAddresses({ xpub: ZPUB, chain, startIndex: 0, limit: 1 })[0];
+      const cachedLastUsed = deriveAddresses({ xpub: ZPUB, chain, startIndex: 25, limit: 1 })[0];
+      const fetchJson = vi.fn(async (url: string) => {
+        const address = addressFromUrl(url);
+        if (address === firstUsed.address) return stats(1, 10_000);
+        if (address === cachedLastUsed.address) return stats(1, 90_000);
+        return stats(0);
+      });
+
+      const result = await scanWallet(
+        { kind: "xpub", xpub: ZPUB },
+        "https://mempool.example/api",
+        {
+          gapLimit: 20,
+          hardCap: 46,
+          batchSize: 20,
+          fetchJson,
+          knownLastUsed: chain === "receive" ? { receive: 25 } : { change: 25 },
+        }
+      );
+
+      expect(fetchJson.mock.calls.map(([url]) => addressFromUrl(url))).toContain(cachedLastUsed.address);
+      expect(result.balance.totalSats).toBe(100_000);
+      expect(result.chains.find((resultChain) => resultChain.chain === chain)?.lastUsedIndex).toBe(25);
+    }
+  );
+
+  it("treats an API that forgets a cached used address as non-authoritative", async () => {
+    const { deriveAddresses } = await import("./xpub");
+    const cachedLastUsed = deriveAddresses({
+      xpub: ZPUB,
+      chain: "receive",
+      startIndex: 25,
+      limit: 1,
+    })[0];
+    const fetchJson = vi.fn(async (_url: string) => stats(0));
+
+    const result = await scanWallet(
+      { kind: "xpub", xpub: ZPUB },
+      "https://mempool.example/api",
+      {
+        gapLimit: 20,
+        hardCap: 46,
+        batchSize: 20,
+        fetchJson,
+        knownLastUsed: { receive: 25 },
+      }
+    );
+
+    expect(fetchJson.mock.calls.map(([url]) => addressFromUrl(url))).toContain(cachedLastUsed.address);
+    expect(result.balance.status).toBe("partial");
+    expect(result.balance.failedAddresses).toBeGreaterThan(0);
+    expect(result.chains.find((chain) => chain.chain === "receive")?.stoppedReason).toBe("apiFailure");
+  });
+
+  it("continues past an API-zero cached boundary and includes a newer used address", async () => {
+    const { deriveAddresses } = await import("./xpub");
+    const newerUsed = deriveAddresses({
+      xpub: ZPUB,
+      chain: "receive",
+      startIndex: 30,
+      limit: 1,
+    })[0];
+    const fetchJson = vi.fn(async (url: string) =>
+      addressFromUrl(url) === newerUsed.address ? stats(1, 123_456) : stats(0)
+    );
+
+    const result = await scanWallet(
+      { kind: "xpub", xpub: ZPUB },
+      "https://mempool.example/api",
+      {
+        gapLimit: 20,
+        hardCap: 51,
+        batchSize: 20,
+        fetchJson,
+        knownLastUsed: { receive: 25 },
+      }
+    );
+
+    expect(fetchJson.mock.calls.map(([url]) => addressFromUrl(url))).toContain(newerUsed.address);
+    expect(result.balance).toMatchObject({ status: "partial", totalSats: 123_456 });
+    expect(result.balance.failedAddresses).toBeGreaterThan(0);
+    expect(result.chains.find((chain) => chain.chain === "receive")?.stoppedReason).toBe("apiFailure");
+    expect(result.chains.find((chain) => chain.chain === "receive")?.lastUsedIndex).toBe(30);
+  });
+
   it("resets gap after a used address with zero balance but history", async () => {
     const { deriveAddresses } = await import("./xpub");
     const receive = deriveAddresses({ xpub: ZPUB, chain: "receive", startIndex: 0, limit: 5 });

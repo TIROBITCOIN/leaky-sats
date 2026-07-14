@@ -33,6 +33,7 @@ export type ScanOptions = {
   batchSize?: number;
   concurrency?: number;
   includeUnconfirmed?: boolean;
+  knownLastUsed?: { receive?: number; change?: number };
   /** Injected for tests */
   fetchJson?: MempoolJsonFetcher;
   signal?: AbortSignal;
@@ -212,6 +213,7 @@ async function scanXpubChain(
   options: Required<Pick<ScanOptions, "gapLimit" | "hardCap" | "batchSize" | "concurrency">> & {
     fetchJson: MempoolJsonFetcher;
     scriptType?: import("./xpub").ScriptType;
+    knownLastUsed?: number;
     signal?: AbortSignal;
   }
 ): Promise<{
@@ -230,6 +232,35 @@ async function scanXpubChain(
   let rateLimited = false;
   let rateLimitRetryAfterMs: number | undefined;
   let candidateFailed = false;
+  const knownLastUsed =
+    Number.isInteger(options.knownLastUsed) && (options.knownLastUsed ?? -1) >= 0
+      ? (options.knownLastUsed as number)
+      : -1;
+  let knownBoundaryConfirmed = knownLastUsed < 0;
+
+  const finishDiscovery = (reason: "gap" | "hardCap") => {
+    const knownBoundaryMissing = !knownBoundaryConfirmed;
+    if (knownBoundaryMissing) {
+      const knownAddress = addresses.find((item) => item.index === knownLastUsed)?.address;
+      lookups.push({
+        ok: false,
+        address: knownAddress ?? `${chain}/${knownLastUsed}`,
+        error: "known used address was reported unused",
+      });
+    }
+    return {
+      chainResult: {
+        chain,
+        addresses,
+        lastUsedIndex,
+        stoppedReason: knownBoundaryMissing ? ("apiFailure" as const) : reason,
+      },
+      lookups,
+      rateLimited,
+      rateLimitRetryAfterMs,
+      candidateFailed: candidateFailed || knownBoundaryMissing,
+    };
+  };
 
   while (startIndex < options.hardCap) {
     throwIfAborted(options.signal);
@@ -354,19 +385,15 @@ async function scanXpubChain(
         if (row.used) {
           lastUsedIndex = row.index;
           consecutiveUnused = 0;
+          if (row.index === knownLastUsed) knownBoundaryConfirmed = true;
         } else {
           consecutiveUnused += 1;
         }
       }
 
-      if (consecutiveUnused >= options.gapLimit) {
-        return {
-          chainResult: { chain, addresses, lastUsedIndex, stoppedReason: "gap" },
-          lookups,
-          rateLimited,
-          rateLimitRetryAfterMs,
-          candidateFailed,
-        };
+      const reachedRequiredGapBoundary = row.index >= knownLastUsed + options.gapLimit;
+      if (reachedRequiredGapBoundary && consecutiveUnused >= options.gapLimit) {
+        return finishDiscovery("gap");
       }
     }
 
@@ -377,13 +404,7 @@ async function scanXpubChain(
     }
   }
 
-  return {
-    chainResult: { chain, addresses, lastUsedIndex, stoppedReason },
-    lookups,
-    rateLimited,
-    rateLimitRetryAfterMs,
-    candidateFailed,
-  };
+  return finishDiscovery(stoppedReason);
 }
 
 export async function scanWallet(
@@ -475,7 +496,10 @@ export async function scanWallet(
     signal: options.signal,
   };
 
-  const receive = await scanXpubChain(descriptor.xpub, "receive", baseUrl, chainOpts);
+  const receive = await scanXpubChain(descriptor.xpub, "receive", baseUrl, {
+    ...chainOpts,
+    knownLastUsed: options.knownLastUsed?.receive,
+  });
   if (receive.rateLimited || receive.candidateFailed) {
     const stoppedReason = receive.rateLimited ? "rateLimit" : "apiFailure";
     return {
@@ -489,7 +513,10 @@ export async function scanWallet(
       rateLimitRetryAfterMs: receive.rateLimitRetryAfterMs,
     };
   }
-  const change = await scanXpubChain(descriptor.xpub, "change", baseUrl, chainOpts);
+  const change = await scanXpubChain(descriptor.xpub, "change", baseUrl, {
+    ...chainOpts,
+    knownLastUsed: options.knownLastUsed?.change,
+  });
 
   const allLookups = [...receive.lookups, ...change.lookups];
   const scannedAddresses = [...receive.chainResult.addresses, ...change.chainResult.addresses];

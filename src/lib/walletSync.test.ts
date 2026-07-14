@@ -6,6 +6,7 @@ import {
   mergeAddressCacheAfterScan,
   mergeWalletBalanceAttempt,
   resolveEffectiveGapLimit,
+  resolveKnownLastUsed,
   scanDescriptorWithFailover,
   syncAllWallets,
   WALLET_SYNC_TIMEOUT_MS,
@@ -22,10 +23,15 @@ import type { ScanWalletResult } from "./wallet/scan";
 import {
   getAggregatedTotalSats,
   loadLastBalances,
+  saveAddressCache,
   saveLastBalances,
   saveWalletConfig,
   type StoredWalletBalance,
 } from "./walletConfig";
+
+const NO_KNOWN_LAST_USED = { receive: -1, change: -1 };
+const ZPUB =
+  "zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs";
 
 afterEach(() => {
   clearMempoolApiHealth();
@@ -74,6 +80,54 @@ describe("calculateWalletScanHardCap", () => {
       "2026-07-13T00:00:00.000Z"
     );
     expect(next).toMatchObject({ receiveLastUsed: 10, changeLastUsed: 7 });
+  });
+});
+
+describe("resolveKnownLastUsed", () => {
+  it("uses the maximum boundary from the address cache and stored balance metadata", () => {
+    expect(
+      resolveKnownLastUsed(
+        { receiveLastUsed: 10, changeLastUsed: 8, updatedAt: "2026-07-13T00:00:00.000Z" },
+        { receiveLastUsed: 25, changeLastUsed: 3 }
+      )
+    ).toEqual({ receive: 25, change: 8 });
+  });
+
+  it("recovers a known boundary from balance metadata when the address cache is missing", () => {
+    expect(resolveKnownLastUsed(undefined, { receiveLastUsed: 25, changeLastUsed: 4 })).toEqual({
+      receive: 25,
+      change: 4,
+    });
+  });
+
+  it("accepts the inclusive persisted boundary range", () => {
+    expect(
+      resolveKnownLastUsed(
+        { receiveLastUsed: -1, changeLastUsed: 1999, updatedAt: "2026-07-13T00:00:00.000Z" },
+        undefined
+      )
+    ).toEqual({ receive: -1, change: 1999 });
+  });
+
+  it.each([
+    ["numeric string", "25"],
+    ["float", 25.5],
+    ["NaN", Number.NaN],
+    ["infinity", Number.POSITIVE_INFINITY],
+    ["below range", -2],
+    ["above range", 2000],
+  ])("rejects a malformed %s boundary restored at runtime", (_label, malformed) => {
+    const cache = {
+      receiveLastUsed: malformed,
+      changeLastUsed: malformed,
+      updatedAt: "2026-07-13T00:00:00.000Z",
+    } as unknown as Parameters<typeof resolveKnownLastUsed>[0];
+    const stored = {
+      receiveLastUsed: malformed,
+      changeLastUsed: malformed,
+    } as unknown as Parameters<typeof resolveKnownLastUsed>[1];
+
+    expect(resolveKnownLastUsed(cache, stored)).toEqual({ receive: -1, change: -1 });
   });
 });
 
@@ -141,6 +195,7 @@ describe("scanDescriptorWithFailover", () => {
       200,
       200,
       true,
+      NO_KNOWN_LAST_USED,
       scanFn
     );
 
@@ -163,6 +218,7 @@ describe("scanDescriptorWithFailover", () => {
       20,
       200,
       true,
+      NO_KNOWN_LAST_USED,
       scanFn
     );
 
@@ -183,6 +239,7 @@ describe("scanDescriptorWithFailover", () => {
       20,
       200,
       true,
+      NO_KNOWN_LAST_USED,
       scanFn
     );
 
@@ -210,6 +267,7 @@ describe("scanDescriptorWithFailover", () => {
       20,
       200,
       true,
+      NO_KNOWN_LAST_USED,
       scanFn
     );
 
@@ -230,6 +288,7 @@ describe("scanDescriptorWithFailover", () => {
         20,
         200,
         true,
+        NO_KNOWN_LAST_USED,
         scanFn
       )
     ).rejects.toThrow("invalid xpub");
@@ -255,6 +314,7 @@ describe("scanDescriptorWithFailover", () => {
       200,
       200,
       true,
+      NO_KNOWN_LAST_USED,
       scanFn
     );
 
@@ -281,6 +341,7 @@ describe("scanDescriptorWithFailover", () => {
       200,
       200,
       true,
+      NO_KNOWN_LAST_USED,
       scanFn
     );
 
@@ -303,6 +364,7 @@ describe("scanDescriptorWithFailover", () => {
       200,
       200,
       true,
+      NO_KNOWN_LAST_USED,
       scanFn
     );
 
@@ -319,11 +381,80 @@ describe("scanDescriptorWithFailover", () => {
       200,
       200,
       true,
+      NO_KNOWN_LAST_USED,
       scanFn
     );
 
     expect(result.balance.status).toBe("offline");
     expect(scanFn).toHaveBeenCalledTimes(chain.length);
+  });
+});
+
+describe("cached xpub boundary integration", () => {
+  it("rechecks a cached receive address beyond an earlier 20-address gap", async () => {
+    vi.stubGlobal("localStorage", memoryStorage());
+    const { deriveAddresses } = await import("./wallet/xpub");
+    const highAddress = deriveAddresses({
+      xpub: ZPUB,
+      chain: "receive",
+      startIndex: 25,
+      limit: 1,
+    })[0].address;
+    const cachedAt = "2026-07-13T00:00:00.000Z";
+
+    saveWalletConfig({
+      enabled: true,
+      wallets: [
+        {
+          id: "cached-wallet",
+          label: "cached wallet",
+          descriptor: { kind: "xpub", xpub: ZPUB },
+          includeInTotal: true,
+          createdAt: cachedAt,
+        },
+      ],
+      mempoolApiUrl: "",
+      gapLimit: 20,
+      includeUnconfirmed: true,
+    });
+    saveAddressCache({
+      "cached-wallet": { receiveLastUsed: 25, changeLastUsed: -1, updatedAt: cachedAt },
+    });
+
+    const publicChain = buildMempoolApiChain("");
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      const address = decodeURIComponent(url.split("/address/")[1] ?? "");
+      const isFallbackApi = url.startsWith(publicChain[1].baseUrl);
+      const fundedSats = isFallbackApi && address === highAddress ? 123_456 : 0;
+      return new Response(
+        JSON.stringify({
+          chain_stats: {
+            tx_count: fundedSats > 0 ? 1 : 0,
+            funded_txo_sum: fundedSats,
+            spent_txo_sum: 0,
+          },
+          mempool_stats: { tx_count: 0, funded_txo_sum: 0, spent_txo_sum: 0 },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const outcome = await syncAllWallets({ force: true });
+
+    expect(outcome).toMatchObject({ ok: true, aggregatedSats: 123_456 });
+    expect(outcome.walletResults[0]).toMatchObject({ status: "online", totalSats: 123_456 });
+    expect(
+      fetchMock.mock.calls.some(
+        ([input]) => String(input).startsWith(publicChain[0].baseUrl) && String(input).includes(highAddress)
+      )
+    ).toBe(true);
+    expect(
+      fetchMock.mock.calls.some(
+        ([input]) => String(input).startsWith(publicChain[1].baseUrl) && String(input).includes(highAddress)
+      )
+    ).toBe(true);
   });
 });
 
