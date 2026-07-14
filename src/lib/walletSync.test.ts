@@ -2,12 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   _testInternals,
   calculateWalletScanHardCap,
+  isWalletSyncRunning,
   mergeAddressCacheAfterScan,
   mergeWalletBalanceAttempt,
   resolveEffectiveGapLimit,
   scanDescriptorWithFailover,
   syncAllWallets,
+  WALLET_SYNC_TIMEOUT_MS,
 } from "./walletSync";
+import { HELD_BTC_STORAGE_KEY } from "./heldBtc";
 import {
   buildMempoolApiChain,
   clearMempoolApiHealth,
@@ -145,6 +148,94 @@ describe("scanDescriptorWithFailover", () => {
     expect(result.rateLimited).toBe(false);
     expect(scanFn).toHaveBeenCalledTimes(2);
     expect(isMempoolApiDead(chain[0].baseUrl)).toBe(true);
+  });
+
+  it("falls back when the first candidate returns an incomplete partial result", async () => {
+    const chain = buildMempoolApiChain("");
+    const scanFn = vi
+      .fn()
+      .mockResolvedValueOnce(scanResult("partial", 1_000))
+      .mockResolvedValueOnce(scanResult("online", 12_345));
+
+    const result = await scanDescriptorWithFailover(
+      { kind: "addresses", addresses: ["bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu"] },
+      chain,
+      20,
+      200,
+      true,
+      scanFn
+    );
+
+    expect(result.balance).toMatchObject({ status: "online", totalSats: 12_345 });
+    expect(scanFn).toHaveBeenCalledTimes(2);
+    expect(isMempoolApiDead(chain[0].baseUrl)).toBe(true);
+  });
+
+  it("accepts a hard-cap partial result with no failed address lookups", async () => {
+    const chain = buildMempoolApiChain("");
+    const hardCapResult = scanResult("partial", 1_000);
+    hardCapResult.balance.failedAddresses = 0;
+    const scanFn = vi.fn(async () => hardCapResult);
+
+    const result = await scanDescriptorWithFailover(
+      { kind: "addresses", addresses: ["bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu"] },
+      chain,
+      20,
+      200,
+      true,
+      scanFn
+    );
+
+    expect(result.balance.status).toBe("partial");
+    expect(result.balance.failedAddresses).toBe(0);
+    expect(scanFn).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the more complete partial when candidates have the same failure count", async () => {
+    const chain = buildMempoolApiChain("");
+    const first = scanResult("partial", 1_000);
+    first.scannedAddresses = [
+      { chain: "receive", index: 0, path: "address/0", address: "bc1qfirst" },
+    ];
+    const second = scanResult("partial", 2_000);
+    second.scannedAddresses = [
+      { chain: "receive", index: 0, path: "address/0", address: "bc1qfirst" },
+      { chain: "receive", index: 1, path: "address/1", address: "bc1qsecond" },
+    ];
+    const scanFn = vi.fn().mockResolvedValueOnce(first).mockResolvedValueOnce(second);
+
+    const result = await scanDescriptorWithFailover(
+      { kind: "addresses", addresses: ["bc1qfirst", "bc1qsecond"] },
+      chain,
+      20,
+      200,
+      true,
+      scanFn
+    );
+
+    expect(result.balance.totalSats).toBe(2_000);
+    expect(result.scannedAddresses).toHaveLength(2);
+  });
+
+  it("does not dead-mark or repeat deterministic descriptor errors across APIs", async () => {
+    const chain = buildMempoolApiChain("");
+    const scanFn = vi.fn(async () => {
+      throw new Error("invalid xpub");
+    });
+
+    await expect(
+      scanDescriptorWithFailover(
+        { kind: "xpub", xpub: "invalid" },
+        chain,
+        20,
+        200,
+        true,
+        scanFn
+      )
+    ).rejects.toThrow("invalid xpub");
+
+    expect(scanFn).toHaveBeenCalledTimes(1);
+    expect(isMempoolApiDead(chain[0].baseUrl)).toBe(false);
   });
 
   it("dead-marks a 429 URL for Retry-After and preserves the signal after fallback succeeds", async () => {
@@ -472,7 +563,7 @@ describe("sync exception persistence", () => {
       },
     });
     for (const candidate of buildMempoolApiChain("")) {
-      markMempoolApiDead(candidate.baseUrl, 60_000);
+      markMempoolApiDead(candidate.baseUrl, 60_000, "rate-limit");
     }
 
     const outcome = await syncAllWallets({ force: true });
@@ -489,6 +580,87 @@ describe("sync exception persistence", () => {
       lastAttemptStatus: "offline",
     });
     expect(saved.lastError).toBeTruthy();
+  });
+});
+
+describe("production sync timeout wiring", () => {
+  it("unlocks, preserves balance, records the timeout, emits an event, and does not overwrite manual mode", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-14T00:00:00.000Z"));
+    vi.stubGlobal("localStorage", memoryStorage());
+    const dispatchEvent = vi.fn();
+    vi.stubGlobal("window", { dispatchEvent });
+    vi.stubGlobal(
+      "CustomEvent",
+      class TestCustomEvent {
+        constructor(public readonly type: string) {}
+      }
+    );
+
+    const previousAt = "2026-07-13T00:00:00.000Z";
+    const config = {
+      enabled: true,
+      wallets: [
+        {
+          id: "timeout-wallet",
+          label: "timeout wallet",
+          descriptor: { kind: "addresses" as const, addresses: ["bc1qtest"] },
+          includeInTotal: true,
+          createdAt: previousAt,
+        },
+      ],
+      mempoolApiUrl: "",
+      gapLimit: 20,
+      includeUnconfirmed: true,
+    };
+    saveWalletConfig(config);
+    saveLastBalances({
+      "timeout-wallet": {
+        ...walletBalance("online", 105_000, previousAt),
+        lastAttemptAt: previousAt,
+        lastAttemptStatus: "online",
+        lastOnlineAt: previousAt,
+        stale: false,
+      },
+    });
+
+    const fetchMock = vi.fn(
+      (_input: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          const signal = init?.signal;
+          const onAbort = () => reject(signal?.reason ?? new Error("aborted"));
+          if (signal?.aborted) onAbort();
+          else signal?.addEventListener("abort", onAbort, { once: true });
+        })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const pending = syncAllWallets({ force: true });
+    await vi.dynamicImportSettled();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fetchMock).toHaveBeenCalled();
+    expect(isWalletSyncRunning()).toBe(true);
+    await expect(syncAllWallets({ force: true })).resolves.toMatchObject({
+      skipped: true,
+      reason: "already-running",
+    });
+
+    saveWalletConfig({ ...config, enabled: false });
+    localStorage.setItem(HELD_BTC_STORAGE_KEY, "9.99");
+    await vi.advanceTimersByTimeAsync(WALLET_SYNC_TIMEOUT_MS);
+    const outcome = await pending;
+    const saved = loadLastBalances()["timeout-wallet"];
+
+    expect(outcome).toMatchObject({ ok: false, reason: "timeout", aggregatedSats: 105_000 });
+    expect(isWalletSyncRunning()).toBe(false);
+    expect(saved).toMatchObject({
+      totalSats: 105_000,
+      status: "online",
+      lastAttemptStatus: "offline",
+      lastError: "동기화 시간이 초과되었습니다. 자동으로 다시 시도합니다.",
+    });
+    expect(localStorage.getItem(HELD_BTC_STORAGE_KEY)).toBe("9.99");
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
   });
 });
 

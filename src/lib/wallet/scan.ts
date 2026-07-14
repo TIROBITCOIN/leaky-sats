@@ -25,6 +25,8 @@ import {
   type WalletDescriptor,
 } from "./xpub";
 
+type MempoolJsonFetcher = (url: string, signal?: AbortSignal) => Promise<unknown>;
+
 export type ScanOptions = {
   gapLimit?: number;
   hardCap?: number;
@@ -32,14 +34,15 @@ export type ScanOptions = {
   concurrency?: number;
   includeUnconfirmed?: boolean;
   /** Injected for tests */
-  fetchJson?: (url: string) => Promise<unknown>;
+  fetchJson?: MempoolJsonFetcher;
+  signal?: AbortSignal;
 };
 
 export type ScanChainResult = {
   chain: AddressChain;
   addresses: DerivedAddress[];
   lastUsedIndex: number; // -1 if none used
-  stoppedReason: "gap" | "hardCap" | "rateLimit";
+  stoppedReason: "gap" | "hardCap" | "rateLimit" | "apiFailure";
 };
 
 export type ScanWalletResult = {
@@ -68,6 +71,11 @@ export type AddressStatsSummary = {
   used: boolean;
 };
 
+function throwIfAborted(signal?: AbortSignal): void {
+  if (!signal?.aborted) return;
+  throw signal.reason instanceof Error ? signal.reason : new Error("wallet sync aborted");
+}
+
 function sanitizeGapLimit(value: number): number {
   if (!Number.isInteger(value) || value < 1 || value > 200) {
     throw new Error("gapLimit must be an integer from 1 to 200");
@@ -91,9 +99,11 @@ function sanitizeHardCap(value: number): number {
 async function lookupAddressActivityOnce(
   baseUrl: string,
   address: string,
-  fetchJson: (url: string) => Promise<unknown> = fetchMempoolJsonOnce
+  fetchJson: MempoolJsonFetcher = fetchMempoolJsonOnce,
+  signal?: AbortSignal
 ): Promise<AddressActivity> {
-  const statsRaw = await fetchJson(addressStatsUrl(baseUrl, address));
+  throwIfAborted(signal);
+  const statsRaw = await fetchJson(addressStatsUrl(baseUrl, address), signal);
   const summary = parseAddressStats(statsRaw);
   if (summary === null) {
     return {
@@ -141,22 +151,27 @@ function cancelledAddressActivity(): AddressActivity {
 export async function lookupAddressActivity(
   baseUrl: string,
   address: string,
-  fetchJson: (url: string) => Promise<unknown> = fetchMempoolJsonOnce,
-  shouldCancel: () => boolean = () => false
+  fetchJson: MempoolJsonFetcher = fetchMempoolJsonOnce,
+  shouldCancel: () => boolean = () => false,
+  signal?: AbortSignal
 ): Promise<AddressActivity> {
+  throwIfAborted(signal);
   try {
-    return await lookupAddressActivityOnce(baseUrl, address, fetchJson);
+    return await lookupAddressActivityOnce(baseUrl, address, fetchJson, signal);
   } catch (error) {
+    throwIfAborted(signal);
     // Preserve every 429 (and its Retry-After), even when another concurrent worker
     // already raised the shared cancellation flag. Cancellation only suppresses retries.
     if (is429Error(error)) return failedAddressActivity(error);
     if (shouldCancel()) return cancelledAddressActivity();
     if (!isTransientAddressError(error)) return failedAddressActivity(error);
     await delay(ADDRESS_RETRY_DELAY_MS);
+    throwIfAborted(signal);
     if (shouldCancel()) return cancelledAddressActivity();
     try {
-      return await lookupAddressActivityOnce(baseUrl, address, fetchJson);
+      return await lookupAddressActivityOnce(baseUrl, address, fetchJson, signal);
     } catch (retryError) {
+      throwIfAborted(signal);
       return failedAddressActivity(retryError);
     }
   }
@@ -195,14 +210,16 @@ async function scanXpubChain(
   chain: AddressChain,
   baseUrl: string,
   options: Required<Pick<ScanOptions, "gapLimit" | "hardCap" | "batchSize" | "concurrency">> & {
-    fetchJson: (url: string) => Promise<unknown>;
+    fetchJson: MempoolJsonFetcher;
     scriptType?: import("./xpub").ScriptType;
+    signal?: AbortSignal;
   }
 ): Promise<{
   chainResult: ScanChainResult;
   lookups: AddressLookupResult[];
   rateLimited: boolean;
   rateLimitRetryAfterMs?: number;
+  candidateFailed: boolean;
 }> {
   const addresses: DerivedAddress[] = [];
   const lookups: AddressLookupResult[] = [];
@@ -212,8 +229,10 @@ async function scanXpubChain(
   let stoppedReason: "gap" | "hardCap" = "gap";
   let rateLimited = false;
   let rateLimitRetryAfterMs: number | undefined;
+  let candidateFailed = false;
 
   while (startIndex < options.hardCap) {
+    throwIfAborted(options.signal);
     const remaining = options.hardCap - startIndex;
     const limit = Math.min(options.batchSize, remaining);
     if (limit <= 0) break;
@@ -228,11 +247,12 @@ async function scanXpubChain(
     addresses.push(...batch);
 
     const batchLookups = await mapWithConcurrency(batch, options.concurrency, async (item) => {
-      if (rateLimited) {
+      throwIfAborted(options.signal);
+      if (rateLimited || candidateFailed) {
         return {
           ok: false as const,
           address: item.address,
-          error: "rate limited",
+          error: rateLimited ? "rate limited" : "API unavailable",
           used: false,
           index: item.index,
         };
@@ -241,7 +261,8 @@ async function scanXpubChain(
         baseUrl,
         item.address,
         options.fetchJson,
-        () => rateLimited
+        () => rateLimited || candidateFailed,
+        options.signal
       );
       if (activity.rateLimited) {
         rateLimited = true;
@@ -250,6 +271,7 @@ async function scanXpubChain(
         }
       }
       if (activity.failed) {
+        if (!activity.rateLimited) candidateFailed = true;
         return {
           ok: false as const,
           address: item.address,
@@ -288,6 +310,30 @@ async function scanXpubChain(
         lookups,
         rateLimited: true,
         rateLimitRetryAfterMs,
+        candidateFailed,
+      };
+    }
+
+    if (candidateFailed) {
+      for (const row of batchLookups) {
+        if (!row.ok) {
+          lookups.push({ ok: false, address: row.address, error: row.error });
+        } else {
+          lookups.push({
+            ok: true,
+            address: row.address,
+            confirmedSats: row.confirmedSats,
+            unconfirmedSats: row.unconfirmedSats,
+            utxos: row.utxos,
+          });
+        }
+      }
+      return {
+        chainResult: { chain, addresses, lastUsedIndex, stoppedReason: "apiFailure" },
+        lookups,
+        rateLimited,
+        rateLimitRetryAfterMs,
+        candidateFailed: true,
       };
     }
 
@@ -319,6 +365,7 @@ async function scanXpubChain(
           lookups,
           rateLimited,
           rateLimitRetryAfterMs,
+          candidateFailed,
         };
       }
     }
@@ -335,6 +382,7 @@ async function scanXpubChain(
     lookups,
     rateLimited,
     rateLimitRetryAfterMs,
+    candidateFailed,
   };
 }
 
@@ -349,6 +397,7 @@ export async function scanWallet(
   const concurrency = options.concurrency ?? MEMPOOL_LOOKUP_CONCURRENCY;
   const fetchJson = options.fetchJson ?? fetchMempoolJsonOnce;
   const includeUnconfirmed = options.includeUnconfirmed ?? true;
+  throwIfAborted(options.signal);
 
   if (descriptor.kind === "addresses") {
     const scannedAddresses = descriptor.addresses.map((address, index) => ({
@@ -359,16 +408,23 @@ export async function scanWallet(
     }));
 
     let addrRateLimited = false;
+    let addrCandidateFailed = false;
     let rateLimitRetryAfterMs: number | undefined;
     const lookups = await mapWithConcurrency(scannedAddresses, concurrency, async (item) => {
-      if (addrRateLimited) {
-        return { ok: false as const, address: item.address, error: "rate limited" };
+      throwIfAborted(options.signal);
+      if (addrRateLimited || addrCandidateFailed) {
+        return {
+          ok: false as const,
+          address: item.address,
+          error: addrRateLimited ? "rate limited" : "API unavailable",
+        };
       }
       const activity = await lookupAddressActivity(
         baseUrl,
         item.address,
         fetchJson,
-        () => addrRateLimited
+        () => addrRateLimited || addrCandidateFailed,
+        options.signal
       );
       if (activity.rateLimited) {
         addrRateLimited = true;
@@ -377,6 +433,7 @@ export async function scanWallet(
         }
       }
       if (activity.failed) {
+        if (!activity.rateLimited) addrCandidateFailed = true;
         return { ok: false as const, address: item.address, error: activity.error ?? "lookup failed" };
       }
       return {
@@ -395,7 +452,11 @@ export async function scanWallet(
           chain: "receive",
           addresses: scannedAddresses,
           lastUsedIndex: scannedAddresses.length > 0 ? scannedAddresses.length - 1 : -1,
-          stoppedReason: "gap",
+          stoppedReason: addrRateLimited
+            ? "rateLimit"
+            : addrCandidateFailed
+              ? "apiFailure"
+              : "gap",
         },
       ],
       scannedAddresses,
@@ -411,18 +472,20 @@ export async function scanWallet(
     concurrency,
     fetchJson,
     scriptType: descriptor.scriptType,
+    signal: options.signal,
   };
 
   const receive = await scanXpubChain(descriptor.xpub, "receive", baseUrl, chainOpts);
-  if (receive.rateLimited) {
+  if (receive.rateLimited || receive.candidateFailed) {
+    const stoppedReason = receive.rateLimited ? "rateLimit" : "apiFailure";
     return {
       balance: buildWalletBalance(receive.lookups, { includeUnconfirmed }),
       chains: [
         receive.chainResult,
-        { chain: "change", addresses: [], lastUsedIndex: -1, stoppedReason: "rateLimit" },
+        { chain: "change", addresses: [], lastUsedIndex: -1, stoppedReason },
       ],
       scannedAddresses: receive.chainResult.addresses,
-      rateLimited: true,
+      rateLimited: receive.rateLimited,
       rateLimitRetryAfterMs: receive.rateLimitRetryAfterMs,
     };
   }

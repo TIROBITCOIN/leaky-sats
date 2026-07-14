@@ -4,12 +4,15 @@ import {
   addressUtxosUrl,
   buildMempoolApiChain,
   clearMempoolApiHealth,
+  clearTransientMempoolApiHealth,
   fetchMempoolJson,
+  fetchMempoolJsonOnce,
   isMempoolApiDead,
   isRetryableMempoolError,
   isTransientAddressError,
   markMempoolApiDead,
   MEMPOOL_API_DEAD_MARK_MS,
+  MEMPOOL_RATE_LIMIT_DEFAULT_MS,
   MempoolHttpError,
   normalizeMempoolBaseUrl,
   parseRetryAfterMs,
@@ -120,6 +123,22 @@ describe("fetchMempoolJson", () => {
     await expect(fetchMempoolJson("https://example/api/x")).rejects.toBeInstanceOf(MempoolHttpError);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+
+  it("forwards a parent abort signal to an in-flight request", async () => {
+    const fetchMock = vi.fn((_url: string, init?: RequestInit) =>
+      new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(init.signal?.reason), { once: true });
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const controller = new AbortController();
+    const pending = fetchMempoolJsonOnce("https://example/api/x", controller.signal);
+
+    controller.abort(new Error("wallet sync stopped"));
+
+    await expect(pending).rejects.toThrow("wallet sync stopped");
+    expect((fetchMock.mock.calls[0][1]?.signal as AbortSignal).aborted).toBe(true);
+  });
 });
 
 describe("mapWithConcurrency", () => {
@@ -179,13 +198,27 @@ describe("mempool API health tracking", () => {
 
   it("does not shorten a longer Retry-After dead mark", () => {
     const url = "https://retry-after.example/api";
-    markMempoolApiDead(url, 120_000);
+    markMempoolApiDead(url, 120_000, "rate-limit");
     vi.advanceTimersByTime(30_000);
-    markMempoolApiDead(url);
+    markMempoolApiDead(url, undefined, "rate-limit");
     vi.advanceTimersByTime(89_999);
     expect(isMempoolApiDead(url)).toBe(true);
     vi.advanceTimersByTime(1);
     expect(isMempoolApiDead(url)).toBe(false);
+  });
+
+  it("force recovery clears ordinary failures without bypassing rate limits", () => {
+    const failedUrl = "https://failed.example/api";
+    const limitedUrl = "https://limited.example/api";
+    markMempoolApiDead(failedUrl);
+    markMempoolApiDead(limitedUrl, undefined, "rate-limit");
+
+    clearTransientMempoolApiHealth();
+
+    expect(isMempoolApiDead(failedUrl)).toBe(false);
+    expect(isMempoolApiDead(limitedUrl)).toBe(true);
+    vi.advanceTimersByTime(MEMPOOL_RATE_LIMIT_DEFAULT_MS);
+    expect(isMempoolApiDead(limitedUrl)).toBe(false);
   });
 });
 

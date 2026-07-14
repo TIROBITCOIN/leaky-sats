@@ -74,15 +74,32 @@ export async function mapWithConcurrency<T, R>(
   return results;
 }
 
-export async function fetchMempoolJsonOnce(url: string): Promise<unknown> {
-  const response = await fetch(url, {
-    signal: AbortSignal.timeout(MEMPOOL_REQUEST_TIMEOUT_MS),
-  });
-  if (!response.ok) {
-    const retryAfterMs = parseRetryAfterMs(response.headers?.get?.("retry-after") ?? null);
-    throw new MempoolHttpError(response.status, retryAfterMs);
+export async function fetchMempoolJsonOnce(
+  url: string,
+  parentSignal?: AbortSignal
+): Promise<unknown> {
+  const controller = new AbortController();
+  const onParentAbort = () => controller.abort(parentSignal?.reason);
+  if (parentSignal?.aborted) onParentAbort();
+  else parentSignal?.addEventListener("abort", onParentAbort, { once: true });
+
+  const timer = setTimeout(() => {
+    const error = new Error("mempool request timed out");
+    error.name = "TimeoutError";
+    controller.abort(error);
+  }, MEMPOOL_REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.ok) {
+      const retryAfterMs = parseRetryAfterMs(response.headers?.get?.("retry-after") ?? null);
+      throw new MempoolHttpError(response.status, retryAfterMs);
+    }
+    return response.json();
+  } finally {
+    clearTimeout(timer);
+    parentSignal?.removeEventListener("abort", onParentAbort);
   }
-  return response.json();
 }
 
 export async function fetchMempoolJson(url: string): Promise<unknown> {
@@ -151,25 +168,47 @@ export const PUBLIC_MEMPOOL_API_CANDIDATES: MempoolApiCandidate[] = [
   { name: "blockstream.info", baseUrl: "https://blockstream.info/api" },
 ];
 
-export const MEMPOOL_API_DEAD_MARK_MS = 60_000;
+export const MEMPOOL_API_DEAD_MARK_MS = 5 * 60_000;
+export const MEMPOOL_RATE_LIMIT_DEFAULT_MS = 60_000;
 
-const deadUntilByBaseUrl = new Map<string, number>();
+export type MempoolApiDeadReason = "failure" | "rate-limit";
+
+const failedUntilByBaseUrl = new Map<string, number>();
+const rateLimitedUntilByBaseUrl = new Map<string, number>();
 
 /** Marks a base URL as dead for MEMPOOL_API_DEAD_MARK_MS so the chain skips it meanwhile. */
-export function markMempoolApiDead(baseUrl: string, ttlMs = MEMPOOL_API_DEAD_MARK_MS): void {
-  const deadUntil = Date.now() + ttlMs;
-  deadUntilByBaseUrl.set(baseUrl, Math.max(deadUntilByBaseUrl.get(baseUrl) ?? 0, deadUntil));
+export function markMempoolApiDead(
+  baseUrl: string,
+  ttlMs: number | undefined = undefined,
+  reason: MempoolApiDeadReason = "failure"
+): void {
+  const effectiveTtlMs =
+    ttlMs ?? (reason === "rate-limit" ? MEMPOOL_RATE_LIMIT_DEFAULT_MS : MEMPOOL_API_DEAD_MARK_MS);
+  const deadUntil = Date.now() + effectiveTtlMs;
+  const target = reason === "rate-limit" ? rateLimitedUntilByBaseUrl : failedUntilByBaseUrl;
+  target.set(baseUrl, Math.max(target.get(baseUrl) ?? 0, deadUntil));
 }
 
 export function isMempoolApiDead(baseUrl: string): boolean {
-  const deadUntil = deadUntilByBaseUrl.get(baseUrl);
-  return typeof deadUntil === "number" && Date.now() < deadUntil;
+  const failedUntil = failedUntilByBaseUrl.get(baseUrl) ?? 0;
+  const rateLimitedUntil = rateLimitedUntilByBaseUrl.get(baseUrl) ?? 0;
+  return Date.now() < Math.max(failedUntil, rateLimitedUntil);
 }
 
 /** Clears dead-marking for one URL, or every URL when called with no argument. */
 export function clearMempoolApiHealth(baseUrl?: string): void {
-  if (baseUrl) deadUntilByBaseUrl.delete(baseUrl);
-  else deadUntilByBaseUrl.clear();
+  if (baseUrl) {
+    failedUntilByBaseUrl.delete(baseUrl);
+    rateLimitedUntilByBaseUrl.delete(baseUrl);
+  } else {
+    failedUntilByBaseUrl.clear();
+    rateLimitedUntilByBaseUrl.clear();
+  }
+}
+
+/** Allows manual/foreground/network-recovery syncs to retry failures without bypassing 429. */
+export function clearTransientMempoolApiHealth(): void {
+  failedUntilByBaseUrl.clear();
 }
 
 export function buildMempoolApiChain(customBaseUrl: string | undefined | null): MempoolApiCandidate[] {
@@ -205,9 +244,11 @@ export async function resolveHealthyMempoolApi(
       clearMempoolApiHealth(candidate.baseUrl);
       return { candidate, height };
     } catch (error) {
+      const rateLimited = is429Error(error);
       markMempoolApiDead(
         candidate.baseUrl,
-        getRateLimitRetryAfterMs(error) ?? MEMPOOL_API_DEAD_MARK_MS
+        getRateLimitRetryAfterMs(error),
+        rateLimited ? "rate-limit" : "failure"
       );
     }
   }

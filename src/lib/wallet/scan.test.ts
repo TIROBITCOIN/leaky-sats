@@ -147,6 +147,74 @@ describe("scanWallet", () => {
     expect(fetchJson).toHaveBeenCalledTimes(1);
   });
 
+  it("stops scheduling new addresses after a candidate fails its retry", async () => {
+    vi.useFakeTimers();
+    const fetchJson = vi.fn(async () => {
+      throw new TypeError("network down");
+    });
+
+    const pending = scanWallet(
+      {
+        kind: "addresses",
+        addresses: [
+          "bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu",
+          "bc1qnjg0jd8228aq7egyzacy8cys3knf9xvrerkf9g",
+          "bc1qtestthirdaddress",
+        ],
+      },
+      "https://mempool.example/api",
+      { fetchJson, concurrency: 1 }
+    );
+    await vi.advanceTimersByTimeAsync(500);
+    const result = await pending;
+
+    expect(fetchJson).toHaveBeenCalledTimes(2);
+    expect(result.chains[0].stoppedReason).toBe("apiFailure");
+  });
+
+  it("skips the xpub change chain when the API candidate fails", async () => {
+    vi.useFakeTimers();
+    const fetchJson = vi.fn(async () => {
+      throw new TypeError("network down");
+    });
+
+    const pending = scanWallet(
+      { kind: "xpub", xpub: ZPUB },
+      "https://mempool.example/api",
+      { gapLimit: 2, hardCap: 2, batchSize: 2, concurrency: 1, fetchJson }
+    );
+    await vi.advanceTimersByTimeAsync(500);
+    const result = await pending;
+
+    expect(fetchJson).toHaveBeenCalledTimes(2);
+    expect(result.chains[0].stoppedReason).toBe("apiFailure");
+    expect(result.chains[1]).toMatchObject({
+      chain: "change",
+      addresses: [],
+      stoppedReason: "apiFailure",
+    });
+  });
+
+  it("aborts an in-flight address request", async () => {
+    const controller = new AbortController();
+    const fetchJson = vi.fn(
+      (_url: string, signal?: AbortSignal) =>
+        new Promise<unknown>((_resolve, reject) => {
+          signal?.addEventListener("abort", () => reject(signal.reason), { once: true });
+        })
+    );
+
+    const pending = scanWallet(
+      { kind: "addresses", addresses: ["bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu"] },
+      "https://mempool.example/api",
+      { fetchJson, concurrency: 1, signal: controller.signal }
+    );
+    await Promise.resolve();
+    controller.abort(new Error("cancelled"));
+
+    await expect(pending).rejects.toThrow("cancelled");
+  });
+
   it("cancels another worker's delayed retry after a concurrent 429", async () => {
     vi.useFakeTimers();
     const addresses = [
