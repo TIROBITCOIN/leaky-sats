@@ -53,8 +53,8 @@ export type StoredWalletBalance = WalletBalance & {
 export type AddressCacheMap = Record<string, AddressCacheEntry>;
 export type LastBalanceMap = Record<string, StoredWalletBalance>;
 
-/** Fixed defaults (no settings UI): wide gap scan + always count unconfirmed. */
-export const WALLET_DEFAULT_GAP_LIMIT = 200;
+/** Fixed defaults (no settings UI): standard BIP discovery gap + unconfirmed included. */
+export const WALLET_DEFAULT_GAP_LIMIT = 20;
 
 const DEFAULT_CONFIG: WalletSyncConfig = {
   enabled: false,
@@ -109,7 +109,7 @@ export function loadWalletConfig(): WalletSyncConfig {
       enabled: parsed.enabled === true,
       wallets,
       mempoolApiUrl: typeof parsed.mempoolApiUrl === "string" ? normalizeMempoolBaseUrl(parsed.mempoolApiUrl) : "",
-      // UI removed: always use fixed product defaults (migrate older 20 → 200).
+      // UI removed: use the fixed product default and migrate the rate-limit-heavy 200 value.
       gapLimit: WALLET_DEFAULT_GAP_LIMIT,
       includeUnconfirmed: true,
     };
