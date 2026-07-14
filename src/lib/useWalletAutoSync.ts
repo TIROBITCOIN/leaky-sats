@@ -2,18 +2,21 @@ import { useEffect } from "react";
 import { loadWalletConfig } from "./walletConfig";
 import { syncAllWallets } from "./walletSync";
 
-/** Matches walletSync.ts's THROTTLE_MS so the interval and the in-flight dedupe stay in sync. */
-export const WALLET_AUTO_SYNC_INTERVAL_MS = 30_000;
+/** Public APIs are polled conservatively; force-triggered user/visibility syncs stay immediate. */
+export const WALLET_AUTO_SYNC_INTERVAL_MS = 2 * 60 * 1000;
 
 export function shouldAutoSyncWallets(): boolean {
   const config = loadWalletConfig();
   return config.enabled && config.wallets.length > 0;
 }
 
-function syncIfDueAndVisible(): void {
+export function syncIfDueAndVisible(
+  force = false,
+  sync: typeof syncAllWallets = syncAllWallets
+): void {
   if (document.visibilityState !== "visible") return;
   if (!shouldAutoSyncWallets()) return;
-  void syncAllWallets();
+  void sync({ force });
 }
 
 /**
@@ -24,10 +27,10 @@ function syncIfDueAndVisible(): void {
  */
 export function useWalletAutoSync(): void {
   useEffect(() => {
-    const interval = setInterval(syncIfDueAndVisible, WALLET_AUTO_SYNC_INTERVAL_MS);
+    const interval = setInterval(() => syncIfDueAndVisible(), WALLET_AUTO_SYNC_INTERVAL_MS);
 
     const onVisibilityChange = () => {
-      if (document.visibilityState === "visible") syncIfDueAndVisible();
+      if (document.visibilityState === "visible") syncIfDueAndVisible(true);
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
 
