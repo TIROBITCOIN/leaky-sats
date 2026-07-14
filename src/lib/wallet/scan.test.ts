@@ -31,6 +31,20 @@ function addressFromUrl(url: string): string {
 }
 
 describe("scanWallet", () => {
+  it("defaults first xpub discovery to the standard 20-address gap", async () => {
+    const fetchJson = vi.fn(async () => stats(0));
+
+    const result = await scanWallet(
+      { kind: "xpub", xpub: ZPUB },
+      "https://mempool.example/api",
+      { fetchJson }
+    );
+
+    expect(result.balance.status).toBe("online");
+    expect(result.scannedAddresses).toHaveLength(40);
+    expect(fetchJson).toHaveBeenCalledTimes(40);
+  });
+
   it("resets gap after a used address with zero balance but history", async () => {
     const { deriveAddresses } = await import("./xpub");
     const receive = deriveAddresses({ xpub: ZPUB, chain: "receive", startIndex: 0, limit: 5 });
