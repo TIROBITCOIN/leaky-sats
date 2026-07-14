@@ -7,10 +7,12 @@ import {
   fetchMempoolJson,
   isMempoolApiDead,
   isRetryableMempoolError,
+  isTransientAddressError,
   markMempoolApiDead,
   MEMPOOL_API_DEAD_MARK_MS,
   MempoolHttpError,
   normalizeMempoolBaseUrl,
+  parseRetryAfterMs,
   PUBLIC_MEMPOOL_API_CANDIDATES,
   resolveHealthyMempoolApi,
   tipHeightUrl,
@@ -64,6 +66,35 @@ describe("isRetryableMempoolError", () => {
     abort.name = "AbortError";
     expect(isRetryableMempoolError(abort)).toBe(true);
     expect(isRetryableMempoolError(new TypeError("fetch failed"))).toBe(true);
+  });
+
+  it("treats server errors as transient only for address-level retry", () => {
+    expect(isTransientAddressError(new MempoolHttpError(503))).toBe(true);
+    expect(isTransientAddressError(new MempoolHttpError(429))).toBe(false);
+    expect(isTransientAddressError(new MempoolHttpError(404))).toBe(false);
+  });
+});
+
+describe("Retry-After", () => {
+  it("parses delta-seconds and HTTP dates", () => {
+    const now = Date.parse("2026-07-14T00:00:00.000Z");
+    expect(parseRetryAfterMs("120", now)).toBe(120_000);
+    expect(parseRetryAfterMs("Tue, 14 Jul 2026 00:02:00 GMT", now)).toBe(120_000);
+    expect(parseRetryAfterMs("invalid", now)).toBeUndefined();
+  });
+
+  it("attaches Retry-After to an HTTP 429 error", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 429,
+      headers: new Headers({ "Retry-After": "90" }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const error = await fetchMempoolJson("https://example/api/x").catch((caught) => caught);
+    expect(error).toBeInstanceOf(MempoolHttpError);
+    expect((error as MempoolHttpError).retryAfterMs).toBe(90_000);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -143,6 +174,17 @@ describe("mempool API health tracking", () => {
     markMempoolApiDead(url);
     expect(isMempoolApiDead(url)).toBe(true);
     clearMempoolApiHealth(url);
+    expect(isMempoolApiDead(url)).toBe(false);
+  });
+
+  it("does not shorten a longer Retry-After dead mark", () => {
+    const url = "https://retry-after.example/api";
+    markMempoolApiDead(url, 120_000);
+    vi.advanceTimersByTime(30_000);
+    markMempoolApiDead(url);
+    vi.advanceTimersByTime(89_999);
+    expect(isMempoolApiDead(url)).toBe(true);
+    vi.advanceTimersByTime(1);
     expect(isMempoolApiDead(url)).toBe(false);
   });
 });

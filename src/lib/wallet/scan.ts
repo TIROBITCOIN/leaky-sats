@@ -8,8 +8,13 @@ import {
   type WalletBalance,
 } from "./balance";
 import {
+  ADDRESS_RETRY_DELAY_MS,
   addressStatsUrl,
-  fetchMempoolJson,
+  delay,
+  fetchMempoolJsonOnce,
+  getRateLimitRetryAfterMs,
+  is429Error,
+  isTransientAddressError,
   mapWithConcurrency,
   MEMPOOL_LOOKUP_CONCURRENCY,
 } from "./mempoolClient";
@@ -34,7 +39,7 @@ export type ScanChainResult = {
   chain: AddressChain;
   addresses: DerivedAddress[];
   lastUsedIndex: number; // -1 if none used
-  stoppedReason: "gap" | "hardCap";
+  stoppedReason: "gap" | "hardCap" | "rateLimit";
 };
 
 export type ScanWalletResult = {
@@ -42,6 +47,8 @@ export type ScanWalletResult = {
   chains: ScanChainResult[];
   /** Flat unique address list that was queried */
   scannedAddresses: DerivedAddress[];
+  rateLimited: boolean;
+  rateLimitRetryAfterMs?: number;
 };
 
 type AddressActivity = {
@@ -51,6 +58,8 @@ type AddressActivity = {
   utxos: AddressUtxo[] | null;
   failed: boolean;
   error?: string;
+  rateLimited?: boolean;
+  rateLimitRetryAfterMs?: number;
 };
 
 export type AddressStatsSummary = {
@@ -79,40 +88,77 @@ function sanitizeHardCap(value: number): number {
  * /address/{addr}/utxo which electrum backends don't implement (404). We therefore never
  * call /utxo during a scan; utxoCount is simply left undefined for such backends.
  */
-export async function lookupAddressActivity(
+async function lookupAddressActivityOnce(
   baseUrl: string,
   address: string,
-  fetchJson: (url: string) => Promise<unknown> = fetchMempoolJson
+  fetchJson: (url: string) => Promise<unknown> = fetchMempoolJsonOnce
 ): Promise<AddressActivity> {
-  try {
-    const statsRaw = await fetchJson(addressStatsUrl(baseUrl, address));
-    const summary = parseAddressStats(statsRaw);
-    if (summary === null) {
-      return {
-        used: false,
-        confirmedSats: 0,
-        unconfirmedSats: 0,
-        utxos: null,
-        failed: true,
-        error: "invalid stats payload",
-      };
-    }
-    return {
-      used: summary.used,
-      confirmedSats: summary.confirmedSats,
-      unconfirmedSats: summary.unconfirmedSats,
-      utxos: null,
-      failed: false,
-    };
-  } catch (error) {
+  const statsRaw = await fetchJson(addressStatsUrl(baseUrl, address));
+  const summary = parseAddressStats(statsRaw);
+  if (summary === null) {
     return {
       used: false,
       confirmedSats: 0,
       unconfirmedSats: 0,
       utxos: null,
       failed: true,
-      error: error instanceof Error ? error.message : String(error),
+      error: "invalid stats payload",
     };
+  }
+  return {
+    used: summary.used,
+    confirmedSats: summary.confirmedSats,
+    unconfirmedSats: summary.unconfirmedSats,
+    utxos: null,
+    failed: false,
+  };
+}
+
+function failedAddressActivity(error: unknown): AddressActivity {
+  return {
+    used: false,
+    confirmedSats: 0,
+    unconfirmedSats: 0,
+    utxos: null,
+    failed: true,
+    rateLimited: is429Error(error),
+    rateLimitRetryAfterMs: getRateLimitRetryAfterMs(error),
+    error: error instanceof Error ? error.message : String(error),
+  };
+}
+
+function cancelledAddressActivity(): AddressActivity {
+  return {
+    used: false,
+    confirmedSats: 0,
+    unconfirmedSats: 0,
+    utxos: null,
+    failed: true,
+    error: "rate limited",
+  };
+}
+
+export async function lookupAddressActivity(
+  baseUrl: string,
+  address: string,
+  fetchJson: (url: string) => Promise<unknown> = fetchMempoolJsonOnce,
+  shouldCancel: () => boolean = () => false
+): Promise<AddressActivity> {
+  try {
+    return await lookupAddressActivityOnce(baseUrl, address, fetchJson);
+  } catch (error) {
+    // Preserve every 429 (and its Retry-After), even when another concurrent worker
+    // already raised the shared cancellation flag. Cancellation only suppresses retries.
+    if (is429Error(error)) return failedAddressActivity(error);
+    if (shouldCancel()) return cancelledAddressActivity();
+    if (!isTransientAddressError(error)) return failedAddressActivity(error);
+    await delay(ADDRESS_RETRY_DELAY_MS);
+    if (shouldCancel()) return cancelledAddressActivity();
+    try {
+      return await lookupAddressActivityOnce(baseUrl, address, fetchJson);
+    } catch (retryError) {
+      return failedAddressActivity(retryError);
+    }
   }
 }
 
@@ -152,13 +198,20 @@ async function scanXpubChain(
     fetchJson: (url: string) => Promise<unknown>;
     scriptType?: import("./xpub").ScriptType;
   }
-): Promise<{ chainResult: ScanChainResult; lookups: AddressLookupResult[] }> {
+): Promise<{
+  chainResult: ScanChainResult;
+  lookups: AddressLookupResult[];
+  rateLimited: boolean;
+  rateLimitRetryAfterMs?: number;
+}> {
   const addresses: DerivedAddress[] = [];
   const lookups: AddressLookupResult[] = [];
   let startIndex = 0;
   let lastUsedIndex = -1;
   let consecutiveUnused = 0;
   let stoppedReason: "gap" | "hardCap" = "gap";
+  let rateLimited = false;
+  let rateLimitRetryAfterMs: number | undefined;
 
   while (startIndex < options.hardCap) {
     const remaining = options.hardCap - startIndex;
@@ -175,9 +228,35 @@ async function scanXpubChain(
     addresses.push(...batch);
 
     const batchLookups = await mapWithConcurrency(batch, options.concurrency, async (item) => {
-      const activity = await lookupAddressActivity(baseUrl, item.address, options.fetchJson);
+      if (rateLimited) {
+        return {
+          ok: false as const,
+          address: item.address,
+          error: "rate limited",
+          used: false,
+          index: item.index,
+        };
+      }
+      const activity = await lookupAddressActivity(
+        baseUrl,
+        item.address,
+        options.fetchJson,
+        () => rateLimited
+      );
+      if (activity.rateLimited) {
+        rateLimited = true;
+        if (activity.rateLimitRetryAfterMs !== undefined) {
+          rateLimitRetryAfterMs = Math.max(rateLimitRetryAfterMs ?? 0, activity.rateLimitRetryAfterMs);
+        }
+      }
       if (activity.failed) {
-        return { ok: false as const, address: item.address, error: activity.error ?? "lookup failed", used: false, index: item.index };
+        return {
+          ok: false as const,
+          address: item.address,
+          error: activity.error ?? "lookup failed",
+          used: false,
+          index: item.index,
+        };
       }
       return {
         ok: true as const,
@@ -189,6 +268,28 @@ async function scanXpubChain(
         index: item.index,
       };
     });
+
+    if (rateLimited) {
+      for (const row of batchLookups) {
+        if (!row.ok) {
+          lookups.push({ ok: false, address: row.address, error: row.error });
+        } else {
+          lookups.push({
+            ok: true,
+            address: row.address,
+            confirmedSats: row.confirmedSats,
+            unconfirmedSats: row.unconfirmedSats,
+            utxos: row.utxos,
+          });
+        }
+      }
+      return {
+        chainResult: { chain, addresses, lastUsedIndex, stoppedReason: "rateLimit" },
+        lookups,
+        rateLimited: true,
+        rateLimitRetryAfterMs,
+      };
+    }
 
     for (const row of batchLookups) {
       if (!row.ok) {
@@ -216,6 +317,8 @@ async function scanXpubChain(
         return {
           chainResult: { chain, addresses, lastUsedIndex, stoppedReason: "gap" },
           lookups,
+          rateLimited,
+          rateLimitRetryAfterMs,
         };
       }
     }
@@ -230,6 +333,8 @@ async function scanXpubChain(
   return {
     chainResult: { chain, addresses, lastUsedIndex, stoppedReason },
     lookups,
+    rateLimited,
+    rateLimitRetryAfterMs,
   };
 }
 
@@ -242,7 +347,7 @@ export async function scanWallet(
   const hardCap = sanitizeHardCap(options.hardCap ?? 200);
   const batchSize = options.batchSize ?? gapLimit;
   const concurrency = options.concurrency ?? MEMPOOL_LOOKUP_CONCURRENCY;
-  const fetchJson = options.fetchJson ?? fetchMempoolJson;
+  const fetchJson = options.fetchJson ?? fetchMempoolJsonOnce;
   const includeUnconfirmed = options.includeUnconfirmed ?? true;
 
   if (descriptor.kind === "addresses") {
@@ -253,8 +358,24 @@ export async function scanWallet(
       address,
     }));
 
+    let addrRateLimited = false;
+    let rateLimitRetryAfterMs: number | undefined;
     const lookups = await mapWithConcurrency(scannedAddresses, concurrency, async (item) => {
-      const activity = await lookupAddressActivity(baseUrl, item.address, fetchJson);
+      if (addrRateLimited) {
+        return { ok: false as const, address: item.address, error: "rate limited" };
+      }
+      const activity = await lookupAddressActivity(
+        baseUrl,
+        item.address,
+        fetchJson,
+        () => addrRateLimited
+      );
+      if (activity.rateLimited) {
+        addrRateLimited = true;
+        if (activity.rateLimitRetryAfterMs !== undefined) {
+          rateLimitRetryAfterMs = Math.max(rateLimitRetryAfterMs ?? 0, activity.rateLimitRetryAfterMs);
+        }
+      }
       if (activity.failed) {
         return { ok: false as const, address: item.address, error: activity.error ?? "lookup failed" };
       }
@@ -278,6 +399,8 @@ export async function scanWallet(
         },
       ],
       scannedAddresses,
+      rateLimited: addrRateLimited,
+      rateLimitRetryAfterMs,
     };
   }
 
@@ -291,6 +414,18 @@ export async function scanWallet(
   };
 
   const receive = await scanXpubChain(descriptor.xpub, "receive", baseUrl, chainOpts);
+  if (receive.rateLimited) {
+    return {
+      balance: buildWalletBalance(receive.lookups, { includeUnconfirmed }),
+      chains: [
+        receive.chainResult,
+        { chain: "change", addresses: [], lastUsedIndex: -1, stoppedReason: "rateLimit" },
+      ],
+      scannedAddresses: receive.chainResult.addresses,
+      rateLimited: true,
+      rateLimitRetryAfterMs: receive.rateLimitRetryAfterMs,
+    };
+  }
   const change = await scanXpubChain(descriptor.xpub, "change", baseUrl, chainOpts);
 
   const allLookups = [...receive.lookups, ...change.lookups];
@@ -311,5 +446,7 @@ export async function scanWallet(
     balance,
     chains: [receive.chainResult, change.chainResult],
     scannedAddresses,
+    rateLimited: receive.rateLimited || change.rateLimited,
+    rateLimitRetryAfterMs: change.rateLimitRetryAfterMs,
   };
 }
