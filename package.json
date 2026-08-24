@@ -60,7 +60,7 @@
     "verify:release": "npm run build && npm run verify:final-sell-flow && npm run verify:t19-ui-simplify && npm run verify:t27-ui-polish && npm run verify:t28-ui && npm run verify:sell-save && npm run verify:sell-completion && npm run verify:pwa-client-refresh && npm run verify:backup && npm run verify:recurring && npm run verify:price-source-ui && npm run verify:help-page && npm run verify:ownership && npm run verify:onboarding"
   },
   "dependencies": {
-    "@bitcoinerlab/secp256k1": "^1.2.0",
+    "@bitcoinerlab/secp256k1": "^2.0.0",
     "bip32": "^5.0.1",
     "bitcoinjs-lib": "^7.0.1",
     "bs58check": "^4.0.0",
