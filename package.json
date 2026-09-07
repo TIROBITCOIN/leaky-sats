@@ -71,11 +71,11 @@
     "react-router-dom": "^6.26.2"
   },
   "devDependencies": {
-    "@types/node": "^26.1.1",
+    "@types/node": "^26.4.1",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.7.0",
-    "sharp": "^0.35.2",
+    "sharp": "^0.35.4",
     "typescript": "^5.5.4",
     "vite": "^6.4.3",
     "vitest": "^4.1.10"
